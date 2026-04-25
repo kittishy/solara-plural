@@ -1,0 +1,26 @@
+{
+  "name": "Solara Plural",
+  "short_name": "Solara",
+  "description": "A warm private space for plural systems to organize members, track fronting, and keep notes.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#1a1625",
+  "theme_color": "#a78bfa",
+  "orientation": "portrait-primary",
+  "categories": ["productivity", "health", "lifestyle"],
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "any",
+      "type": "image/x-icon",
+      "purpose": "any"
+    },
+    {
+      "src": "/favicon.ico",
+      "sizes": "any",
+      "type": "image/x-icon",
+      "purpose": "maskable"
+    }
+  ]
+}

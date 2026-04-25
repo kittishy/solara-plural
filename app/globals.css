@@ -3,25 +3,87 @@
 @tailwind utilities;
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --color-bg: #1a1625;
+  --color-surface: #231d33;
+  --color-surface-alt: #2d2640;
+  --color-border: #3d3454;
+  --color-text: #e8e0f0;
+  --color-muted: #9d91b5;
+  --color-primary: #a78bfa;
+  --color-front: #f9a8d4;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@layer base {
+  html {
+    background-color: #1a1625;
+    color: #e8e0f0;
+    font-family: var(--font-nunito), Inter, system-ui, sans-serif;
+  }
+
+  body {
+    background-color: #1a1625;
+    color: #e8e0f0;
+    font-family: var(--font-nunito), Inter, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    min-height: 100dvh;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  /* Scrollbar styling */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #3d3454; border-radius: 9999px; }
+  ::-webkit-scrollbar-thumb:hover { background: #6b5f85; }
+
+  /* Focus rings */
+  *:focus-visible {
+    @apply outline-none ring-2 ring-primary/60 ring-offset-2 ring-offset-bg;
+  }
+
+  /* Reduced motion */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
   }
 }
 
-body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
-}
+@layer components {
+  .card {
+    @apply bg-surface rounded-xl border border-border shadow-card;
+  }
 
-@layer utilities {
-  .text-balance {
-    text-wrap: balance;
+  .btn {
+    @apply inline-flex items-center gap-2 px-4 py-2 rounded-xl font-medium text-sm
+           transition-colors duration-100 focus-visible:ring-2 focus-visible:ring-primary/60
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-primary {
+    @apply btn bg-primary-soft text-white hover:bg-primary hover:text-bg;
+  }
+
+  .btn-ghost {
+    @apply btn bg-transparent text-muted hover:bg-surface-alt hover:text-text;
+  }
+
+  .btn-danger {
+    @apply btn bg-transparent text-error border border-error/30 hover:bg-error/10;
+  }
+
+  .input {
+    @apply w-full bg-surface-alt border border-border rounded-xl px-3 py-2
+           text-text placeholder:text-subtle text-sm
+           focus:outline-none focus:border-primary/60 focus:ring-1 focus:ring-primary/30
+           transition-colors duration-150;
+  }
+
+  .label {
+    @apply block text-sm font-medium text-muted mb-1;
   }
 }
