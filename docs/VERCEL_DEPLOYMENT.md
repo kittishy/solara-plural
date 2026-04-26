@@ -28,7 +28,7 @@ Set these in Vercel for Production and Preview unless a variable is intentionall
 DATABASE_URL=libsql://your-database.turso.io
 DATABASE_AUTH_TOKEN=your-turso-auth-token
 NEXTAUTH_SECRET=your-random-secret
-NEXTAUTH_URL=https://your-production-domain.example
+NEXTAUTH_URL=https://solara-plural.vercel.app
 ```
 
 Local development can keep these in `.env.local`. Never commit `.env.local`.
@@ -41,7 +41,7 @@ vercel env add DATABASE_AUTH_TOKEN --sensitive
 vercel env add NEXTAUTH_SECRET --sensitive
 ```
 
-`NEXTAUTH_URL` should match the deployed site URL for production. Preview deployments may need separate Auth.js handling if callback URLs become strict.
+`NEXTAUTH_URL` should match the deployed site URL for production. For this project, use `https://solara-plural.vercel.app`. The `solara.vercel.app` alias is not owned by this project, so do not point auth there.
 
 ---
 

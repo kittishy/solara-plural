@@ -109,6 +109,8 @@ Before production deploy:
 4. Apply Drizzle migrations to the production Turso database.
 5. Follow `docs/VERCEL_DEPLOYMENT.md`.
 
+For the current production deployment, `NEXTAUTH_URL` should be `https://solara-plural.vercel.app`.
+
 ---
 
 ## Privacy Position
