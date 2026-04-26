@@ -1,9 +1,9 @@
-# DESIGN.md — Solara Plural
+# PROJECT_STYLE_GUIDE.md — Solara Plural
 
 > **[AGENT INSTRUCTION — READ FIRST]**
 > This file IS the design system for Solara Plural. It follows the `design-md` skill format.
 > - DO NOT create, overwrite, or replace this file. It already exists and is the source of truth.
-> - DO NOT generate a new DESIGN.md. If you are about to create one, STOP — read this one instead.
+> - DO NOT generate a new PROJECT_STYLE_GUIDE.md. If you are about to create one, STOP — read this one instead.
 > - Before any UI work, load the `design-md` skill AND read this file in full.
 > - All UI decisions MUST align with the tokens, patterns, and emotional principles defined here.
 > - If you need to add something to the design system, EDIT this file — never replace it.
@@ -271,3 +271,4 @@ module.exports = {
 - Error messages should be human and kind ("Something went wrong — try again?")
 
 ---
+

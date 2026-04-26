@@ -181,21 +181,37 @@ export default function SettingsClient({ system }: { system: SettingsSystem | nu
   }
 
   return (
-    <div className="space-y-4" aria-busy={importing || exporting}>
-      <div className="card p-6">
-        <h2 className="text-lg font-semibold text-text mb-4">Your System</h2>
-        <div className="space-y-2 text-sm">
-          <p><span className="text-muted">Name:</span> <span className="text-text ml-2">{system?.name ?? 'Not found'}</span></p>
-          <p><span className="text-muted">Email:</span> <span className="text-text ml-2">{system?.email ?? 'Not found'}</span></p>
-          {system?.description && (
-            <p><span className="text-muted">Description:</span> <span className="text-text ml-2">{system.description}</span></p>
-          )}
-        </div>
-      </div>
+    <div className="space-y-6" aria-busy={importing || exporting}>
 
-      <div className="card p-6">
-        <h2 className="text-lg font-semibold text-text mb-2">Data</h2>
-        <p className="text-muted text-sm mb-4">
+      {/* ── Your System ─────────────────────────────────────────── */}
+      <section className="card p-6" aria-labelledby="settings-system-heading">
+        <h2 id="settings-system-heading" className="text-lg font-semibold text-text mb-4">
+          Your System
+        </h2>
+        <dl className="space-y-2 text-sm">
+          <div className="flex gap-3">
+            <dt className="text-muted w-24 flex-shrink-0">Name</dt>
+            <dd className="text-text font-medium">{system?.name ?? 'Not found'}</dd>
+          </div>
+          <div className="flex gap-3">
+            <dt className="text-muted w-24 flex-shrink-0">Email</dt>
+            <dd className="text-text font-medium">{system?.email ?? 'Not found'}</dd>
+          </div>
+          {system?.description && (
+            <div className="flex gap-3">
+              <dt className="text-muted w-24 flex-shrink-0">About</dt>
+              <dd className="text-text">{system.description}</dd>
+            </div>
+          )}
+        </dl>
+      </section>
+
+      <hr className="border-border/30" />
+
+      {/* ── Data Import / Export ─────────────────────────────────── */}
+      <section id="data" className="card p-6 scroll-mt-6" aria-labelledby="settings-data-heading">
+        <h2 id="settings-data-heading" className="text-lg font-semibold text-text mb-1">Data</h2>
+        <p className="text-muted text-sm mb-5">
           Export all your system data as a JSON file, or import members from a JSON file.
         </p>
 
@@ -265,12 +281,12 @@ export default function SettingsClient({ system }: { system: SettingsSystem | nu
           </div>
         </section>
 
-        <div className="flex flex-wrap gap-3">
+        <div className="flex flex-wrap gap-3 mt-5">
           <button
             type="button"
             onClick={handleExport}
             disabled={exporting || importing}
-            className="btn-primary min-w-[132px] justify-center"
+            className="btn-ghost border border-border min-w-[132px] justify-center"
           >
             {exporting ? 'Exporting...' : 'Download export'}
           </button>
@@ -293,18 +309,22 @@ export default function SettingsClient({ system }: { system: SettingsSystem | nu
         </div>
 
         {status && (
-          <p
-            className={`text-sm mt-3 ${
-              status.type === 'success'
-                ? 'text-success'
-                : status.type === 'error'
-                  ? 'text-error'
-                  : 'text-muted'
-            }`}
-            role={status.type === 'error' ? 'alert' : 'status'}
-          >
-            {status.message}
-          </p>
+          <>
+            <div aria-live="polite" aria-atomic="true">
+              {status.type !== 'error' && (
+                <p role="status" className={`text-sm mt-3 ${status.type === 'success' ? 'text-success' : 'text-muted'}`}>
+                  {status.message}
+                </p>
+              )}
+            </div>
+            <div aria-live="assertive" aria-atomic="true">
+              {status.type === 'error' && (
+                <p role="alert" className="text-sm mt-3 text-error">
+                  {status.message}
+                </p>
+              )}
+            </div>
+          </>
         )}
 
         {lastImportSummary && (
@@ -321,15 +341,20 @@ export default function SettingsClient({ system }: { system: SettingsSystem | nu
             </dl>
           </section>
         )}
-      </div>
+      </section>
 
-      <div className="card p-6">
-        <h2 className="text-lg font-semibold text-text mb-2">About Solara Plural</h2>
+      <hr className="border-border/30" />
+
+      {/* ── About ───────────────────────────────────────────────── */}
+      <section className="card p-6" aria-labelledby="settings-about-heading">
+        <h2 id="settings-about-heading" className="text-lg font-semibold text-text mb-2">
+          About Solara Plural
+        </h2>
         <p className="text-muted text-sm">
           A warm, open-source space for plural systems. Built with care.
         </p>
-        <p className="text-subtle text-xs mt-2">v0.1.0 - MVP alpha</p>
-      </div>
+        <p className="text-subtle text-xs mt-2">v0.1.0 — MVP alpha</p>
+      </section>
     </div>
   );
 }
@@ -379,7 +404,6 @@ function SettingsToggle({
 }: SettingsToggleProps) {
   return (
     <label
-      htmlFor={id}
       className={`group flex w-full items-start justify-between gap-3 rounded-lg border border-border-soft bg-surface/40 px-3 transition-all duration-150 ${
         compact ? 'py-2' : 'py-2.5'
       } ${
@@ -400,19 +424,31 @@ function SettingsToggle({
         {description && <span className="mt-1 block text-xs text-muted">{description}</span>}
       </span>
 
-      <span className="relative inline-flex h-11 min-w-11 items-center justify-center">
-        <input
-          id={id}
-          type="checkbox"
-          className="peer sr-only"
-          checked={checked}
-          onChange={(event) => onChange(event.target.checked)}
-          disabled={disabled}
-        />
-        <span className="relative inline-flex h-6 w-11 items-center rounded-full border border-border bg-surface-alt transition-colors duration-150 peer-checked:border-primary/60 peer-checked:bg-primary-soft/50 peer-focus-visible:ring-2 peer-focus-visible:ring-primary/60 peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-bg">
-          <span className="absolute left-0.5 h-5 w-5 rounded-full bg-text-subtle shadow-sm transition-transform duration-150 peer-checked:translate-x-5 peer-checked:bg-primary-glow" />
+      <button
+        id={id}
+        type="button"
+        role="switch"
+        aria-checked={checked}
+        aria-label={label}
+        disabled={disabled}
+        onClick={() => onChange(!checked)}
+        className="relative inline-flex h-11 min-w-11 items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2 focus-visible:ring-offset-bg rounded-full"
+      >
+        <span
+          className={`relative inline-flex h-6 w-11 items-center rounded-full border transition-colors duration-150 ${
+            checked
+              ? 'border-primary/60 bg-primary-soft/50'
+              : 'border-border bg-surface-alt'
+          }`}
+          aria-hidden="true"
+        >
+          <span
+            className={`absolute left-0.5 h-5 w-5 rounded-full shadow-sm transition-transform duration-150 ${
+              checked ? 'translate-x-5 bg-primary-glow' : 'translate-x-0 bg-text'
+            }`}
+          />
         </span>
-      </span>
+      </button>
     </label>
   );
 }

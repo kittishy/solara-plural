@@ -42,3 +42,8 @@ next-env.d.ts
 *.db
 *.sqlite
 
+# local skills (agent reference, not for git)
+/.skills/
+
+
+.vercel

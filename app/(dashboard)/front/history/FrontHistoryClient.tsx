@@ -141,7 +141,14 @@ export default function FrontHistoryClient({
       {/* Page header */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-4">
-          <Link href="/front" aria-label="Back to front tracker" className="btn-ghost border border-border/60 hover:border-border hover:bg-surface-alt transition-colors px-4 py-2 min-h-[44px] rounded-lg text-sm font-medium">← Front</Link>
+          <Link
+            href="/front"
+            aria-label="Back to current front"
+            className="inline-flex min-h-[44px] items-center gap-2 rounded-full border border-border/60 bg-surface/70 px-4 py-2 text-sm font-medium text-muted transition-colors hover:border-primary/40 hover:bg-surface-alt hover:text-text"
+          >
+            <span aria-hidden="true">?</span>
+            Current front
+          </Link>
           <div>
             <h1 className="text-2xl font-bold text-text tracking-tight">Front History</h1>
             <p className="text-sm text-muted mt-0.5">{history.length} entries recorded</p>
@@ -331,3 +338,4 @@ export default function FrontHistoryClient({
     </div>
   );
 }
+

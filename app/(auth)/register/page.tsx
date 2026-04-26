@@ -64,14 +64,18 @@ export default function RegisterPage() {
     <div className="w-full max-w-md animate-fade-in">
       {/* Logo / Header */}
       <div className="text-center mb-8">
-        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/20 mb-4">
-          <span className="text-3xl">☀️</span>
+        <div className="inline-flex items-center justify-center relative mb-4">
+          {/* Outer pulse ring */}
+          <span className="absolute inset-0 rounded-full bg-primary/10 animate-pulse-ring" aria-hidden="true" />
+          <div className="relative inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/15 shadow-glow">
+            <span className="text-3xl">☀️</span>
+          </div>
         </div>
         <h1 className="text-3xl font-bold text-text">Solara Plural</h1>
         <p className="text-muted mt-2 text-sm">Create your system account 💜</p>
       </div>
 
-      <div className="card p-8">
+      <div className="card p-8 animate-slide-up" style={{ animationDelay: '80ms' }}>
         <h2 className="text-xl font-semibold text-text mb-6">New system account</h2>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -131,7 +135,10 @@ export default function RegisterPage() {
           </div>
 
           {error && (
-            <p className="text-error text-sm bg-error/10 border border-error/20 rounded-xl px-3 py-2">
+            <p
+              role="alert"
+              className="text-error text-sm bg-error/10 border border-error/20 rounded-xl px-3 py-2"
+            >
               {error}
             </p>
           )}
@@ -139,11 +146,11 @@ export default function RegisterPage() {
           <button
             type="submit"
             disabled={loading}
-            className="btn-primary w-full justify-center mt-2"
+            className="btn-primary w-full justify-center mt-2 min-h-[48px] text-base"
           >
             {loading ? (
               <span className="flex items-center gap-2">
-                <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+                <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
                 </svg>
@@ -156,7 +163,9 @@ export default function RegisterPage() {
 
       <p className="text-center text-muted text-sm mt-6">
         Already have an account?{' '}
-        <Link href="/login" className="text-primary hover:underline">Sign in</Link>
+        <Link href="/login" className="text-primary hover:text-primary-glow transition-colors duration-150">
+          Sign in
+        </Link>
       </p>
 
       <p className="text-center text-subtle text-xs mt-3">

@@ -190,7 +190,7 @@ Keep current stack:
 - Next.js App Router on Vercel.
 - Turso/libSQL plus Drizzle.
 - Auth.js/NextAuth.
-- Tailwind with existing `docs/DESIGN.md` tokens.
+- Tailwind with existing `docs/PROJECT_STYLE_GUIDE.md` tokens.
 
 Borrow Sheaf's architectural habits, not its stack:
 
@@ -215,7 +215,7 @@ Borrow Sheaf's architectural habits, not its stack:
 ## Source Links
 
 - Sheaf README: https://github.com/sheaf-project/sheaf
-- Sheaf client guide: https://github.com/sheaf-project/sheaf/blob/main/docs/CLIENT_DESIGN.md
+- Sheaf client guide: https://github.com/sheaf-project/sheaf/blob/main/docs/CLIENT_PROJECT_STYLE_GUIDE.md
 - Sheaf self-hosting guide: https://github.com/sheaf-project/sheaf/blob/main/docs/SELFHOSTING.md
 - Sheaf FAQ: https://github.com/sheaf-project/sheaf/blob/main/FAQ.md
 - PluralKit: https://pluralkit.me/
@@ -226,3 +226,4 @@ Borrow Sheaf's architectural habits, not its stack:
 - Plural Star Desktop: https://github.com/TheHanyou/Plural-Star-Desktop
 - SElves: https://github.com/moumoum0/SElves
 - imPlural discussion: https://www.reddit.com/r/plural/comments/1s7kgyj/implural_system_tracker_for_plurals_and_friends/
+

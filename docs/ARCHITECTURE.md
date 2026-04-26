@@ -132,7 +132,7 @@ solara-plural/
 │   ├── MASTER_CONTEXT.md
 │   ├── DECISIONS.md
 │   ├── ARCHITECTURE.md
-│   ├── DESIGN.md
+│   ├── PROJECT_STYLE_GUIDE.md
 │   ├── ROADMAP.md
 │   ├── CHANGELOG.md
 │   ├── DATA_MODEL.md
@@ -223,3 +223,4 @@ Solara should borrow architecture habits, not external implementation code:
 - Keep `systemId` session-derived in every route.
 - Plan custom fields, groups/subsystems, and privacy labels as first-class data model extensions.
 - Avoid copying AGPL source code from Sheaf or PluralKit into this codebase without an explicit license decision.
+

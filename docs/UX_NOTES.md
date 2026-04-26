@@ -1,7 +1,7 @@
 # UX_NOTES.md — Solara Plural
 
 > UX principles, patterns, and notes for Solara Plural.
-> Read alongside DESIGN.md before building any UI.
+> Read alongside PROJECT_STYLE_GUIDE.md before building any UI.
 
 ---
 
@@ -82,6 +82,11 @@ Error messages are human and kind:
 
 - Touch targets: minimum 44×44px
 - Bottom nav (not sidebar) on mobile
+- Keep bottom nav to the primary 3-5 destinations and avoid visual weight that competes with page content
+- Let Home behave as a mobile navigation/action page when the app has multiple important destinations
+- Prefer one primary task per mobile screen; move supporting details below or into a secondary section
+- Use larger readable text on mobile instead of shrinking content to fit more at once
+- Avoid double-nesting cards on mobile; use spacing, dividers, or plain sections when grouping is enough
 - Swipe-to-go-back respected
 - Modal sheets (bottom sheet) on mobile instead of centered modals
 - Font size minimum 16px for inputs (prevents iOS zoom)
@@ -123,6 +128,12 @@ These interactions deserve extra care:
 - Import/export actions must show inline progress and inline results; no alert-only feedback
 - Failed import/export actions must always return controls to an enabled state
 
+### Writing notes
+- Notes can be written during memory gaps, stress, or front switches; never silently lose text
+- Note editors should keep a local draft when possible and warn before accidental page unload
+- Save failures must reassure the user that their text is still present
+- Use gentle prompts as optional support, not instructions or clinical framing
+
 ### Editing front history
 - Must be possible after the fact because users may have memory gaps
 - Allow start/end time edits without shame language
@@ -157,3 +168,5 @@ From Sheaf, PluralKit, PluralSpace, Plural Star, SElves, and imPlural research:
 - Dark mode, reduced motion, text size, contrast, and low sensory load belong in the product foundation.
 - Friend sharing is important, but dangerous without privacy labels and clear trust boundaries.
 - Avoid gatekeeping language. Some users use clinical terms; others do not. The UI should not force either.
+
+

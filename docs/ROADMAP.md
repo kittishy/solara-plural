@@ -16,7 +16,7 @@
 
 ### Phase 0: Project Setup
 - [x] Architecture decision (Turso + Drizzle + NextAuth)
-- [x] Design system (DESIGN.md)
+- [x] Design system (PROJECT_STYLE_GUIDE.md)
 - [x] Documentation setup
 - [ ] Initialize Next.js 14 project
 - [ ] Configure Tailwind CSS with design tokens
@@ -46,14 +46,15 @@
 - [ ] Member avatar (color + initials)
 
 ### Phase 4: Front Tracking
-- [ ] Current front display (dashboard)
-- [ ] Start/end front entry
-- [ ] Multiple members in front simultaneously
+- [x] Current front display (dashboard)
+- [x] Start/end front entry
+- [x] Multiple members in front simultaneously
 - [x] Front history page
 - [x] Front history entry component
 
 - [x] Edit front history entries after the fact
 - [x] Add retroactive front entries
+- [x] Searchable member picker for front selection
 - [ ] Preserve ordered fronters where relevant
 
 ### Phase 5: Notes
@@ -93,7 +94,6 @@
 - [ ] Tags/groups for members
 - [ ] Groups/subsystems with nesting plan
 - [ ] Member search and filter
-- [ ] Searchable member picker for front selection
 - [ ] Note search
 - [ ] Front tracker: add note to entry
 - [ ] Front tiers: primary, co-front, co-conscious
@@ -136,3 +136,4 @@
 See IDEAS.md for the full backlog of feature ideas.
 
 ---
+

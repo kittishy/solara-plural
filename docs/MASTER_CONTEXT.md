@@ -110,7 +110,7 @@ SystemNote {
 
 ## 10. Agent Operations
 - Always use skills and agents
-- Consult MASTER_CONTEXT.md and DESIGN.md before every decision
+- Consult MASTER_CONTEXT.md and PROJECT_STYLE_GUIDE.md before every decision
 - Document everything in: DECISIONS.md, ROADMAP.md, CHANGELOG.md, ARCHITECTURE.md, UX_NOTES.md, DATA_MODEL.md, IDEAS.md, KNOWN_ISSUES.md
 - Preserve the soul of Simply Plural: warmth, accessibility, humanity, privacy
 - External reference research is tracked in REFERENCE_RESEARCH.md. Use it before adding features inspired by Sheaf, PluralKit, PluralSpace, Plural Star, SElves, or imPlural.
@@ -118,7 +118,7 @@ SystemNote {
 
 ## 11. Critical Rules for All Agents
 1. ALWAYS consult MASTER_CONTEXT.md before any decision
-2. ALWAYS consult DESIGN.md before any UI decision — it already exists, DO NOT create it
+2. ALWAYS consult PROJECT_STYLE_GUIDE.md before any UI decision — it already exists, DO NOT create it
 3. Document every significant decision in the appropriate .md file
 4. Never build cold, clinical UI — this is a warm, human, safe space
 5. Prioritize accessibility and mobile experience
@@ -126,12 +126,12 @@ SystemNote {
 7. Every feature must serve the plural community's real needs
 
 ## 12. Design System Rules (CRITICAL)
-- The file `DESIGN.md` at the project root is the ONLY design source of truth
+- The file `PROJECT_STYLE_GUIDE.md` at the project root is the ONLY design source of truth
 - It follows the `design-md` skill format — load that skill to understand the format
-- NEVER generate a new `DESIGN.md`. If you are about to create one, STOP and read the existing file
-- NEVER overwrite `DESIGN.md` with a generic template — the real system design is already there
-- To add design tokens or patterns, EDIT the existing DESIGN.md file
-- Workflow before any UI task: (1) load `design-md` skill, (2) read `DESIGN.md`, (3) build UI
+- NEVER generate a new `PROJECT_STYLE_GUIDE.md`. If you are about to create one, STOP and read the existing file
+- NEVER overwrite `PROJECT_STYLE_GUIDE.md` with a generic template — the real system design is already there
+- To add design tokens or patterns, EDIT the existing PROJECT_STYLE_GUIDE.md file
+- Workflow before any UI task: (1) load `design-md` skill, (2) read `PROJECT_STYLE_GUIDE.md`, (3) build UI
 
 ## 13. Reference-informed Direction
 - Sheaf is the strongest architecture and privacy reference, but Solara must not copy Sheaf code or inherit AGPL obligations accidentally.
@@ -139,3 +139,4 @@ SystemNote {
 - Borrow patterns: privacy honesty, import/export as core, custom fields, groups/subsystems, account deletion, API clarity, and trust-model documentation.
 - Do not claim end-to-end encryption with the current server-backed architecture.
 - The first public-facing path should be small and reliable, not a large hosted community platform.
+

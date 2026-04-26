@@ -13,7 +13,7 @@
 - **Middleware performance** - split Auth.js config so Edge middleware no longer imports bcrypt/database credential code; production middleware size dropped from 125 kB to 78.9 kB
 - **Export safety** - `/api/export` now returns a JSON `404` if the session has no matching system row instead of throwing while building the export
 - **Next config support** - consolidated configuration into supported `next.config.mjs` and removed the unsupported `next.config.ts`
-- **Member cards now show "IN FRONT" indicator** — pulsing pink dot + "IN FRONT" text per DESIGN.md spec; active front fetched once per page using a `Set` for O(1) per-card lookup; fronting cards also gain `border-front/40 shadow-front-glow` styling
+- **Member cards now show "IN FRONT" indicator** — pulsing pink dot + "IN FRONT" text per PROJECT_STYLE_GUIDE.md spec; active front fetched once per page using a `Set` for O(1) per-card lookup; fronting cards also gain `border-front/40 shadow-front-glow` styling
 - **Dashboard notes count** — stats card now shows real total note count via `db.$count()` instead of the length of the 3-item preview fetch
 - **`app/page.tsx` route conflict** — the default Next.js scaffold page was intercepting the `/` route before `app/(dashboard)/page.tsx`; removed `app/page.tsx` entirely since route groups do not affect URL structure and `(dashboard)/page.tsx` correctly owns `/`
 - **Member profile front history** — added "Front history" section to `members/[id]/page.tsx`; queries last 10 front entries where this member's ID appears in `memberIds` using SQLite `LIKE`; shows date, time range, duration badge, note (if any), pulsing "Now" indicator for active sessions, warm empty state
@@ -40,6 +40,13 @@
 - `scripts/cleanup-dupes.cjs` now defaults to dry-run and requires `--apply` before deleting rows
 - Front-history note rendering now escapes quote characters for ESLint compliance
 - Front history page now loads through a dedicated client editor component
+- Front tracker now uses a dashboard-style flow with searchable member picker, selected-member summary, and clearer session actions for mobile and desktop
+- Mobile bottom navigation now uses a glassmorphism shell and animated active bubble to improve transition feel between sections
+- Mobile dashboard now acts as a navigation/action hub with larger touch targets, clearer first-screen actions, and less dense stacked content
+- Front tracker mobile hierarchy was refined around a single primary task: choose members, review selected chips, then start or switch front
+- Notes editor now separates title/body more clearly, keeps local drafts, warns before accidental unload, and shows save/error status for safer use during switches or dissociation
+- Sidebar personalization now uses system-centered language, offers more symbols, and exposes useful system shortcuts instead of generic brand actions
+- Front empty state and front-history back navigation now use clearer accessible language and intentional visual affordances
 
 ### Security
 - Documented `npm audit --omit=dev` production vulnerabilities in Next.js 14 as a separate upgrade-planning issue instead of applying a breaking Next 16 force upgrade
@@ -47,7 +54,7 @@
 - MASTER_CONTEXT.md — source of truth document
 - DECISIONS.md — architectural decisions (D001–D007)
 - ARCHITECTURE.md — full system architecture with folder structure
-- DESIGN.md — complete design system (colors, typography, components)
+- PROJECT_STYLE_GUIDE.md — complete design system (colors, typography, components)
 - ROADMAP.md — MVP and future roadmap
 - DATA_MODEL.md — database schema documentation
 - IDEAS.md — future feature ideas
@@ -70,3 +77,4 @@
 - Working directory established: `F:\Solara\coding\Solara Plural`
 
 ---
+

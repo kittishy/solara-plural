@@ -58,6 +58,12 @@ const config: Config = {
         'pulse-soft': 'pulse 2s ease-in-out infinite',
         'fade-in':    'fadeIn 200ms ease',
       },
+      transitionDuration: {
+        '0':   '0ms',
+        '150': '150ms',
+        '200': '200ms',
+        '300': '300ms',
+      },
       keyframes: {
         fadeIn: {
           from: { opacity: '0', transform: 'scale(0.97)' },

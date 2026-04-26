@@ -25,7 +25,7 @@ The project is inspired by Simply Plural and informed by open projects like Shea
 Project context lives in `docs/`. Start here before changing product, UI, data, auth, or deployment behavior:
 
 - `docs/MASTER_CONTEXT.md`
-- `docs/DESIGN.md`
+- `docs/PROJECT_STYLE_GUIDE.md`
 - `docs/ARCHITECTURE.md`
 - `docs/DATA_MODEL.md`
 - `docs/DECISIONS.md`
@@ -35,7 +35,7 @@ Project context lives in `docs/`. Start here before changing product, UI, data, 
 - `docs/KNOWN_ISSUES.md`
 - `docs/CHANGELOG.md`
 
-`docs/DESIGN.md` is the design source of truth. Do not replace it with a generic design template.
+`docs/PROJECT_STYLE_GUIDE.md` is the design source of truth. Do not replace it with a generic design template.
 
 ---
 
@@ -127,3 +127,4 @@ Core promises to preserve:
 ## Documentation Rule
 
 Every meaningful product, architecture, data, privacy, deployment, or UX decision must update the relevant file in `docs/` so future sessions do not lose context.
+

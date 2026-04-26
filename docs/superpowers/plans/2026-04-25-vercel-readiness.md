@@ -19,7 +19,7 @@
 
 - [x] **Step 1: Add manifest file**
 
-Create `public/manifest.json` with Solara-specific name, short name, colors from `docs/DESIGN.md`, and `/favicon.ico` icon references.
+Create `public/manifest.json` with Solara-specific name, short name, colors from `docs/PROJECT_STYLE_GUIDE.md`, and `/favicon.ico` icon references.
 
 - [x] **Step 2: Verify manifest reference**
 
@@ -117,3 +117,4 @@ Run: `npm run build`
 - [x] **Step 4: Review git diff**
 
 Run: `git diff -- README.md next.config.mjs package.json package-lock.json .eslintrc.json public/manifest.json scripts/cleanup-dupes.cjs scripts/cleanup-dupes.test.cjs docs`
+
