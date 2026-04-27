@@ -110,7 +110,7 @@ export default function LoginPage() {
       <p className="text-center text-muted text-sm mt-6">
         New here?{' '}
         <Link href="/register" className="text-primary hover:text-primary-glow transition-colors duration-150">
-          Create a system account
+          Create a system or singlet account
         </Link>
       </p>
 

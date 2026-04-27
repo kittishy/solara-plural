@@ -35,6 +35,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           id: system.id,
           name: system.name,
           email: system.email,
+          accountType: system.accountType === 'singlet' ? 'singlet' : 'system',
         };
       },
     }),

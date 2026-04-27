@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 
-const CRITICAL_ROUTES = ['/', '/front', '/members', '/notes', '/settings'] as const;
+const CRITICAL_ROUTES = ['/', '/front', '/members', '/notes', '/friends', '/settings'] as const;
 
 export function DashboardPrefetch() {
   const router = useRouter();

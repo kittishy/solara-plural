@@ -220,3 +220,95 @@ Do not add this before:
 - Export remains reliable
 - Privacy labels are clear in the UI
 - Sharing is opt-in and reversible
+
+---
+
+## 2026-04-27 Data Model Update (Implemented)
+
+### Account Type Extension
+- `systems.accountType` added with default `system`.
+- Allowed values in current implementation: `system`, `singlet`.
+
+### New Social Tables
+
+#### system_friend_requests
+- `id` (PK)
+- `senderSystemId` (FK -> systems.id)
+- `receiverSystemId` (FK -> systems.id)
+- `status` (`pending` | `accepted` | `declined` | `canceled`)
+- `message` (nullable)
+- `createdAt`
+- `respondedAt` (nullable)
+
+Indexes:
+- `idx_friend_requests_sender_system_id`
+- `idx_friend_requests_receiver_system_id`
+- `idx_friend_requests_status`
+
+#### system_friendships
+- `id` (PK)
+- `systemAId` (FK -> systems.id)
+- `systemBId` (FK -> systems.id)
+- `createdAt`
+
+Constraints:
+- Canonical pair order at application layer (`systemAId < systemBId`)
+- Unique pair index: `ux_friendships_pair(systemAId, systemBId)`
+
+### Export Format Update
+- Export JSON moved to `version: 2`.
+- `system.accountType` is now included.
+- New `social` payload included:
+  - `social.friendRequests`
+  - `social.friendships`
+
+### Notes
+- This keeps one account table (`systems`) while enabling both plural-system and singlet onboarding.
+- Singlet accounts can self-upgrade to system via settings/API.
+
+## 2026-04-27 Data Model Update (Safety + Sharing)
+
+### Additional Social Tables
+
+#### system_blocks
+- `id` (PK)
+- `blockerSystemId` (FK -> systems.id)
+- `blockedSystemId` (FK -> systems.id)
+- `createdAt`
+
+Indexes and constraints:
+- `idx_system_blocks_blocker_system_id`
+- `idx_system_blocks_blocked_system_id`
+- `ux_system_blocks_pair(blockerSystemId, blockedSystemId)`
+
+Notes:
+- Directional model (A blocks B is distinct from B blocks A).
+- Used to prevent invites and acceptance while blocked.
+
+#### system_friend_member_shares
+- `id` (PK)
+- `ownerSystemId` (FK -> systems.id)
+- `friendSystemId` (FK -> systems.id)
+- `memberId` (FK -> members.id)
+- `visibility` (`hidden` | `profile` | `full`)
+- `fieldVisibility` (DB column `field_visibility`, nullable JSON string)
+- `createdAt`
+- `updatedAt`
+
+Notes:
+- `field_visibility` stores field-level toggles for shared member data.
+- Current field keys: `pronouns`, `description`, `avatarUrl`, `color`, `role`, `tags`, `notes`.
+
+Indexes and constraints:
+- `idx_friend_member_shares_owner_friend`
+- `idx_friend_member_shares_member_id`
+- `ux_friend_member_shares_owner_friend_member(ownerSystemId, friendSystemId, memberId)`
+
+### Export Format Update
+- Export JSON is now `version: 3`.
+- `social` now includes:
+  - `friendRequests`
+  - `friendships`
+  - `blocks`
+  - `memberSharing`
+- `social.memberSharing` rows include `visibility` plus optional `fieldVisibility` JSON for per-field sharing.

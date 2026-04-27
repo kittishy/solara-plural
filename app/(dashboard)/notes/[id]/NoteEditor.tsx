@@ -144,14 +144,6 @@ export default function NoteEditor({ note }: Props) {
           />
         </div>
 
-        <div className="border-b border-border/40 px-5 py-3">
-          <div className="flex flex-wrap gap-2 text-xs text-muted">
-            <span className="rounded-full border border-border/60 bg-surface-alt/50 px-2.5 py-1">Private note</span>
-            <span className="rounded-full border border-border/60 bg-surface-alt/50 px-2.5 py-1">Local draft</span>
-            <span className="rounded-full border border-border/60 bg-surface-alt/50 px-2.5 py-1">Editable later</span>
-          </div>
-        </div>
-
         <div className="px-5 py-4">
           <label htmlFor="note-content" className="mb-3 block text-sm font-medium text-muted">
             Note body

@@ -224,3 +224,78 @@ Solara should borrow architecture habits, not external implementation code:
 - Plan custom fields, groups/subsystems, and privacy labels as first-class data model extensions.
 - Avoid copying AGPL source code from Sheaf or PluralKit into this codebase without an explicit license decision.
 
+
+---
+
+## 2026-04-27 Architecture Update: Friends + Account Types
+
+### Auth/session changes
+- Credentials login still authenticates against `systems`.
+- JWT/session now include `accountType` (`system` or `singlet`) in addition to `systemId`.
+- Registration accepts account type and stores it on the account.
+
+### New API surfaces
+- `PUT /api/account/type`
+  - Self-service account type update (used for `singlet -> system` upgrade).
+- `GET /api/friends`
+  - Lists connected friends, incoming requests, outgoing requests.
+- `POST /api/friends`
+  - Sends invite by email and supports auto-accept when opposite pending request already exists.
+- `POST /api/friends/requests/[id]`
+  - Accept, decline, or cancel friend request.
+
+### New dashboard surface
+- `/(dashboard)/friends`
+  - Warm, consent-first social UI for invites and friend management.
+- Sidebar and mobile navigation now include `Friends`.
+- Dashboard prefetch now includes `/friends`.
+
+### Data portability changes
+- Export route now includes:
+  - `system.accountType`
+  - `social.friendRequests`
+  - `social.friendships`
+
+### Philanthropic UX intent
+- The social flow intentionally supports both plural systems and singlet friends.
+- Singlet onboarding remains simpler while preserving easy self-identification upgrades.
+
+## 2026-04-27 Architecture Update: Safety + Sharing Layer
+
+### New social safety routes
+- `DELETE /api/friends/[friendSystemId]`:
+  - Explicit unfriend operation.
+  - Removes sharing rows for the friend pair.
+- `POST /api/friends/blocks` and `DELETE /api/friends/blocks/[blockedSystemId]`:
+  - Directional blocking.
+  - Blocking transaction removes friendship, pending requests, and sharing links for that pair.
+
+### New sharing routes
+- `GET /api/friends/sharing/[friendSystemId]`:
+  - Returns owner-member visibility matrix for one connected friend.
+  - Includes `fieldVisibility` per member for field-level sharing control.
+- `PUT /api/friends/sharing/[friendSystemId]`:
+  - Updates one member visibility (`hidden`, `profile`, `full`).
+  - Accepts optional `fieldVisibility` payload (`pronouns`, `description`, `avatarUrl`, `color`, `role`, `tags`, `notes`).
+  - Enforces ownership (`member.systemId === auth.systemId`).
+
+### Friends sharing UI behavior
+- `FriendsClient` exposes per-member sharing controls with:
+  - Visibility level select (`hidden`, `profile`, `full`)
+  - Field-level toggles mapped to `fieldVisibility` for non-hidden members
+- UI updates are persisted through `PUT /api/friends/sharing/[friendSystemId]`.
+
+### Runtime invariants
+- Invites are rejected when either side is blocked.
+- Friend-request acceptance is rejected when either side is blocked.
+- Sharing requires active friendship and no block in either direction.
+
+### Validation workflow used
+- Applied DB migrations against configured Turso target with `npm run db:migrate`.
+- Executed real two-account social flow via `scripts/validate-friends-flow.cjs` against local server.
+
+### Maintenance workflow used
+- Added validation-account cleanup script: `scripts/cleanup-validation-data.cjs`.
+- `npm run cleanup:validation` runs dry-run lookup for validation accounts (`alpha.*@example.com`, `beta.*@example.com`).
+- `npm run cleanup:validation:apply` deletes matched validation accounts.
+- Script behavior is covered by `scripts/cleanup-validation-data.test.cjs`.

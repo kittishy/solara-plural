@@ -4,6 +4,14 @@ import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { signOut } from 'next-auth/react';
+import {
+  applySolaraTheme,
+  DEFAULT_SOLARA_THEME,
+  persistSolaraTheme,
+  readStoredSolaraTheme,
+  SOLARA_THEMES,
+  type SolaraThemeId,
+} from '@/lib/theme';
 
 type IconProps = { size?: number };
 
@@ -60,6 +68,19 @@ function IconNotes({ size = 18 }: IconProps) {
   );
 }
 
+function IconFriends({ size = 18 }: IconProps) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M16 11c1.66 0 3-1.79 3-4s-1.34-4-3-4-3 1.79-3 4 1.34 4 3 4Z" />
+      <path d="M8 11c1.66 0 3-1.79 3-4S9.66 3 8 3 5 4.79 5 7s1.34 4 3 4Z" />
+      <path d="M8 13c-3 0-5 1.8-5 4v2h7" />
+      <path d="M16 13c3 0 5 1.8 5 4v2h-7" />
+      <path d="M12 15v6" />
+      <path d="M9 18h6" />
+    </svg>
+  );
+}
+
 function IconSettings({ size = 18 }: IconProps) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -85,6 +106,7 @@ const navItems = [
   { href: '/front', label: 'Front', Icon: IconFront },
   { href: '/front/history', label: 'Front history', Icon: IconCalendar },
   { href: '/notes', label: 'Notes', Icon: IconNotes },
+  { href: '/friends', label: 'Friends', Icon: IconFriends },
   { href: '/settings', label: 'Settings', Icon: IconSettings },
 ];
 
@@ -99,6 +121,7 @@ export function Sidebar({ systemName }: SidebarProps) {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
   const [sidebarSymbol, setSidebarSymbol] = useState<string>('☀️');
+  const [selectedTheme, setSelectedTheme] = useState<SolaraThemeId>(DEFAULT_SOLARA_THEME);
   const brandMenuRef = useRef<HTMLDivElement | null>(null);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
 
@@ -111,6 +134,10 @@ export function Sidebar({ systemName }: SidebarProps) {
     } catch {
       // Local storage is optional.
     }
+
+    const theme = readStoredSolaraTheme();
+    setSelectedTheme(theme);
+    applySolaraTheme(theme);
   }, []);
 
   useEffect(() => {
@@ -145,10 +172,16 @@ export function Sidebar({ systemName }: SidebarProps) {
     }
   }
 
+  function setTheme(themeId: SolaraThemeId) {
+    setSelectedTheme(themeId);
+    applySolaraTheme(themeId);
+    persistSolaraTheme(themeId);
+  }
+
   return (
     <aside
       className="hidden md:flex fixed left-0 top-0 z-10 min-h-dvh w-60 flex-col border-r border-border/40"
-      style={{ background: 'linear-gradient(180deg, #231d33 0%, #1f1a2e 100%)' }}
+      style={{ background: 'linear-gradient(180deg, var(--theme-surface) 0%, var(--theme-bg) 100%)' }}
     >
       <div ref={brandMenuRef} className="relative border-b border-border/40 px-4 py-4">
         <button
@@ -194,19 +227,32 @@ export function Sidebar({ systemName }: SidebarProps) {
               </div>
             </div>
 
-            <div className="space-y-1">
-              <p className="px-2 text-xs font-medium text-muted">System shortcuts</p>
-              <Link href="/settings" className="block rounded-lg px-2 py-1.5 text-sm text-text transition-colors hover:bg-surface" onClick={() => setMenuOpen(false)}>
-                System settings
-              </Link>
-              <Link href="/settings#data" className="block rounded-lg px-2 py-1.5 text-sm text-muted transition-colors hover:bg-surface hover:text-text" onClick={() => setMenuOpen(false)}>
-                Import and export data
-              </Link>
-              <Link href="/notes/new" className="block rounded-lg px-2 py-1.5 text-sm text-muted transition-colors hover:bg-surface hover:text-text" onClick={() => setMenuOpen(false)}>
-                New note
-              </Link>
-              <Link href="/front" className="block rounded-lg px-2 py-1.5 text-sm text-muted transition-colors hover:bg-surface hover:text-text" onClick={() => setMenuOpen(false)}>
-                Current front
+            <div>
+              <p className="mb-2 px-2 text-xs font-medium text-muted">Theme preset</p>
+              <div className="space-y-1">
+                {SOLARA_THEMES.map((theme) => (
+                  <button
+                    key={theme.id}
+                    type="button"
+                    onClick={() => setTheme(theme.id)}
+                    className={`w-full rounded-lg border px-2 py-1.5 text-left transition-colors ${
+                      selectedTheme === theme.id
+                        ? 'border-primary/50 bg-primary/10 text-text'
+                        : 'border-border bg-surface text-muted hover:bg-surface-alt hover:text-text'
+                    }`}
+                    aria-pressed={selectedTheme === theme.id}
+                  >
+                    <span className="block text-sm font-medium">{theme.label}</span>
+                    <span className="block text-xs opacity-80">{theme.description}</span>
+                  </button>
+                ))}
+              </div>
+              <Link
+                href="/settings#appearance"
+                className="mt-2 block rounded-lg px-2 py-1.5 text-xs text-muted transition-colors hover:bg-surface hover:text-text"
+                onClick={() => setMenuOpen(false)}
+              >
+                Open appearance settings
               </Link>
             </div>
           </div>

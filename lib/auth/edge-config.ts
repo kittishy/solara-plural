@@ -6,6 +6,7 @@ export const authConfig = {
     async jwt({ token, user }) {
       if (user) {
         token.systemId = user.id;
+        token.accountType = user.accountType === 'singlet' ? 'singlet' : 'system';
       }
       return token;
     },
@@ -13,6 +14,7 @@ export const authConfig = {
       if (token.systemId) {
         session.user.id = token.systemId as string;
       }
+      session.user.accountType = (token.accountType as 'system' | 'singlet' | undefined) ?? 'system';
       return session;
     },
   },

@@ -3,31 +3,145 @@
 @tailwind utilities;
 
 :root {
-  --color-bg: #1a1625;
-  --color-surface: #231d33;
-  --color-surface-alt: #2d2640;
-  --color-border: #3d3454;
-  --color-text: #e8e0f0;
-  --color-muted: #9d91b5;
-  --color-primary: #a78bfa;
-  --color-front: #f9a8d4;
+  --theme-bg: #1a1625;
+  --theme-bg-rgb: 26 22 37;
+  --theme-surface: #231d33;
+  --theme-surface-rgb: 35 29 51;
+  --theme-surface-alt: #2d2640;
+  --theme-surface-alt-rgb: 45 38 64;
+  --theme-border: #3d3454;
+  --theme-border-rgb: 61 52 84;
+  --theme-border-soft: #2d2640;
+  --theme-border-soft-rgb: 45 38 64;
+  --theme-text: #e8e0f0;
+  --theme-text-rgb: 232 224 240;
+  --theme-muted: #9d91b5;
+  --theme-muted-rgb: 157 145 181;
+  --theme-subtle: #6b5f85;
+  --theme-subtle-rgb: 107 95 133;
+  --theme-primary: #a78bfa;
+  --theme-primary-rgb: 167 139 250;
+  --theme-primary-soft: #7c3aed;
+  --theme-primary-soft-rgb: 124 58 237;
+  --theme-primary-glow: #c4b5fd;
+  --theme-primary-glow-rgb: 196 181 253;
+  --theme-front: #f9a8d4;
+  --theme-front-rgb: 249 168 212;
+  --theme-front-soft: #831843;
+  --theme-front-soft-rgb: 131 24 67;
+
+  --color-bg: var(--theme-bg);
+  --color-surface: var(--theme-surface);
+  --color-surface-alt: var(--theme-surface-alt);
+  --color-border: var(--theme-border);
+  --color-text: var(--theme-text);
+  --color-muted: var(--theme-muted);
+  --color-primary: var(--theme-primary);
+  --color-front: var(--theme-front);
 
   /* Transition system */
   --transition-base: 150ms ease;
   --transition-medium: 200ms ease;
 }
 
+html[data-solara-theme='sunrise'] {
+  --theme-bg: #231a14;
+  --theme-bg-rgb: 35 26 20;
+  --theme-surface: #2d2219;
+  --theme-surface-rgb: 45 34 25;
+  --theme-surface-alt: #3a2c20;
+  --theme-surface-alt-rgb: 58 44 32;
+  --theme-border: #5a4532;
+  --theme-border-rgb: 90 69 50;
+  --theme-border-soft: #4a3729;
+  --theme-border-soft-rgb: 74 55 41;
+  --theme-text: #f4e5d6;
+  --theme-text-rgb: 244 229 214;
+  --theme-muted: #c9ac8e;
+  --theme-muted-rgb: 201 172 142;
+  --theme-subtle: #9d7f64;
+  --theme-subtle-rgb: 157 127 100;
+  --theme-primary: #f59e0b;
+  --theme-primary-rgb: 245 158 11;
+  --theme-primary-soft: #d97706;
+  --theme-primary-soft-rgb: 217 119 6;
+  --theme-primary-glow: #fbbf24;
+  --theme-primary-glow-rgb: 251 191 36;
+  --theme-front: #fda4af;
+  --theme-front-rgb: 253 164 175;
+  --theme-front-soft: #9f1239;
+  --theme-front-soft-rgb: 159 18 57;
+}
+
+html[data-solara-theme='forest'] {
+  --theme-bg: #141f1b;
+  --theme-bg-rgb: 20 31 27;
+  --theme-surface: #1b2a24;
+  --theme-surface-rgb: 27 42 36;
+  --theme-surface-alt: #23352d;
+  --theme-surface-alt-rgb: 35 53 45;
+  --theme-border: #355147;
+  --theme-border-rgb: 53 81 71;
+  --theme-border-soft: #2b4238;
+  --theme-border-soft-rgb: 43 66 56;
+  --theme-text: #ddeee4;
+  --theme-text-rgb: 221 238 228;
+  --theme-muted: #a2c2b1;
+  --theme-muted-rgb: 162 194 177;
+  --theme-subtle: #799887;
+  --theme-subtle-rgb: 121 152 135;
+  --theme-primary: #34d399;
+  --theme-primary-rgb: 52 211 153;
+  --theme-primary-soft: #059669;
+  --theme-primary-soft-rgb: 5 150 105;
+  --theme-primary-glow: #6ee7b7;
+  --theme-primary-glow-rgb: 110 231 183;
+  --theme-front: #93c5fd;
+  --theme-front-rgb: 147 197 253;
+  --theme-front-soft: #1d4ed8;
+  --theme-front-soft-rgb: 29 78 216;
+}
+
+html[data-solara-theme='ocean'] {
+  --theme-bg: #111a26;
+  --theme-bg-rgb: 17 26 38;
+  --theme-surface: #172336;
+  --theme-surface-rgb: 23 35 54;
+  --theme-surface-alt: #1f2f46;
+  --theme-surface-alt-rgb: 31 47 70;
+  --theme-border: #334d6f;
+  --theme-border-rgb: 51 77 111;
+  --theme-border-soft: #2a405c;
+  --theme-border-soft-rgb: 42 64 92;
+  --theme-text: #e0ebff;
+  --theme-text-rgb: 224 235 255;
+  --theme-muted: #9db6d8;
+  --theme-muted-rgb: 157 182 216;
+  --theme-subtle: #7591b8;
+  --theme-subtle-rgb: 117 145 184;
+  --theme-primary: #60a5fa;
+  --theme-primary-rgb: 96 165 250;
+  --theme-primary-soft: #2563eb;
+  --theme-primary-soft-rgb: 37 99 235;
+  --theme-primary-glow: #93c5fd;
+  --theme-primary-glow-rgb: 147 197 253;
+  --theme-front: #c4b5fd;
+  --theme-front-rgb: 196 181 253;
+  --theme-front-soft: #6d28d9;
+  --theme-front-soft-rgb: 109 40 217;
+}
+
 @layer base {
   html {
-    background-color: #1a1625;
-    color: #e8e0f0;
+    background-color: var(--theme-bg);
+    color: var(--theme-text);
     font-family: var(--font-nunito), Inter, system-ui, sans-serif;
     scroll-behavior: smooth;
   }
 
   body {
-    background-color: #1a1625;
-    color: #e8e0f0;
+    background-color: var(--theme-bg);
+    color: var(--theme-text);
     font-family: var(--font-nunito), Inter, system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -53,15 +167,15 @@
 
   /* Text selection */
   ::selection {
-    background-color: rgba(167, 139, 250, 0.25);
-    color: #e8e0f0;
+    background-color: color-mix(in srgb, var(--theme-primary) 25%, transparent);
+    color: var(--theme-text);
   }
 
   /* Scrollbar styling */
   ::-webkit-scrollbar { width: 6px; height: 6px; }
   ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: #3d3454; border-radius: 9999px; }
-  ::-webkit-scrollbar-thumb:hover { background: #6b5f85; }
+  ::-webkit-scrollbar-thumb { background: var(--theme-border); border-radius: 9999px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--theme-subtle); }
 
   /* Focus rings — visible violet, offset matches dark bg */
   *:focus-visible {

@@ -137,3 +137,36 @@ See IDEAS.md for the full backlog of feature ideas.
 
 ---
 
+
+---
+
+## 2026-04-27 Progress Update
+
+### Social (Friend Systems)
+- [x] System-to-system invite and connection flow
+- [x] Singlet account registration option
+- [x] Singlet-to-system self-upgrade in Settings
+- [x] Friends dashboard page (incoming/outgoing/connected lists)
+- [x] Navigation integration for Friends (desktop and mobile)
+
+### Remaining social work
+- [ ] Sharing roles and visibility scopes
+- [ ] Expand per-field privacy labels to partner-facing read-only views (sharing config is implemented)
+- [ ] Partner system read-only visibility controls
+- [ ] Trusted notifications and consent tuning
+
+---
+
+## 2026-04-27 Social Hardening Update
+
+### Completed in social phase
+- [x] Unfriend flow
+- [x] Optional directional block/unblock flow
+- [x] Per-member sharing visibility controls (`hidden`, `profile`, `full`)
+- [x] Field-level sharing toggles in Friends sharing settings (`fieldVisibility`)
+- [x] Social export portability includes blocks and member-sharing settings
+
+### Next social steps
+- [ ] Role presets mapped to sharing defaults
+- [ ] Apply field-level visibility when rendering partner read-only social surfaces
+- [ ] Read-only partner view honoring per-member visibility

@@ -1,8 +1,14 @@
 'use client';
 
+import { useEffect } from 'react';
 import { SWRConfig } from 'swr';
+import { applySolaraTheme, readStoredSolaraTheme } from '@/lib/theme';
 
 export function DashboardClientProviders({ children }: { children: React.ReactNode }) {
+  useEffect(() => {
+    applySolaraTheme(readStoredSolaraTheme());
+  }, []);
+
   return (
     <SWRConfig
       value={{

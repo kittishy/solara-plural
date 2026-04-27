@@ -6,7 +6,9 @@ import bcrypt from 'bcryptjs';
 import { NextResponse } from 'next/server';
 
 export async function POST(request: Request) {
-  const { name, email, password, description } = await request.json();
+  const { name, email, password, description, accountType } = await request.json();
+
+  const normalizedAccountType = accountType === 'singlet' ? 'singlet' : 'system';
 
   if (!name?.trim() || !email?.trim() || !password) {
     return NextResponse.json({ error: 'Name, email, and password are required' }, { status: 400 });
@@ -25,7 +27,11 @@ export async function POST(request: Request) {
 
   await db.insert(systems).values({
     id: createId(), name: name.trim(), email: email.toLowerCase().trim(),
-    passwordHash, description: description?.trim() ?? null, createdAt: now, updatedAt: now,
+    passwordHash,
+    description: description?.trim() ?? null,
+    accountType: normalizedAccountType,
+    createdAt: now,
+    updatedAt: now,
   });
 
   return NextResponse.json({ success: true }, { status: 201 });

@@ -1,11 +1,20 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import {
+  applySolaraTheme,
+  DEFAULT_SOLARA_THEME,
+  persistSolaraTheme,
+  readStoredSolaraTheme,
+  SOLARA_THEMES,
+  type SolaraThemeId,
+} from '@/lib/theme';
 
 type SettingsSystem = {
   name: string;
   email: string;
   description: string | null;
+  accountType: string;
 };
 
 type ActionStatus = {
@@ -38,8 +47,8 @@ type ImportSuccessData = {
   duplicatesDetected?: number;
 };
 
-type ApiResponse =
-  | { success: true; data: ImportSuccessData }
+type ApiResponse<T> =
+  | { success: true; data: T }
   | { success: false; error?: string };
 
 type ImportSummary = {
@@ -75,7 +84,10 @@ const DEFAULT_IMPORT_OPTIONS: ImportOptions = {
 export default function SettingsClient({ system }: { system: SettingsSystem | null }) {
   const [importing, setImporting] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [changingAccountType, setChangingAccountType] = useState(false);
   const [status, setStatus] = useState<ActionStatus | null>(null);
+  const [accountType, setAccountType] = useState<'system' | 'singlet'>(toAccountType(system?.accountType));
+  const [themeId, setThemeId] = useState<SolaraThemeId>(DEFAULT_SOLARA_THEME);
   const [importOptions, setImportOptions] = useState<ImportOptions>(DEFAULT_IMPORT_OPTIONS);
   const [lastImportSummary, setLastImportSummary] = useState<ImportSummary | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -83,7 +95,14 @@ export default function SettingsClient({ system }: { system: SettingsSystem | nu
   useEffect(() => {
     const saved = readStoredImportOptions();
     if (saved) setImportOptions(saved);
+    const savedTheme = readStoredSolaraTheme();
+    setThemeId(savedTheme);
+    applySolaraTheme(savedTheme);
   }, []);
+
+  useEffect(() => {
+    setAccountType(toAccountType(system?.accountType));
+  }, [system?.accountType]);
 
   useEffect(() => {
     try {
@@ -159,7 +178,7 @@ export default function SettingsClient({ system }: { system: SettingsSystem | nu
         body: JSON.stringify(payload),
       });
 
-      const result = await readJsonResponse(res);
+      const result = await readJsonResponse<ImportSuccessData>(res);
       if (!result.success) {
         throw new Error(result.error ?? 'Import failed. Please try again.');
       }
@@ -180,13 +199,50 @@ export default function SettingsClient({ system }: { system: SettingsSystem | nu
     }
   }
 
+  async function upgradeToSystem() {
+    if (changingAccountType) return;
+    setChangingAccountType(true);
+    setStatus({ type: 'info', message: 'Upgrading your account to system...' });
+
+    try {
+      const res = await fetch('/api/account/type', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ accountType: 'system' }),
+      });
+
+      const payload = await readJsonResponse(res);
+      if (!payload.success) {
+        throw new Error(payload.error ?? 'Could not update your account type.');
+      }
+
+      setAccountType('system');
+      setStatus({ type: 'success', message: 'Your account is now a full system account.' });
+    } catch (error) {
+      setStatus({
+        type: 'error',
+        message: error instanceof Error ? error.message : 'Could not update your account type.',
+      });
+    } finally {
+      setChangingAccountType(false);
+    }
+  }
+
+  function updateTheme(nextTheme: SolaraThemeId) {
+    setThemeId(nextTheme);
+    applySolaraTheme(nextTheme);
+    persistSolaraTheme(nextTheme);
+    const label = SOLARA_THEMES.find((theme) => theme.id === nextTheme)?.label ?? 'Custom';
+    setStatus({ type: 'success', message: `Theme changed to ${label}.` });
+  }
+
   return (
     <div className="space-y-6" aria-busy={importing || exporting}>
 
       {/* ── Your System ─────────────────────────────────────────── */}
       <section className="card p-6" aria-labelledby="settings-system-heading">
         <h2 id="settings-system-heading" className="text-lg font-semibold text-text mb-4">
-          Your System
+          Your Account
         </h2>
         <dl className="space-y-2 text-sm">
           <div className="flex gap-3">
@@ -197,6 +253,10 @@ export default function SettingsClient({ system }: { system: SettingsSystem | nu
             <dt className="text-muted w-24 flex-shrink-0">Email</dt>
             <dd className="text-text font-medium">{system?.email ?? 'Not found'}</dd>
           </div>
+          <div className="flex gap-3">
+            <dt className="text-muted w-24 flex-shrink-0">Type</dt>
+            <dd className="text-text font-medium">{accountType === 'system' ? 'System' : 'Singlet'}</dd>
+          </div>
           {system?.description && (
             <div className="flex gap-3">
               <dt className="text-muted w-24 flex-shrink-0">About</dt>
@@ -204,6 +264,50 @@ export default function SettingsClient({ system }: { system: SettingsSystem | nu
             </div>
           )}
         </dl>
+
+        {accountType === 'singlet' && (
+          <div className="mt-4 rounded-xl border border-border-soft bg-surface-alt/40 p-4">
+            <h3 className="text-sm font-semibold text-text">Become a system account</h3>
+            <p className="text-xs text-muted mt-1">
+              If you later discover you are a system, you can upgrade in one click.
+            </p>
+            <button
+              type="button"
+              onClick={upgradeToSystem}
+              disabled={changingAccountType}
+              className="btn-primary mt-3 min-h-[42px]"
+            >
+              {changingAccountType ? 'Updating...' : 'Upgrade to system'}
+            </button>
+          </div>
+        )}
+      </section>
+
+      <section id="appearance" className="card p-6 scroll-mt-6" aria-labelledby="settings-appearance-heading">
+        <h2 id="settings-appearance-heading" className="text-lg font-semibold text-text mb-1">
+          Appearance
+        </h2>
+        <p className="text-muted text-sm mb-4">
+          Pick a theme that feels safe and comfortable for your system.
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {SOLARA_THEMES.map((theme) => (
+            <button
+              key={theme.id}
+              type="button"
+              onClick={() => updateTheme(theme.id)}
+              className={`rounded-xl border p-3 text-left transition-colors ${
+                themeId === theme.id
+                  ? 'border-primary/60 bg-primary/10'
+                  : 'border-border bg-surface-alt/40 hover:bg-surface-alt/60'
+              }`}
+              aria-pressed={themeId === theme.id}
+            >
+              <p className="text-sm font-semibold text-text">{theme.label}</p>
+              <p className="mt-1 text-xs text-muted">{theme.description}</p>
+            </button>
+          ))}
+        </div>
       </section>
 
       <hr className="border-border/30" />
@@ -561,7 +665,11 @@ function asCount(value: unknown): number {
   return typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : 0;
 }
 
-async function readJsonResponse(res: Response): Promise<ApiResponse> {
+function toAccountType(value: unknown): 'system' | 'singlet' {
+  return value === 'singlet' ? 'singlet' : 'system';
+}
+
+async function readJsonResponse<T = unknown>(res: Response): Promise<ApiResponse<T>> {
   const contentType = res.headers.get('content-type') ?? '';
   if (!contentType.includes('application/json')) {
     return { success: false, error: 'The server returned an unexpected response. Please sign in again.' };

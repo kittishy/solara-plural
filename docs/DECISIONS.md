@@ -176,3 +176,117 @@
 **Implementation:** Use `docs/VERCEL_DEPLOYMENT.md` as the deployment checklist. Revisit self-hosting only after the MVP is stable.
 
 ---
+
+## [2026-04-27] D013 - Dual Account Types: `system` and `singlet`
+
+**Decision:** Keep a single `systems` auth table for MVP, but add `accountType` (`system` or `singlet`) so trusted friends can join with a simpler profile and later self-upgrade.
+
+**Justification:**
+- Preserves current auth/session architecture and avoids a disruptive user-table split.
+- Supports the project's social/friendship mission immediately.
+- Allows singlet onboarding without forcing plural-specific setup at signup.
+- Keeps self-identification flexible: singlet accounts can become system accounts in Settings.
+
+**Implementation:**
+- Added `systems.account_type` defaulting to `system`.
+- Registration now accepts account type.
+- Added `PUT /api/account/type` for self-managed account-type updates.
+- Session/JWT now include `accountType`.
+
+---
+
+## [2026-04-27] D014 - Friendship Model: Requests + Canonical Pair
+
+**Decision:** Implement social connections with:
+1. `system_friend_requests` for pending/accepted/declined/canceled invites.
+2. `system_friendships` for established relationships, stored as a canonical ID pair (`systemAId`, `systemBId`) with a unique index.
+
+**Justification:**
+- Keeps consent explicit and auditable.
+- Prevents duplicate friendship rows by enforcing one canonical pair per relationship.
+- Supports system-to-system, singlet-to-system, and singlet-to-singlet connections using the same model.
+
+**Implementation:**
+- Added `GET/POST /api/friends` for listing and sending requests.
+- Added `POST /api/friends/requests/[id]` for accept/decline/cancel.
+- Added `/friends` dashboard page and navigation integration.
+- Export payload now includes social data (`friendRequests`, `friendships`) and account type.
+
+---
+
+## [2026-04-27] D015 - Safety Layer for Social: Directional Block + Explicit Unfriend
+
+**Decision:** Add a directional blocking model and a dedicated unfriend operation on top of friendship requests.
+
+**Justification:**
+- Some relationships need a clear safety boundary that is stronger than "decline request".
+- Directional blocks preserve autonomy: each account controls who can contact it.
+- Unfriend and block must clean up sharing links to avoid stale access expectations.
+
+**Implementation:**
+- Added `system_blocks` with unique directional pair (`blockerSystemId`, `blockedSystemId`).
+- Added `DELETE /api/friends/[friendSystemId]` for unfriend.
+- Added `POST /api/friends/blocks` and `DELETE /api/friends/blocks/[blockedSystemId]`.
+- Invites and request acceptance now fail when either side is blocked.
+- Blocking removes friendship, pending requests, and sharing rows for that pair.
+
+---
+
+## [2026-04-27] D016 - Per-member Sharing Permissions (Social Phase)
+
+**Decision:** Introduce per-member sharing permissions between connected friends using visibility levels.
+
+**Justification:**
+- Trust is not all-or-nothing; systems need fine-grained control per member.
+- Keeps the project aligned with warmth, consent, and reversibility.
+- Enables future role/field-level privacy evolution without a full redesign.
+
+**Implementation:**
+- Added `system_friend_member_shares` keyed by (`ownerSystemId`, `friendSystemId`, `memberId`).
+- Visibility levels currently: `hidden`, `profile`, `full`.
+- Added `GET/PUT /api/friends/sharing/[friendSystemId]`.
+- Owner-only enforcement: only the member owner can configure sharing for their members.
+
+---
+
+## [2026-04-27] D017 - Field-level Sharing Visibility + Validation Data Cleanup
+
+**Decision:** Extend social sharing from per-member-only visibility to per-field visibility, and add a dedicated maintenance script to clean validation accounts safely.
+
+**Justification:**
+- Social privacy needs granular consent (field-by-field), not only member-level access.
+- Sharing controls should map directly to the existing Friends UI toggles and API payload.
+- Validation accounts must be removable with a repeatable, low-risk workflow (dry run first, explicit apply).
+
+**Implementation:**
+- Added `system_friend_member_shares.field_visibility` for field-level sharing data.
+- `GET/PUT /api/friends/sharing/[friendSystemId]` now handles `fieldVisibility`.
+- `FriendsClient` now exposes toggles per field (`pronouns`, `description`, `avatarUrl`, `color`, `role`, `tags`, `notes`).
+- Added `scripts/cleanup-validation-data.cjs` and coverage in `scripts/cleanup-validation-data.test.cjs`.
+- Added package scripts: `cleanup:validation` (dry run) and `cleanup:validation:apply` (destructive apply).
+
+---
+
+## [2026-04-27] D018 - Usability Cleanup: Notes, Theme Presets, Invite Hardening, Mobile Nav
+
+**Decision:** Prioritize practical UX cleanup based on direct user feedback:
+1. remove low-value note chips,
+2. replace sidebar shortcuts with real theme presets,
+3. harden invite form behavior,
+4. improve mobile navigation ergonomics.
+
+**Justification:**
+- The chips in the note editor added noise without helping note-writing flow.
+- Sidebar shortcuts were cluttered and not aligned with personalization intent.
+- Invite UX needed clearer validation and safer request handling to reduce fragile behavior.
+- Mobile bottom navigation was too dense on small screens.
+
+**Implementation:**
+- Removed decorative chips (`Private note`, `Local draft`, `Editable later`) from the note editor.
+- Added theme infrastructure (`lib/theme.ts`) with persistence and document-level application.
+- Replaced sidebar shortcuts with theme preset actions and linked to `Settings > Appearance`.
+- Added appearance theme picker in Settings.
+- Improved invite form validation (normalized email, self-invite guard, timeout handling, inline error).
+- Redesigned mobile nav spacing and sizing for better touch targets and narrow screens.
+
+---

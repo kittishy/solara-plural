@@ -1,0 +1,69 @@
+ ⨯ TypeError: __webpack_modules__[moduleId] is not a function
+    at Object.__webpack_require__ [as require] (F:\Solara\coding\solara-plural\.next\server\webpack-runtime.js:33:42)
+    at JSON.parse (<anonymous>)
+digest: "3370735258"
+TypeError: __webpack_modules__[moduleId] is not a function
+    at Object.__webpack_require__ [as require] (F:\Solara\coding\solara-plural\.next\server\webpack-runtime.js:33:42)
+    at require (F:\Solara\coding\solara-plural\node_modules\next\dist\compiled\next-server\app-page.runtime.dev.js:40:20064)
+    at F:\Solara\coding\solara-plural\node_modules\next\dist\compiled\next-server\app-page.runtime.dev.js:35:108376
+    at ea (F:\Solara\coding\solara-plural\node_modules\next\dist\compiled\next-server\app-page.runtime.dev.js:35:108583)
+    at F:\Solara\coding\solara-plural\node_modules\next\dist\compiled\next-server\app-page.runtime.dev.js:35:110813
+    at Object._fromJSON (F:\Solara\coding\solara-plural\node_modules\next\dist\compiled\next-server\app-page.runtime.dev.js:35:111370)
+    at JSON.parse (<anonymous>)
+    at ec (F:\Solara\coding\solara-plural\node_modules\next\dist\compiled\next-server\app-page.runtime.dev.js:35:109078)
+    at eo (F:\Solara\coding\solara-plural\node_modules\next\dist\compiled\next-server\app-page.runtime.dev.js:35:108123)
+    at F:\Solara\coding\solara-plural\node_modules\next\dist\compiled\next-server\app-page.runtime.dev.js:35:115291
+    at F:\Solara\coding\solara-plural\node_modules\next\dist\compiled\next-server\app-page.runtime.dev.js:35:115308
+    at F:\Solara\coding\solara-plural\node_modules\next\dist\compiled\next-server\app-page.runtime.dev.js:35:115341
+    at F:\Solara\coding\solara-plural\node_modules\next\dist\compiled\next-server\app-page.runtime.dev.js:35:115358
+    at t (F:\Solara\coding\solara-plural\node_modules\next\dist\compiled\next-server\app-page.runtime.dev.js:35:115581)
+ ⨯ TypeError: __webpack_modules__[moduleId] is not a function
+    at Object.__webpack_require__ [as require] (F:\Solara\coding\solara-plural\.next\server\webpack-runtime.js:33:42)
+    at require (F:\Solara\coding\solara-plural\node_modules\next\dist\compiled\next-server\app-page.runtime.dev.js:40:20064)
+    at F:\Solara\coding\solara-plural\node_modules\next\dist\compiled\next-server\app-page.runtime.dev.js:35:108376
+    at ea (F:\Solara\coding\solara-plural\node_modules\next\dist\compiled\next-server\app-page.runtime.dev.js:35:108583)
+    at F:\Solara\coding\solara-plural\node_modules\next\dist\compiled\next-server\app-page.runtime.dev.js:35:110813
+    at Object._fromJSON (F:\Solara\coding\solara-plural\node_modules\next\dist\compiled\next-server\app-page.runtime.dev.js:35:111370)
+    at JSON.parse (<anonymous>)
+    at ec (F:\Solara\coding\solara-plural\node_modules\next\dist\compiled\next-server\app-page.runtime.dev.js:35:109078)
+    at eo (F:\Solara\coding\solara-plural\node_modules\next\dist\compiled\next-server\app-page.runtime.dev.js:35:108123)
+    at F:\Solara\coding\solara-plural\node_modules\next\dist\compiled\next-server\app-page.runtime.dev.js:35:115291
+    at F:\Solara\coding\solara-plural\node_modules\next\dist\compiled\next-server\app-page.runtime.dev.js:35:115308
+    at F:\Solara\coding\solara-plural\node_modules\next\dist\compiled\next-server\app-page.runtime.dev.js:35:115341
+    at F:\Solara\coding\solara-plural\node_modules\next\dist\compiled\next-server\app-page.runtime.dev.js:35:115358
+    at t (F:\Solara\coding\solara-plural\node_modules\next\dist\compiled\next-server\app-page.runtime.dev.js:35:115581) {
+  page: '/members'
+}
+ ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, lstat 'F:\Solara\coding\solara-plural\.next\server\vendor-chunks\dequal.js'
+<w> [webpack.cache.PackFileCacheStrategy/webpack.FileSystemInfo] Resolving './vendor-chunks/dequal' in F:\Solara\coding\solara-plural\.next\server for build dependencies doesn't lead to expected result 'F:\Solara\coding\solara-plural\.next\server\vendor-chunks\dequal.js', but to 'Error: Can't resolve './vendor-chunks/dequal' in 'F:\Solara\coding\solara-plural\.next\server'' instead. Resolving dependencies are ignored for this path.
+<w>  at resolve commonjs file ./vendor-chunks/dequal (expected F:\Solara\coding\solara-plural\.next\server\vendor-chunks\dequal.js)
+<w>  at file dependencies F:\Solara\coding\solara-plural\.next\server\webpack-runtime.js
+<w>  at file F:\Solara\coding\solara-plural\.next\server\webpack-runtime.js
+<w>  at file dependencies F:\Solara\coding\solara-plural\.next\server\app\(dashboard)\members\page.js
+<w>  at file F:\Solara\coding\solara-plural\.next\server\app\(dashboard)\members\page.js
+<w>  at file dependencies F:\Solara\coding\solara-plural\node_modules\next\dist\server\require.js
+<w>  at file F:\Solara\coding\solara-plural\node_modules\next\dist\server\require.js
+<w>  at file dependencies F:\Solara\coding\solara-plural\node_modules\next\dist\server\load-components.js
+<w>  at file F:\Solara\coding\solara-plural\node_modules\next\dist\server\load-components.js
+<w>  at file dependencies F:\Solara\coding\solara-plural\node_modules\next\dist\build\utils.js
+<w>  at file F:\Solara\coding\solara-plural\node_modules\next\dist\build\utils.js
+<w>  at file dependencies F:\Solara\coding\solara-plural\node_modules\next\dist\build\webpack\loaders\next-route-loader\index.js
+<w>  at file F:\Solara\coding\solara-plural\node_modules\next\dist\build\webpack\loaders\next-route-loader\index.js
+<w>  at resolve commonjs F:\Solara\coding\solara-plural\node_modules\next\dist\build\webpack\loaders\next-route-loader\index.js
+<w> [webpack.cache.PackFileCacheStrategy/webpack.FileSystemInfo] Resolving './vendor-chunks/@panva' in F:\Solara\coding\solara-plural\.next\server for build dependencies doesn't lead to expected result 'F:\Solara\coding\solara-plural\.next\server\vendor-chunks\@panva.js', but to 'Error: Can't resolve './vendor-chunks/@panva' in 'F:\Solara\coding\solara-plural\.next\server'' instead. Resolving dependencies are ignored for this path.
+<w>  at resolve commonjs file ./vendor-chunks/@panva (expected F:\Solara\coding\solara-plural\.next\server\vendor-chunks\@panva.js)
+<w>  at file dependencies F:\Solara\coding\solara-plural\.next\server\webpack-runtime.js
+<w>  at file F:\Solara\coding\solara-plural\.next\server\webpack-runtime.js
+<w>  at file dependencies F:\Solara\coding\solara-plural\.next\server\app\(dashboard)\members\page.js
+<w>  at file F:\Solara\coding\solara-plural\.next\server\app\(dashboard)\members\page.js
+<w>  at file dependencies F:\Solara\coding\solara-plural\node_modules\next\dist\server\require.js
+<w>  at file F:\Solara\coding\solara-plural\node_modules\next\dist\server\require.js
+<w>  at file dependencies F:\Solara\coding\solara-plural\node_modules\next\dist\server\load-components.js
+<w>  at file F:\Solara\coding\solara-plural\node_modules\next\dist\server\load-components.js
+<w>  at file dependencies F:\Solara\coding\solara-plural\node_modules\next\dist\build\utils.js
+<w>  at file F:\Solara\coding\solara-plural\node_modules\next\dist\build\utils.js
+<w>  at file dependencies F:\Solara\coding\solara-plural\node_modules\next\dist\build\webpack\loaders\next-route-loader\index.js
+<w>  at file F:\Solara\coding\solara-plural\node_modules\next\dist\build\webpack\loaders\next-route-loader\index.js
+<w>  at resolve commonjs F:\Solara\coding\solara-plural\node_modules\next\dist\build\webpack\loaders\next-route-loader\index.js
+ ⚠ Fast Refresh had to perform a full reload due to a runtime error.

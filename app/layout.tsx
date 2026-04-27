@@ -22,7 +22,22 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={nunito.variable}>
-      <body>{children}</body>
+      <body>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function () {
+                try {
+                  var key = 'solara.theme';
+                  var theme = localStorage.getItem(key);
+                  if (theme) document.documentElement.setAttribute('data-solara-theme', theme);
+                } catch (_) {}
+              })();
+            `,
+          }}
+        />
+        {children}
+      </body>
     </html>
   );
 }

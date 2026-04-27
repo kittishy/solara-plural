@@ -13,6 +13,7 @@ export default async function SettingsPage() {
       name: true,
       email: true,
       description: true,
+      accountType: true,
       createdAt: true,
       updatedAt: true,
     },
@@ -23,7 +24,7 @@ export default async function SettingsPage() {
     <div className="space-y-6 max-w-2xl">
       <div>
         <h1 className="text-2xl font-bold text-text">Settings</h1>
-        <p className="text-muted text-sm mt-0.5">Manage your system profile and data</p>
+        <p className="text-muted text-sm mt-0.5">Manage your account profile and data</p>
       </div>
       <SettingsClient system={system ?? null} />
     </div>

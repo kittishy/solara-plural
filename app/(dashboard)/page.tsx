@@ -74,6 +74,7 @@ export default async function DashboardPage() {
         <HomeTile href="/members" label="Members" detail={`${memberCount} saved`} />
         <HomeTile href="/notes/new" label="New note" detail="Capture context" />
         <HomeTile href="/front/history" label="History" detail="Edit past entries" />
+        <HomeTile href="/friends" label="Friends" detail="Invite and connect" />
       </section>
 
       <section aria-label="System summary" className="grid grid-cols-3 gap-2 md:gap-3">
@@ -131,6 +132,7 @@ export default async function DashboardPage() {
             <QuickAction href="/front" label="Start front session" />
             <QuickAction href="/notes/new" label="Write note" />
             <QuickAction href="/front/history" label="Front history" />
+            <QuickAction href="/friends" label="Friends" />
             <QuickAction href="/settings" label="Settings" />
           </div>
         </section>

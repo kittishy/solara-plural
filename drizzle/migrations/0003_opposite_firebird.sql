@@ -1,0 +1,1 @@
+ALTER TABLE `system_friend_member_shares` ADD `field_visibility` text;

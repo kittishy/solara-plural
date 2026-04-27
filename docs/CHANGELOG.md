@@ -78,3 +78,44 @@
 
 ---
 
+
+## [feature] - 2026-04-27
+
+### Added
+- Friendship data model with `system_friend_requests` and `system_friendships`
+- `Friends` dashboard page with invite, incoming requests, outgoing requests, and connected friend list
+- Social APIs: `GET/POST /api/friends` and `POST /api/friends/requests/[id]`
+- Account-type API: `PUT /api/account/type`
+- Support for singlet registration and session/account typing (`system` or `singlet`)
+- NextAuth type augmentation for `accountType` on `User`, `Session`, and `JWT`
+
+### Changed
+- Registration now supports choosing between `system` and `singlet` account types
+- Settings now show account type and allow singlet-to-system self-upgrade
+- Sidebar, mobile nav, dashboard shortcuts, and prefetch flow now include `Friends`
+- Export JSON now includes account type and social relationship data (`version: 2`)
+
+## [feature] - 2026-04-27 (social hardening)
+
+### Added
+- Unfriend endpoint: `DELETE /api/friends/[friendSystemId]`
+- Directional block endpoints:
+  - `POST /api/friends/blocks`
+  - `DELETE /api/friends/blocks/[blockedSystemId]`
+- Per-member sharing API:
+  - `GET /api/friends/sharing/[friendSystemId]`
+  - `PUT /api/friends/sharing/[friendSystemId]`
+- New tables: `system_blocks`, `system_friend_member_shares`
+- Real-flow validator script: `scripts/validate-friends-flow.cjs`
+
+### Changed
+- `GET /api/friends` now includes block state (`blockedByMe`, `blockedMe`)
+- Invite flow blocks requests when either direction is blocked
+- Accept request flow rejects when either direction is blocked
+- Blocking now removes friendship, pending requests, and sharing settings for that pair
+- Friends UI now supports unfriend, block/unblock, and per-member sharing controls
+- Export JSON now includes social blocks/member-sharing and bumped to `version: 3`
+
+### Verified
+- Migration applied successfully with `npm run db:migrate`
+- End-to-end social flow validated with two real accounts via `scripts/validate-friends-flow.cjs`
