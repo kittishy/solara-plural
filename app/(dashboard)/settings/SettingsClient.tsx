@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { signOut } from 'next-auth/react';
 import {
   applySolaraTheme,
   DEFAULT_SOLARA_THEME,
@@ -85,6 +86,7 @@ export default function SettingsClient({ system }: { system: SettingsSystem | nu
   const [importing, setImporting] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [changingAccountType, setChangingAccountType] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
   const [status, setStatus] = useState<ActionStatus | null>(null);
   const [accountType, setAccountType] = useState<'system' | 'singlet'>(toAccountType(system?.accountType));
   const [themeId, setThemeId] = useState<SolaraThemeId>(DEFAULT_SOLARA_THEME);
@@ -236,6 +238,12 @@ export default function SettingsClient({ system }: { system: SettingsSystem | nu
     setStatus({ type: 'success', message: `Theme changed to ${label}.` });
   }
 
+  async function handleSignOut() {
+    if (signingOut) return;
+    setSigningOut(true);
+    await signOut({ callbackUrl: '/login' });
+  }
+
   return (
     <div className="space-y-6" aria-busy={importing || exporting}>
 
@@ -308,6 +316,24 @@ export default function SettingsClient({ system }: { system: SettingsSystem | nu
             </button>
           ))}
         </div>
+      </section>
+
+      <section className="card p-6" aria-labelledby="settings-session-heading">
+        <h2 id="settings-session-heading" className="text-lg font-semibold text-text mb-1">
+          Session
+        </h2>
+        <p className="text-muted text-sm mb-4">
+          You can sign out safely from this device here.
+        </p>
+        <button
+          type="button"
+          onClick={handleSignOut}
+          disabled={signingOut}
+          className="btn-danger min-h-[48px] w-full justify-center text-base font-semibold"
+          aria-label="Sign out from your account"
+        >
+          {signingOut ? 'Signing out...' : 'Sign out'}
+        </button>
       </section>
 
       <hr className="border-border/30" />
