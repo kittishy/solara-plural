@@ -12,10 +12,14 @@ import {
 } from '@/lib/theme';
 
 type SettingsSystem = {
+  id?: string;
   name: string;
   email: string;
   description: string | null;
   accountType: string;
+  avatarMode?: string | null;
+  avatarEmoji?: string | null;
+  avatarUrl?: string | null;
 };
 
 type ActionStatus = {
@@ -65,7 +69,11 @@ type ImportEnvelope = {
 } & Record<string, unknown>;
 
 const IMPORT_OPTIONS_STORAGE_KEY = 'solara.settings.importOptions';
+const DEFAULT_AVATAR_EMOJI = '☀️';
+const AVATAR_PRESETS = ['☀️', '🌙', '⭐', '🌸', '💜', '✨', '🫷', '🌿', '🫧', '🧭'] as const;
+const MAX_AVATAR_FILE_BYTES = 10 * 1024 * 1024;
 
+type AvatarMode = 'emoji' | 'url';
 const DEFAULT_IMPORT_OPTIONS: ImportOptions = {
   updateExistingMembers: true,
   importNewMembers: true,
@@ -86,13 +94,22 @@ export default function SettingsClient({ system }: { system: SettingsSystem | nu
   const [importing, setImporting] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [changingAccountType, setChangingAccountType] = useState(false);
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [avatarUploadError, setAvatarUploadError] = useState<string | null>(null);
   const [signingOut, setSigningOut] = useState(false);
   const [status, setStatus] = useState<ActionStatus | null>(null);
   const [accountType, setAccountType] = useState<'system' | 'singlet'>(toAccountType(system?.accountType));
   const [themeId, setThemeId] = useState<SolaraThemeId>(DEFAULT_SOLARA_THEME);
+  const [avatarMode, setAvatarMode] = useState<AvatarMode>('emoji');
+  const [avatarEmoji, setAvatarEmoji] = useState<string>(DEFAULT_AVATAR_EMOJI);
+  const [avatarUrl, setAvatarUrl] = useState<string>('');
+  const [profileName, setProfileName] = useState<string>(system?.name ?? '');
+  const [profileDescription, setProfileDescription] = useState<string>(system?.description ?? '');
   const [importOptions, setImportOptions] = useState<ImportOptions>(DEFAULT_IMPORT_OPTIONS);
   const [lastImportSummary, setLastImportSummary] = useState<ImportSummary | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const avatarUploadRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const saved = readStoredImportOptions();
@@ -104,7 +121,12 @@ export default function SettingsClient({ system }: { system: SettingsSystem | nu
 
   useEffect(() => {
     setAccountType(toAccountType(system?.accountType));
-  }, [system?.accountType]);
+    setProfileName(system?.name ?? '');
+    setProfileDescription(system?.description ?? '');
+    setAvatarMode(toAvatarMode(system?.avatarMode));
+    setAvatarEmoji(system?.avatarEmoji?.trim() ? system.avatarEmoji : DEFAULT_AVATAR_EMOJI);
+    setAvatarUrl(system?.avatarUrl ?? '');
+  }, [system]);
 
   useEffect(() => {
     try {
@@ -238,6 +260,91 @@ export default function SettingsClient({ system }: { system: SettingsSystem | nu
     setStatus({ type: 'success', message: `Theme changed to ${label}.` });
   }
 
+  async function handleAvatarFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file || uploadingAvatar) return;
+
+    setAvatarUploadError(null);
+    if (file.size > MAX_AVATAR_FILE_BYTES) {
+      setAvatarUploadError('File is too large — max 10 MB.');
+      e.target.value = '';
+      return;
+    }
+
+    setUploadingAvatar(true);
+    setStatus({ type: 'info', message: 'Uploading avatar image...' });
+
+    try {
+      const form = new FormData();
+      form.append('file', file);
+      const res = await fetch('/api/upload', { method: 'POST', body: form });
+      const payload = await readJsonResponse<{ url: string }>(res);
+      if (!payload.success) {
+        throw new Error(payload.error ?? 'Upload failed. Try another image.');
+      }
+      if (!payload.data?.url) {
+        throw new Error('Upload failed. Try another image.');
+      }
+
+      setAvatarMode('url');
+      setAvatarUrl(payload.data.url);
+      setStatus({ type: 'success', message: 'Avatar uploaded. URL filled automatically.' });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Upload failed. Try again.';
+      setAvatarUploadError(message);
+      setStatus({ type: 'error', message });
+    } finally {
+      setUploadingAvatar(false);
+      e.target.value = '';
+    }
+  }
+
+  async function saveProfile() {
+    if (savingProfile) return;
+
+    const normalizedName = profileName.trim();
+    if (!normalizedName) {
+      setStatus({ type: 'error', message: 'Name is required.' });
+      return;
+    }
+
+    if (avatarMode === 'url' && !isValidImageUrl(avatarUrl)) {
+      setStatus({ type: 'error', message: 'Please provide a valid avatar image URL (http/https).' });
+      return;
+    }
+
+    setSavingProfile(true);
+    setStatus({ type: 'info', message: 'Saving your profile...' });
+
+    try {
+      const res = await fetch('/api/account/profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: normalizedName,
+          description: profileDescription.trim() || null,
+          avatarMode,
+          avatarEmoji: avatarEmoji || DEFAULT_AVATAR_EMOJI,
+          avatarUrl: avatarUrl.trim() || null,
+        }),
+      });
+
+      const payload = await readJsonResponse(res);
+      if (!payload.success) {
+        throw new Error(payload.error ?? 'Could not save profile.');
+      }
+
+      setStatus({ type: 'success', message: 'Profile updated successfully.' });
+    } catch (error) {
+      setStatus({
+        type: 'error',
+        message: error instanceof Error ? error.message : 'Could not save profile.',
+      });
+    } finally {
+      setSavingProfile(false);
+    }
+  }
+
   async function handleSignOut() {
     if (signingOut) return;
     setSigningOut(true);
@@ -289,6 +396,84 @@ export default function SettingsClient({ system }: { system: SettingsSystem | nu
             </button>
           </div>
         )}
+      </section>
+
+      <section className="card p-6" aria-labelledby="settings-profile-heading">
+        <h2 id="settings-profile-heading" className="text-lg font-semibold text-text mb-1">
+          Profile and avatar
+        </h2>
+        <p className="text-muted text-sm mb-4">
+          Choose a system avatar with emoji preset or image URL, with live preview.
+        </p>
+
+        <div className="flex flex-col sm:flex-row sm:items-start gap-4 mb-4">
+          <div className="h-20 w-20 rounded-full border border-border bg-surface-alt flex items-center justify-center overflow-hidden">
+            {avatarMode === 'url' && isValidImageUrl(avatarUrl) ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={avatarUrl} alt="Avatar preview" className="h-full w-full object-cover" />
+            ) : (
+              <span className="text-4xl leading-none">{avatarEmoji || DEFAULT_AVATAR_EMOJI}</span>
+            )}
+          </div>
+          <div className="flex-1 space-y-3">
+            <div>
+              <label htmlFor="profile-name" className="label">Display name</label>
+              <input id="profile-name" className="input" value={profileName} onChange={(e) => setProfileName(e.target.value)} maxLength={80} />
+            </div>
+            <div>
+              <label htmlFor="profile-description" className="label">Description</label>
+              <textarea id="profile-description" className="input min-h-[84px]" value={profileDescription} onChange={(e) => setProfileDescription(e.target.value)} maxLength={600} />
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          <div className="flex flex-wrap gap-2">
+            <button type="button" className={`btn-ghost border min-h-[38px] px-3 text-sm ${avatarMode === 'emoji' ? 'border-primary/50 bg-primary/10' : 'border-border'}`} onClick={() => setAvatarMode('emoji')}>Emoji preset</button>
+            <button type="button" className={`btn-ghost border min-h-[38px] px-3 text-sm ${avatarMode === 'url' ? 'border-primary/50 bg-primary/10' : 'border-border'}`} onClick={() => setAvatarMode('url')}>Image URL</button>
+          </div>
+
+          {avatarMode === 'emoji' ? (
+            <div className="flex flex-wrap gap-2">
+              {AVATAR_PRESETS.map((preset) => (
+                <button key={preset} type="button" onClick={() => setAvatarEmoji(preset)} className={`h-10 w-10 rounded-lg border text-xl ${avatarEmoji === preset ? 'border-primary/60 bg-primary/10' : 'border-border bg-surface-alt/60'}`} aria-label={`Use ${preset} as avatar`} aria-pressed={avatarEmoji === preset}>
+                  {preset}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <label htmlFor="profile-avatar-url" className="label">Avatar image URL</label>
+              <input id="profile-avatar-url" type="url" className="input" value={avatarUrl} onChange={(e) => setAvatarUrl(e.target.value)} placeholder="https://..." />
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => avatarUploadRef.current?.click()}
+                  disabled={uploadingAvatar}
+                  className="btn-ghost border border-border min-h-[38px] px-3 text-sm"
+                >
+                  {uploadingAvatar ? 'Uploading...' : 'Upload image'}
+                </button>
+                <p className="text-xs text-subtle">Use URL or upload via catbox (max 10 MB).</p>
+              </div>
+              {avatarUploadError && (
+                <p role="alert" className="text-xs text-error">{avatarUploadError}</p>
+              )}
+              <input
+                ref={avatarUploadRef}
+                type="file"
+                accept="image/*"
+                className="sr-only"
+                onChange={handleAvatarFileChange}
+                aria-label="Upload avatar image"
+              />
+            </div>
+          )}
+        </div>
+
+        <button type="button" onClick={saveProfile} disabled={savingProfile} className="btn-primary mt-4 min-h-[42px]">
+          {savingProfile ? 'Saving...' : 'Save profile'}
+        </button>
       </section>
 
       <section id="appearance" className="card p-6 scroll-mt-6" aria-labelledby="settings-appearance-heading">
@@ -695,6 +880,22 @@ function toAccountType(value: unknown): 'system' | 'singlet' {
   return value === 'singlet' ? 'singlet' : 'system';
 }
 
+function toAvatarMode(value: unknown): AvatarMode {
+  return value === 'url' ? 'url' : 'emoji';
+}
+
+function isValidImageUrl(value: string): boolean {
+  const trimmed = value.trim();
+  if (!trimmed) return false;
+
+  try {
+    const parsed = new URL(trimmed);
+    return parsed.protocol === 'https:' || parsed.protocol === 'http:';
+  } catch {
+    return false;
+  }
+}
+
 async function readJsonResponse<T = unknown>(res: Response): Promise<ApiResponse<T>> {
   const contentType = res.headers.get('content-type') ?? '';
   if (!contentType.includes('application/json')) {
@@ -711,3 +912,5 @@ async function readErrorMessage(res: Response, fallback: string) {
   const body = await res.json().catch(() => null);
   return typeof body?.error === 'string' ? body.error : fallback;
 }
+
+

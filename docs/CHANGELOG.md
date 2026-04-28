@@ -21,6 +21,9 @@
 ## [Unreleased]
 
 ### Added
+- System avatar persistence fields (`avatarMode`, `avatarEmoji`, `avatarUrl`) plus migration `0004_safe_hummingbird.sql`
+- New account profile API: `GET/PUT /api/account/profile`
+- Settings profile controls for system avatar mode (emoji preset or image URL), including catbox upload support via `POST /api/upload`
 - Front history editing UI with retroactive entry creation and per-entry edit flows
 - Front history API routes for retroactive creation and per-entry updates
 - Initial `public/manifest.json` for the existing app metadata manifest reference
@@ -36,6 +39,17 @@
 - Initial project orchestration and planning
 
 ### Changed
+- Member profile `Edit profile` action now uses a clearer warm CTA style (higher contrast, larger touch target, stronger hover/focus affordance) on mobile and desktop without changing page structure
+- Front tracker mobile `Choose members` trigger now has clearer tap affordance with explicit open/close label, action cue icon, expansion indicator, and helper text while preserving the existing selector behavior and multi-selection flow
+- Settings appearance now uses preset themes only; removed the `Custom colors (local)` UI and its local override logic
+- Added a new gray preset theme (`Mist Gray`) to `SOLARA_THEMES` with full token coverage for Settings and Sidebar selection
+- Settings profile avatar now supports image upload through `POST /api/upload` (catbox flow), with inline upload feedback and automatic `avatarUrl` fill while preserving emoji avatar mode
+- Front tracker mobile member selection now uses a compact collapsible multi-select with search and scroll-friendly list behavior, keeping multi-member front selection intact
+- `Session details > Selected members` chips now render member avatar miniatures when available, with warm initial/color fallback when not
+- Dashboard current-front chips now show member avatar thumbnails when available (fallback remains color + initial)
+- Front history editor member picker now loads all active system members, not only members already present in prior history entries
+- Friends list action label changed from `Sharing` to `Privacy` (and `Hide privacy` when expanded)
+- Friends payload now includes avatar fields for connected accounts, and connected-friend cards render avatar when available
 - Removed the broad Next image optimizer allowlist for all HTTPS hostnames
 - `scripts/cleanup-dupes.cjs` now defaults to dry-run and requires `--apply` before deleting rows
 - Front-history note rendering now escapes quote characters for ESLint compliance

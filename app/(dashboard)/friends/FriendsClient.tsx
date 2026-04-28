@@ -13,6 +13,9 @@ type FriendSummary = {
   name: string;
   description: string | null;
   accountType: AccountType;
+  avatarMode?: 'emoji' | 'url' | null;
+  avatarEmoji?: string | null;
+  avatarUrl?: string | null;
   connectedAt: string;
 };
 
@@ -677,12 +680,21 @@ export default function FriendsClient() {
               return (
                 <li key={friend.friendshipId} className="rounded-xl border border-border-soft bg-surface-alt/50 p-4">
                   <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div>
+                    <div className="flex items-start gap-3">
+                      <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center overflow-hidden rounded-full border border-border/60 bg-surface">
+                        {friend.avatarMode === 'url' && isLikelyHttpUrl(friend.avatarUrl) ? (
+                          <img src={friend.avatarUrl} alt={friend.name} className="h-full w-full object-cover" />
+                        ) : (
+                          <span className="text-base leading-none">{friend.avatarEmoji?.trim() || '☀️'}</span>
+                        )}
+                      </div>
+                      <div>
                       <p className="text-sm font-semibold text-text">{friend.name}</p>
                       <p className="text-xs text-muted">
                         {ACCOUNT_LABEL[friend.accountType]} - Connected {formatDate(friend.connectedAt)}
                       </p>
                       {friend.description && <p className="text-xs text-subtle mt-2">{friend.description}</p>}
+                      </div>
                     </div>
 
                     <div className="flex flex-wrap gap-2">
@@ -692,7 +704,7 @@ export default function FriendsClient() {
                         disabled={busy}
                         onClick={() => void toggleSharing(friend.id)}
                       >
-                        {sharing?.open ? 'Hide sharing' : 'Sharing'}
+                        {sharing?.open ? 'Hide privacy' : 'Privacy'}
                       </button>
                       <button
                         type="button"
@@ -867,6 +879,16 @@ function isLikelyEmail(value: string): boolean {
   const email = value.trim().toLowerCase();
   if (!email || email.length > 254) return false;
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+function isLikelyHttpUrl(value: string | null | undefined): value is string {
+  if (!value) return false;
+  try {
+    const parsed = new URL(value);
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+  } catch {
+    return false;
+  }
 }
 
 function defaultFieldVisibilityForLevel(visibility: ShareVisibility): ShareFieldVisibility {

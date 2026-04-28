@@ -3,6 +3,7 @@ import { members, frontEntries } from '@/lib/db/schema';
 import { eq, and, isNull } from 'drizzle-orm';
 import FrontTracker from './FrontTracker';
 import { requireSystemId } from '@/lib/auth/session';
+import { Trans } from '@/components/language/Trans';
 
 export default async function FrontPage() {
   const systemId = await requireSystemId();
@@ -30,8 +31,8 @@ export default async function FrontPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-text">Front Tracker</h1>
-        <p className="text-muted text-sm mt-0.5">Track who is currently fronting</p>
+        <h1 className="text-2xl font-bold text-text"><Trans k="front.pageTitle" /></h1>
+        <p className="text-muted text-sm mt-0.5"><Trans k="front.pageSubtitle" /></p>
       </div>
       <FrontTracker members={allMembers} activeFront={parsedFront} />
     </div>

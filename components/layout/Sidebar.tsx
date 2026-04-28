@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { signOut } from 'next-auth/react';
+import { LanguageSelector } from '@/components/language/LanguageSelector';
+import { useLanguage } from '@/components/providers/LanguageProvider';
 import {
   applySolaraTheme,
   DEFAULT_SOLARA_THEME,
@@ -101,24 +103,24 @@ function IconLogout({ size = 18 }: IconProps) {
 }
 
 const navItems = [
-  { href: '/', label: 'Home', Icon: IconHome },
-  { href: '/members', label: 'Members', Icon: IconMembers },
-  { href: '/front', label: 'Front', Icon: IconFront },
-  { href: '/front/history', label: 'Front history', Icon: IconCalendar },
-  { href: '/notes', label: 'Notes', Icon: IconNotes },
-  { href: '/friends', label: 'Friends', Icon: IconFriends },
-  { href: '/settings', label: 'Settings', Icon: IconSettings },
-];
+  { href: '/', labelKey: 'nav.home', Icon: IconHome },
+  { href: '/members', labelKey: 'nav.members', Icon: IconMembers },
+  { href: '/front', labelKey: 'nav.front', Icon: IconFront },
+  { href: '/front/history', labelKey: 'nav.frontHistory', Icon: IconCalendar },
+  { href: '/notes', labelKey: 'nav.notes', Icon: IconNotes },
+  { href: '/friends', labelKey: 'nav.friends', Icon: IconFriends },
+  { href: '/settings', labelKey: 'nav.settings', Icon: IconSettings },
+] as const;
 
 const SIDEBAR_SYMBOLS = ['☀️', '🌙', '⭐', '🌸', '💜', '✨', '🪷', '🌿', '🫧', '🧭'] as const;
 const SIDEBAR_SYMBOL_STORAGE = 'solara.sidebar.symbol';
-
 interface SidebarProps {
   systemName?: string;
 }
 
 export function Sidebar({ systemName }: SidebarProps) {
   const pathname = usePathname();
+  const { t } = useLanguage();
   const [menuOpen, setMenuOpen] = useState(false);
   const [sidebarSymbol, setSidebarSymbol] = useState<string>('☀️');
   const [selectedTheme, setSelectedTheme] = useState<SolaraThemeId>(DEFAULT_SOLARA_THEME);
@@ -138,6 +140,7 @@ export function Sidebar({ systemName }: SidebarProps) {
     const theme = readStoredSolaraTheme();
     setSelectedTheme(theme);
     applySolaraTheme(theme);
+
   }, []);
 
   useEffect(() => {
@@ -176,6 +179,7 @@ export function Sidebar({ systemName }: SidebarProps) {
     setSelectedTheme(themeId);
     applySolaraTheme(themeId);
     persistSolaraTheme(themeId);
+
   }
 
   return (
@@ -202,11 +206,11 @@ export function Sidebar({ systemName }: SidebarProps) {
         {menuOpen && (
           <div
             role="menu"
-            aria-label="System menu"
+            aria-label={t('nav.systemMenu')}
             className="absolute left-4 right-4 top-[calc(100%-6px)] z-20 space-y-4 rounded-xl border border-border bg-surface-alt/95 p-3 shadow-card backdrop-blur-sm animate-slide-up"
           >
             <div>
-              <p className="mb-2 text-xs font-medium text-muted">Sidebar symbol</p>
+              <p className="mb-2 text-xs font-medium text-muted">{t('nav.sidebarSymbol')}</p>
               <div className="flex flex-wrap gap-2">
                 {SIDEBAR_SYMBOLS.map((symbol) => (
                   <button
@@ -228,7 +232,7 @@ export function Sidebar({ systemName }: SidebarProps) {
             </div>
 
             <div>
-              <p className="mb-2 px-2 text-xs font-medium text-muted">Theme preset</p>
+              <p className="mb-2 px-2 text-xs font-medium text-muted">{t('nav.themePreset')}</p>
               <div className="space-y-1">
                 {SOLARA_THEMES.map((theme) => (
                   <button
@@ -252,14 +256,16 @@ export function Sidebar({ systemName }: SidebarProps) {
                 className="mt-2 block rounded-lg px-2 py-1.5 text-xs text-muted transition-colors hover:bg-surface hover:text-text"
                 onClick={() => setMenuOpen(false)}
               >
-                Open appearance settings
+                {t('nav.appearanceSettings')}
               </Link>
             </div>
+
+            <LanguageSelector />
           </div>
         )}
       </div>
 
-      <nav className="flex-1 space-y-0.5 px-3 py-4" aria-label="Primary navigation">
+      <nav className="flex-1 space-y-0.5 px-3 py-4" aria-label={t('nav.primary')}>
         {navItems.map((item) => {
           const isActive =
             item.href === '/'
@@ -282,7 +288,7 @@ export function Sidebar({ systemName }: SidebarProps) {
               <span className={`flex-shrink-0 transition-all duration-200 ${isActive ? 'text-primary' : ''}`}>
                 <item.Icon />
               </span>
-              {item.label}
+              {t(item.labelKey)}
             </Link>
           );
         })}
@@ -295,9 +301,11 @@ export function Sidebar({ systemName }: SidebarProps) {
           className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-error/60 transition-all duration-150 hover:bg-error/10 hover:text-error"
         >
           <span className="flex-shrink-0"><IconLogout /></span>
-          Sign out
+          {t('nav.signOut')}
         </button>
       </div>
     </aside>
   );
 }
+
+

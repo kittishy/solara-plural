@@ -1,6 +1,6 @@
 import { db } from '@/lib/db';
 import { frontEntries, members } from '@/lib/db/schema';
-import { eq, and, isNotNull, desc } from 'drizzle-orm';
+import { eq, and, isNotNull } from 'drizzle-orm';
 import FrontHistoryClient from './FrontHistoryClient';
 import { safeParseMemberIds } from '@/lib/front';
 import { requireSystemId } from '@/lib/auth/session';
@@ -29,18 +29,16 @@ export default async function FrontHistoryPage() {
     memberIds: safeParseMemberIds(entry.memberIds),
   }));
 
-  const allMemberIds = Array.from(new Set(parsedHistory.flatMap((h) => h.memberIds)));
-  const allMembers = allMemberIds.length > 0
-    ? await db.query.members.findMany({
-        columns: {
-          id: true,
-          name: true,
-          color: true,
-          avatarUrl: true,
-        },
-        where: (m, { inArray }) => inArray(m.id, allMemberIds),
-      })
-    : [];
+  const allMembers = await db.query.members.findMany({
+    columns: {
+      id: true,
+      name: true,
+      color: true,
+      avatarUrl: true,
+    },
+    where: and(eq(members.systemId, systemId), eq(members.isArchived, 0)),
+    orderBy: (m, { asc }) => [asc(m.name)],
+  });
 
   return <FrontHistoryClient history={parsedHistory} members={allMembers} />;
 }

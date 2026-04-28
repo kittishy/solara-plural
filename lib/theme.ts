@@ -1,6 +1,6 @@
 export const SOLARA_THEME_STORAGE_KEY = 'solara.theme';
 
-export type SolaraThemeId = 'night' | 'sunrise' | 'forest' | 'ocean';
+export type SolaraThemeId = 'night' | 'sunrise' | 'forest' | 'ocean' | 'mist';
 
 export type SolaraTheme = {
   id: SolaraThemeId;
@@ -102,6 +102,26 @@ export const SOLARA_THEMES: SolaraTheme[] = [
       primaryGlow: '#93c5fd',
       front: '#c4b5fd',
       frontSoft: '#6d28d9',
+    },
+  },
+  {
+    id: 'mist',
+    label: 'Mist Gray',
+    description: 'Soft neutral calm',
+    colors: {
+      bg: '#17191d',
+      surface: '#20242a',
+      surfaceAlt: '#2a3038',
+      border: '#3b444f',
+      borderSoft: '#323943',
+      text: '#e4e8ef',
+      muted: '#aab3c0',
+      subtle: '#808b9a',
+      primary: '#b8c0cc',
+      primarySoft: '#949daa',
+      primaryGlow: '#d3d9e2',
+      front: '#f3b6c5',
+      frontSoft: '#8b3f56',
     },
   },
 ];

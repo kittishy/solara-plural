@@ -102,7 +102,10 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
           </div>
         )}
 
-        <Link href={`/members/${member.id}/edit`} className="btn-ghost mt-6">
+        <Link
+          href={`/members/${member.id}/edit`}
+          className="mt-6 inline-flex min-h-11 items-center justify-center rounded-xl border border-primary/50 bg-primary-soft px-5 py-2.5 text-sm font-semibold text-white shadow-glow transition-all duration-150 hover:-translate-y-0.5 hover:bg-primary hover:shadow-[0_0_24px_rgba(167,139,250,0.35)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 focus-visible:ring-offset-2 focus-visible:ring-offset-surface"
+        >
           Edit profile
         </Link>
       </div>

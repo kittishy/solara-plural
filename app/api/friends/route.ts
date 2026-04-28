@@ -86,7 +86,7 @@ export async function GET() {
 
   const relatedProfiles = relatedSystemIds.size > 0
     ? await db.query.systems.findMany({
-        columns: { id: true, name: true, description: true, accountType: true },
+        columns: { id: true, name: true, description: true, accountType: true, avatarMode: true, avatarEmoji: true, avatarUrl: true },
         where: inArray(systems.id, Array.from(relatedSystemIds)),
       })
     : [];
@@ -105,6 +105,9 @@ export async function GET() {
         name: profile.name,
         description: profile.description,
         accountType: profile.accountType,
+        avatarMode: profile.avatarMode,
+        avatarEmoji: profile.avatarEmoji,
+        avatarUrl: profile.avatarUrl,
         connectedAt: friendship.createdAt,
       };
     })

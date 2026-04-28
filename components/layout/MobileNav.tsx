@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { LanguageSelector } from '@/components/language/LanguageSelector';
+import { useLanguage } from '@/components/providers/LanguageProvider';
 
 type IconProps = { size?: number };
 
@@ -92,17 +94,17 @@ function IconCalendar({ size = 18 }: IconProps) {
 }
 
 const navItems = [
-  { href: '/', label: 'Home', mobileLabel: 'Home', Icon: IconHome },
-  { href: '/members', label: 'Members', mobileLabel: 'Members', Icon: IconMembers },
-  { href: '/front', label: 'Front', mobileLabel: 'Front', Icon: IconFront },
-  { href: '/notes', label: 'Notes', mobileLabel: 'Notes', Icon: IconNotes },
-];
+  { href: '/', labelKey: 'nav.home', Icon: IconHome },
+  { href: '/members', labelKey: 'nav.members', Icon: IconMembers },
+  { href: '/front', labelKey: 'nav.front', Icon: IconFront },
+  { href: '/notes', labelKey: 'nav.notes', Icon: IconNotes },
+] as const;
 
 const menuItems = [
-  { href: '/friends', label: 'Friends', Icon: IconFriends },
-  { href: '/front/history', label: 'Front history', Icon: IconCalendar },
-  { href: '/settings', label: 'Settings', Icon: IconSettings },
-];
+  { href: '/friends', labelKey: 'nav.friends', Icon: IconFriends },
+  { href: '/front/history', labelKey: 'nav.frontHistory', Icon: IconCalendar },
+  { href: '/settings', labelKey: 'nav.settings', Icon: IconSettings },
+] as const;
 
 function isActive(pathname: string, href: string) {
   if (href === '/') return pathname === '/';
@@ -112,6 +114,7 @@ function isActive(pathname: string, href: string) {
 
 export function MobileNav() {
   const pathname = usePathname();
+  const { t } = useLanguage();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
   const menuIsActive = menuItems.some((item) => isActive(pathname, item.href));
@@ -145,15 +148,19 @@ export function MobileNav() {
     <nav
       className="md:hidden fixed bottom-0 left-0 right-0 z-20 px-2 pt-1"
       style={{ paddingBottom: 'max(0.4rem, env(safe-area-inset-bottom))' }}
-      aria-label="Primary mobile navigation"
+      aria-label={t('nav.mobilePrimary')}
     >
       <div ref={menuRef} className="relative flex items-end gap-2">
         {menuOpen && (
           <div
             className="absolute bottom-[calc(100%+0.5rem)] right-0 w-48 rounded-xl border border-border bg-surface/95 p-2 shadow-card backdrop-blur-xl animate-slide-up"
             role="menu"
-            aria-label="More mobile navigation"
+            aria-label={t('nav.moreMenu')}
           >
+            <div className="mb-2 rounded-lg border border-border/60 bg-surface-alt/70 p-2">
+              <LanguageSelector />
+            </div>
+
             {menuItems.map((item) => {
               const current = isActive(pathname, item.href);
 
@@ -172,7 +179,7 @@ export function MobileNav() {
                   <span className={current ? 'text-primary' : undefined}>
                     <item.Icon />
                   </span>
-                  {item.label}
+                  {t(item.labelKey)}
                 </Link>
               );
             })}
@@ -189,7 +196,7 @@ export function MobileNav() {
                 key={item.href}
                 href={item.href}
                 prefetch={true}
-                aria-label={item.label}
+                aria-label={t(item.labelKey)}
                 aria-current={current ? 'page' : undefined}
                 onClick={() => setMenuOpen(false)}
                 className={`relative flex min-h-[54px] min-w-0 flex-col items-center justify-center gap-0.5 rounded-xl px-1 py-1 text-[11px] font-medium leading-none transition-all duration-200 focus-visible:ring-2 focus-visible:ring-primary/70 focus-visible:ring-offset-2 focus-visible:ring-offset-bg ${
@@ -201,7 +208,7 @@ export function MobileNav() {
                 <span className={`leading-none transition-transform duration-200 ${current ? 'scale-105 text-primary' : ''}`}>
                   <item.Icon />
                 </span>
-                <span className="max-w-full truncate leading-none">{item.mobileLabel}</span>
+                <span className="max-w-full truncate leading-none">{t(item.labelKey)}</span>
                 {current && (
                   <span className="absolute bottom-1 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-primary" aria-hidden="true" />
                 )}
@@ -214,7 +221,7 @@ export function MobileNav() {
         <button
           type="button"
           onClick={() => setMenuOpen((open) => !open)}
-          aria-label="Open more navigation options"
+          aria-label={t('nav.moreOptions')}
           aria-expanded={menuOpen}
           aria-haspopup="menu"
           className={`flex min-h-[66px] w-[68px] shrink-0 flex-col items-center justify-center gap-1 rounded-2xl border text-[11px] font-semibold leading-none backdrop-blur-xl transition-all duration-200 focus-visible:ring-2 focus-visible:ring-primary/70 focus-visible:ring-offset-2 focus-visible:ring-offset-bg ${
@@ -226,7 +233,7 @@ export function MobileNav() {
           <span className={menuIsActive || menuOpen ? 'text-primary' : undefined}>
             <IconMenu size={20} />
           </span>
-          Menu
+          {t('nav.more')}
         </button>
       </div>
     </nav>

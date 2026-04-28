@@ -3,6 +3,7 @@ import { MobileNav } from '@/components/layout/MobileNav';
 import { DashboardPrefetch } from '@/components/layout/DashboardPrefetch';
 import { DashboardClientProviders } from './DashboardClientProviders';
 import { getCachedSession } from '@/lib/auth/session';
+import { Trans } from '@/components/language/Trans';
 
 export default async function DashboardLayout({
   children,
@@ -21,7 +22,7 @@ export default async function DashboardLayout({
           focus:px-4 focus:py-2 focus:bg-surface focus:text-primary focus:rounded-xl
           focus:ring-2 focus:ring-primary focus:shadow-card"
       >
-        Skip to main content
+        <Trans k="nav.skip" />
       </a>
 
       <Sidebar systemName={systemName} />

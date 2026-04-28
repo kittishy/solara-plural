@@ -15,6 +15,9 @@ Represents a plural system (user account).
 | id | text | PRIMARY KEY | CUID/UUID |
 | name | text | NOT NULL | System display name |
 | description | text | nullable | System description |
+| avatarMode | text | NOT NULL DEFAULT `emoji` | System avatar mode (`emoji` or `url`) |
+| avatarEmoji | text | NOT NULL DEFAULT `☀️` | Emoji avatar fallback/preset |
+| avatarUrl | text | nullable | Optional profile avatar image URL |
 | email | text | UNIQUE NOT NULL | Login email |
 | passwordHash | text | NOT NULL | bcrypt hash |
 | createdAt | integer | NOT NULL | Unix timestamp |

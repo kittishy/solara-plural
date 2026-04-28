@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import type { FrontEntry } from '@/lib/db/schema';
 import { revalidateFrontHistory, revalidateMembersAndFront } from '@/lib/swr';
+import { useLanguage } from '@/components/providers/LanguageProvider';
 
 type FrontMember = {
   id: string;
@@ -18,8 +19,12 @@ interface Props {
   activeFront: (Omit<FrontEntry, 'memberIds'> & { memberIds: string[] }) | null;
 }
 
-function MemberAvatar({ member, size }: { member: FrontMember; size: 'sm' | 'md' }) {
-  const cls = size === 'sm' ? 'h-8 w-8 text-xs' : 'h-10 w-10 text-sm';
+function MemberAvatar({ member, size }: { member: FrontMember; size: 'xs' | 'sm' | 'md' }) {
+  const cls = size === 'xs'
+    ? 'h-5 w-5 text-[10px]'
+    : size === 'sm'
+      ? 'h-8 w-8 text-xs'
+      : 'h-10 w-10 text-sm';
 
   if (member.avatarUrl) {
     return (
@@ -43,10 +48,12 @@ function MemberAvatar({ member, size }: { member: FrontMember; size: 'sm' | 'md'
 
 export default function FrontTracker({ members, activeFront }: Props) {
   const router = useRouter();
+  const { t, formatTime } = useLanguage();
   const [isPending, startTransition] = useTransition();
   const [selected, setSelected] = useState<string[]>(activeFront?.memberIds ?? []);
   const [note, setNote] = useState('');
   const [query, setQuery] = useState('');
+  const [isMobilePickerOpen, setIsMobilePickerOpen] = useState(false);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   function toggleMember(id: string) {
@@ -66,11 +73,11 @@ export default function FrontTracker({ members, activeFront }: Props) {
     });
 
     if (!res.ok) {
-      setFeedback({ type: 'error', message: 'Could not save front session. Try again.' });
+      setFeedback({ type: 'error', message: t('front.saveError') });
       return;
     }
 
-    setFeedback({ type: 'success', message: activeFront ? 'Front switched.' : 'Front started.' });
+    setFeedback({ type: 'success', message: activeFront ? t('front.switched') : t('front.started') });
     revalidateMembersAndFront();
     revalidateFrontHistory();
     startTransition(() => router.refresh());
@@ -81,13 +88,13 @@ export default function FrontTracker({ members, activeFront }: Props) {
     const res = await fetch('/api/front', { method: 'DELETE' });
 
     if (!res.ok) {
-      setFeedback({ type: 'error', message: 'Could not end front. Try again.' });
+      setFeedback({ type: 'error', message: t('front.endError') });
       return;
     }
 
     setSelected([]);
     setNote('');
-    setFeedback({ type: 'success', message: 'Front session ended.' });
+    setFeedback({ type: 'success', message: t('front.ended') });
     revalidateMembersAndFront();
     revalidateFrontHistory();
     startTransition(() => router.refresh());
@@ -120,13 +127,13 @@ export default function FrontTracker({ members, activeFront }: Props) {
   return (
     <div className="space-y-4">
       {activeFront ? (
-        <section className="card border-front/40 p-5 shadow-front-glow" aria-label="Current front session">
+        <section className="card border-front/40 p-5 shadow-front-glow" aria-label={t('front.currentSession')}>
           <div className="mb-4 flex items-center gap-2.5">
             <span className="relative inline-flex h-3 w-3" aria-hidden="true">
               <span className="absolute inline-flex h-full w-full animate-pulse-ring rounded-full bg-front opacity-60" />
               <span className="relative inline-flex h-3 w-3 rounded-full bg-front shadow-[0_0_8px_rgba(249,168,212,0.7)]" />
             </span>
-            <h2 className="text-lg font-semibold tracking-tight text-text">Currently fronting</h2>
+            <h2 className="text-lg font-semibold tracking-tight text-text">{t('front.currentlyFronting')}</h2>
           </div>
 
           <div className="mb-5 flex flex-wrap gap-3">
@@ -140,7 +147,7 @@ export default function FrontTracker({ members, activeFront }: Props) {
 
           <div className="flex items-center justify-between gap-4 border-t border-border/50 pt-4">
             <p className="text-sm font-medium text-muted">
-              Since {new Date(activeFront.startedAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+              {t('dashboard.since')} {formatTime(activeFront.startedAt, { hour: 'numeric', minute: '2-digit' })}
             </p>
             <button
               type="button"
@@ -148,7 +155,7 @@ export default function FrontTracker({ members, activeFront }: Props) {
               disabled={isPending}
               className="btn-ghost min-h-[44px] border border-border/60 px-5 py-2.5 text-sm font-medium shadow-sm hover:border-border"
             >
-              {isPending ? 'Ending...' : 'End front'}
+              {isPending ? t('front.ending') : t('front.endFront')}
             </button>
           </div>
         </section>
@@ -165,18 +172,18 @@ export default function FrontTracker({ members, activeFront }: Props) {
                 <circle cx="12" cy="12" r="5" />
               </svg>
             </span>
-            <h2 className="text-base font-semibold tracking-tight text-text">Quiet moment</h2>
+            <h2 className="text-base font-semibold tracking-tight text-text">{t('front.quietMoment')}</h2>
           </div>
-          <p className="text-sm text-muted">No one is listed as fronting right now.</p>
+          <p className="text-sm text-muted">{t('dashboard.noCurrentFront')}</p>
         </section>
       )}
 
       {members.length === 0 ? (
         <section className="card p-5">
           <p className="rounded-xl border border-border/50 bg-surface-alt p-4 text-base text-muted">
-            No members yet -{' '}
+            {t('front.noMembersYet')}{' '}
             <Link href="/members/new" className="font-medium text-primary hover:underline">
-              add one first
+              {t('front.addOneFirst')}
             </Link>
           </p>
         </section>
@@ -186,91 +193,173 @@ export default function FrontTracker({ members, activeFront }: Props) {
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
               <div>
                 <h2 id="front-selector-title" className="text-base font-semibold text-text">
-                  {activeFront ? 'Switch front' : 'Start front'}
+                  {activeFront ? t('front.switchFront') : t('front.startFront')}
                 </h2>
-                <p className="text-sm text-muted">Select one or more members to track this session.</p>
+                <p className="text-sm text-muted">{t('front.selectMembersHelp')}</p>
               </div>
               <p className="rounded-full border border-primary/30 bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary-glow">
-                {selected.length} selected
+                {selected.length} {t('common.selected')}
               </p>
             </div>
 
-            <label htmlFor="front-member-search" className="label text-sm font-medium">Search members</label>
-            <input
-              id="front-member-search"
-              className="input min-h-[44px] bg-surface-alt/50 px-4 py-2.5 text-base transition-colors focus:bg-surface"
-              placeholder="Type a name"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              aria-describedby="front-member-help"
-            />
-            <p id="front-member-help" className="mt-2 text-xs text-subtle">
-              Tap a member to add or remove them from this session.
-            </p>
+            <div className="mt-4 md:hidden">
+              <button
+                type="button"
+                onClick={() => setIsMobilePickerOpen((prev) => !prev)}
+                className="w-full rounded-xl border border-border/70 bg-surface-alt/70 px-3.5 py-3 text-left shadow-sm transition-all hover:border-primary/40 hover:bg-surface-alt/90 active:scale-[0.99]"
+                aria-expanded={isMobilePickerOpen}
+                aria-controls="mobile-member-picker"
+              >
+                <span className="flex items-center justify-between gap-3">
+                  <span className="text-sm font-semibold text-text">
+                    {isMobilePickerOpen ? t('front.closeSelector') : t('front.chooseMembers')}
+                  </span>
+                  <span
+                    aria-hidden="true"
+                    className={`text-base text-primary-glow transition-transform duration-150 ${isMobilePickerOpen ? 'rotate-180' : ''}`}
+                  >
+                    ▾
+                  </span>
+                </span>
+                <span className="mt-2 flex items-center justify-start">
+                  <span className="rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary-glow">
+                    {selected.length} {t('common.selected')}
+                  </span>
+                </span>
+              </button>
 
-            <fieldset className="mt-4">
-              <legend className="sr-only">Member selection</legend>
-              {filteredMembers.length === 0 ? (
-                <p className="rounded-xl border border-border/50 bg-surface-alt p-4 text-sm text-muted">
-                  Nothing found for &quot;{query}&quot;. Try a different name?
-                </p>
-              ) : (
-                <div className="max-h-[46dvh] overflow-y-auto pr-1 sm:max-h-[52dvh]">
-                  <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2">
-                    {filteredMembers.map((member) => {
-                      const isSelected = selected.includes(member.id);
+              {isMobilePickerOpen && (
+                <div id="mobile-member-picker" className="mt-3 space-y-3 rounded-xl border border-border/50 bg-surface-alt/50 p-3">
+                  <label htmlFor="front-member-search-mobile" className="label text-sm font-medium">{t('front.searchMembers')}</label>
+                  <input
+                    id="front-member-search-mobile"
+                    className="input min-h-[44px] bg-surface px-4 py-2.5 text-base transition-colors focus:bg-surface"
+                    placeholder={t('front.searchPlaceholder')}
+                    value={query}
+                    onChange={(event) => setQuery(event.target.value)}
+                  />
 
-                      return (
-                        <button
-                          key={member.id}
-                          type="button"
-                          onClick={() => toggleMember(member.id)}
-                          aria-pressed={isSelected}
-                          aria-label={`Toggle member ${member.name}`}
-                          className={`flex min-h-[56px] items-center gap-3 rounded-xl border-2 p-2.5 text-left text-sm transition-all duration-150 active:scale-95 ${
-                            isSelected
-                              ? 'border-primary bg-primary/10 text-text shadow-sm'
-                              : 'border-transparent bg-surface-alt text-muted hover:bg-surface-alt/80 hover:text-text'
-                          }`}
-                        >
-                          <MemberAvatar member={member} size="sm" />
-                          <span className="flex-1 truncate font-medium leading-tight">{member.name}</span>
-                          {isSelected && (
-                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
-                              stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
-                              aria-hidden="true" className="flex-shrink-0 text-primary">
-                              <polyline points="20 6 9 17 4 12" />
-                            </svg>
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
+                  {filteredMembers.length === 0 ? (
+                    <p className="rounded-xl border border-border/50 bg-surface p-3 text-sm text-muted">
+                      {t('common.noResultsFor', { query })}
+                    </p>
+                  ) : (
+                    <div className="max-h-[42dvh] space-y-2 overflow-y-auto pr-1">
+                      {filteredMembers.map((member) => {
+                        const isSelected = selected.includes(member.id);
+
+                        return (
+                          <button
+                            key={member.id}
+                            type="button"
+                            onClick={() => toggleMember(member.id)}
+                            aria-pressed={isSelected}
+                            aria-label={t('front.toggleMember', { name: member.name })}
+                            className={`flex min-h-[48px] w-full items-center gap-2.5 rounded-lg border px-3 py-2 text-left text-sm transition-colors ${
+                              isSelected
+                                ? 'border-primary/60 bg-primary/12 text-text'
+                                : 'border-border/50 bg-surface text-muted'
+                            }`}
+                          >
+                            <MemberAvatar member={member} size="sm" />
+                            <span className="flex-1 truncate font-medium">{member.name}</span>
+                            <span
+                              aria-hidden="true"
+                              className={`h-5 w-5 rounded-full border text-center text-xs leading-[18px] ${
+                                isSelected
+                                  ? 'border-primary/70 bg-primary/20 text-primary-glow'
+                                  : 'border-border/70 text-subtle'
+                              }`}
+                            >
+                              {isSelected ? 'x' : '+'}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               )}
-            </fieldset>
+            </div>
+
+            <div className="hidden md:block">
+              <label htmlFor="front-member-search-desktop" className="label text-sm font-medium">{t('front.searchMembers')}</label>
+              <input
+                id="front-member-search-desktop"
+                className="input min-h-[44px] bg-surface-alt/50 px-4 py-2.5 text-base transition-colors focus:bg-surface"
+                placeholder={t('front.searchPlaceholder')}
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                aria-describedby="front-member-help"
+              />
+              <p id="front-member-help" className="mt-2 text-xs text-subtle">
+                {t('front.selectionHelp')}
+              </p>
+
+              <fieldset className="mt-4">
+                <legend className="sr-only">{t('front.memberSelection')}</legend>
+                {filteredMembers.length === 0 ? (
+                  <p className="rounded-xl border border-border/50 bg-surface-alt p-4 text-sm text-muted">
+                    {t('common.noResultsTry', { query })}
+                  </p>
+                ) : (
+                  <div className="max-h-[46dvh] overflow-y-auto pr-1 sm:max-h-[52dvh]">
+                    <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2">
+                      {filteredMembers.map((member) => {
+                        const isSelected = selected.includes(member.id);
+
+                        return (
+                          <button
+                            key={member.id}
+                            type="button"
+                            onClick={() => toggleMember(member.id)}
+                            aria-pressed={isSelected}
+                            aria-label={t('front.toggleMember', { name: member.name })}
+                            className={`flex min-h-[56px] items-center gap-3 rounded-xl border-2 p-2.5 text-left text-sm transition-all duration-150 active:scale-95 ${
+                              isSelected
+                                ? 'border-primary bg-primary/10 text-text shadow-sm'
+                                : 'border-transparent bg-surface-alt text-muted hover:bg-surface-alt/80 hover:text-text'
+                            }`}
+                          >
+                            <MemberAvatar member={member} size="sm" />
+                            <span className="flex-1 truncate font-medium leading-tight">{member.name}</span>
+                            {isSelected && (
+                              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                                stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+                                aria-hidden="true" className="flex-shrink-0 text-primary">
+                                <polyline points="20 6 9 17 4 12" />
+                              </svg>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </fieldset>
+            </div>
           </section>
 
           <section className="card h-fit p-5 shadow-sm lg:sticky lg:top-6" aria-labelledby="front-session-title">
-            <h2 id="front-session-title" className="mb-3 text-base font-semibold text-text">Session details</h2>
+            <h2 id="front-session-title" className="mb-3 text-base font-semibold text-text">{t('front.sessionDetails')}</h2>
 
             <div className="mb-4">
               <div className="mb-2 flex items-center justify-between gap-2">
-                <p className="text-sm font-medium text-muted">Selected members</p>
+                <p className="text-sm font-medium text-muted">{t('front.selectedMembers')}</p>
                 {selectedMembers.length > 1 && (
                   <button
                     type="button"
                     onClick={() => setSelected([])}
                     className="min-h-[44px] px-1 text-xs text-primary transition-colors hover:text-primary-glow"
                   >
-                    Clear all
+                    {t('common.clearAll')}
                   </button>
                 )}
               </div>
 
               {selectedMembers.length === 0 ? (
                 <p className="rounded-xl border border-border/50 bg-surface-alt p-3 text-sm text-muted">
-                  No members selected yet.
+                  {t('front.noSelected')}
                 </p>
               ) : (
                 <div className="flex flex-wrap gap-2">
@@ -279,10 +368,10 @@ export default function FrontTracker({ members, activeFront }: Props) {
                       type="button"
                       key={member.id}
                       onClick={() => toggleMember(member.id)}
-                      aria-label={`Remove ${member.name} from selection`}
+                      aria-label={t('front.removeMember', { name: member.name })}
                       className="inline-flex min-h-[36px] items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-1.5 text-sm text-text transition-colors hover:border-primary/50 hover:bg-primary/15"
                     >
-                      <span aria-hidden="true" className="h-2 w-2 rounded-full" style={{ backgroundColor: member.color ?? '#a78bfa' }} />
+                      <MemberAvatar member={member} size="xs" />
                       {member.name}
                       <span aria-hidden="true" className="text-primary-glow">x</span>
                     </button>
@@ -292,11 +381,11 @@ export default function FrontTracker({ members, activeFront }: Props) {
             </div>
 
             <div className="mb-5 space-y-2">
-              <label htmlFor="front-note" className="label text-sm font-medium">Note (optional)</label>
+              <label htmlFor="front-note" className="label text-sm font-medium">{t('common.noteOptional')}</label>
               <input
                 id="front-note"
                 className="input min-h-[44px] bg-surface-alt/50 px-4 py-2.5 text-base transition-colors focus:bg-surface"
-                placeholder="Add context for this front session..."
+                placeholder={t('front.notePlaceholder')}
                 value={note}
                 onChange={(event) => setNote(event.target.value)}
               />
@@ -309,13 +398,13 @@ export default function FrontTracker({ members, activeFront }: Props) {
               className="btn-primary min-h-[52px] w-full text-base font-semibold shadow-glow transition-all duration-200 active:scale-[0.98]"
             >
               {isPending
-                ? activeFront ? 'Switching...' : 'Starting...'
-                : activeFront ? 'Switch front' : 'Start front'}
+                ? activeFront ? t('front.switching') : t('front.starting')
+                : activeFront ? t('front.switchFront') : t('front.startFront')}
               {selected.length > 0 && ` (${selected.length})`}
             </button>
 
             <Link href="/front/history" className="btn-ghost mt-3 min-h-[44px] w-full justify-center border border-border/60">
-              Open front history
+              {t('front.openHistory')}
             </Link>
           </section>
         </div>

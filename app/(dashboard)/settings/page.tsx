@@ -3,6 +3,7 @@ import { systems } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import SettingsClient from './SettingsClient';
 import { requireSystemId } from '@/lib/auth/session';
+import { Trans } from '@/components/language/Trans';
 
 export default async function SettingsPage() {
   const systemId = await requireSystemId();
@@ -14,6 +15,9 @@ export default async function SettingsPage() {
       email: true,
       description: true,
       accountType: true,
+      avatarMode: true,
+      avatarEmoji: true,
+      avatarUrl: true,
       createdAt: true,
       updatedAt: true,
     },
@@ -23,8 +27,8 @@ export default async function SettingsPage() {
   return (
     <div className="space-y-6 max-w-2xl">
       <div>
-        <h1 className="text-2xl font-bold text-text">Settings</h1>
-        <p className="text-muted text-sm mt-0.5">Manage your account profile and data</p>
+        <h1 className="text-2xl font-bold text-text"><Trans k="pages.settingsTitle" /></h1>
+        <p className="text-muted text-sm mt-0.5"><Trans k="pages.settingsSubtitle" /></p>
       </div>
       <SettingsClient system={system ?? null} />
     </div>

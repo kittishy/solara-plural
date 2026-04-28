@@ -290,3 +290,21 @@
 - Redesigned mobile nav spacing and sizing for better touch targets and narrow screens.
 
 ---
+
+## [2026-04-28] D019 - System-level Avatar + Local Custom Theme Controls
+
+**Decision:** Add a first-class system avatar model (emoji preset or image URL) and expose lightweight local custom theme color controls while keeping preset themes as the default path.
+
+**Justification:**
+- The system identity marker in navigation should be user-controlled and consistent across Settings, sidebar brand area, and friend lists.
+- Friends need a recognizable profile marker when available, with graceful fallback when not set.
+- Theme presets are still the primary UX, but users requested basic personalization beyond fixed presets.
+
+**Implementation:**
+- Added `systems.avatarMode`, `systems.avatarEmoji`, and `systems.avatarUrl`.
+- Added `GET/PUT /api/account/profile` for account profile + avatar persistence.
+- Updated Settings profile UI with avatar mode switch, emoji presets, URL input, and preview.
+- Extended `GET /api/friends` payload with friend avatar fields.
+- Added local custom theme color controls (primary, surface, background) layered on top of preset themes.
+
+---

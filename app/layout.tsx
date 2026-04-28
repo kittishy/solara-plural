@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { Nunito } from 'next/font/google';
+import { LanguageProvider } from '@/components/providers/LanguageProvider';
 import './globals.css';
 
 const nunito = Nunito({
@@ -31,12 +32,16 @@ export default function RootLayout({
                   var key = 'solara.theme';
                   var theme = localStorage.getItem(key);
                   if (theme) document.documentElement.setAttribute('data-solara-theme', theme);
+                  var language = localStorage.getItem('solara.language');
+                  if (language === 'pt-BR' || language === 'es' || language === 'en') {
+                    document.documentElement.lang = language;
+                  }
                 } catch (_) {}
               })();
             `,
           }}
         />
-        {children}
+        <LanguageProvider>{children}</LanguageProvider>
       </body>
     </html>
   );
