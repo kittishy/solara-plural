@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LanguageSelector } from '@/components/language/LanguageSelector';
 import { useLanguage } from '@/components/providers/LanguageProvider';
 
 type IconProps = { size?: number };
@@ -157,10 +156,6 @@ export function MobileNav() {
             role="menu"
             aria-label={t('nav.moreMenu')}
           >
-            <div className="mb-2 rounded-lg border border-border/60 bg-surface-alt/70 p-2">
-              <LanguageSelector />
-            </div>
-
             {menuItems.map((item) => {
               const current = isActive(pathname, item.href);
 

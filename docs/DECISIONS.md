@@ -308,3 +308,55 @@
 - Added local custom theme color controls (primary, surface, background) layered on top of preset themes.
 
 ---
+
+## [2026-04-29] D020 - Inline Compressed Avatar Storage
+
+**Decision:** Store uploaded avatar images as compressed inline `data:image` values for profile/member avatars instead of relying on Catbox for this flow. Prefer WebP when the browser supports it, with JPEG as a fallback.
+
+**Justification:**
+- Catbox rejected production uploads from the Vercel route with `HTTP 412: Invalid uploader`.
+- Avatar images do not need full-resolution external hosting; a small compressed image is enough for UI use.
+- Keeping avatar upload local to the app removes a fragile third-party dependency from the profile setup flow.
+
+**Implementation:**
+- Added client-side avatar compression to a 512px WebP data URL, with JPEG fallback.
+- Settings and member avatar upload now use the compressed data URL directly.
+- Account profile validation accepts safe image data URLs up to a bounded size.
+
+---
+
+## [2026-04-29] D021 - Friend List Shows Only Relevant Shared Front Context
+
+**Decision:** Keep the Friends list lightweight by showing current-front context only when it is relevant and available for system friends. Do not show plural-specific empty states for singlet friends, shared-member empty states, or "accounts blocking you" status.
+
+**Justification:**
+- Friend cards should answer "who am I connected to?" without creating emotional discomfort or unnecessary social exposure.
+- Current front visibility is useful for system friends, but empty front/member states are noise in the list view.
+- Blocking visibility can feel negative and should not be surfaced as a passive dashboard panel.
+
+**Implementation:**
+- Extended `GET /api/friends` with `sharedMembers` and `currentFront` summaries.
+- Filtered shared members and fronting members through `system_friend_member_shares` and field-level visibility.
+- Updated `FriendsClient` to render a current-front strip only for system friends with a visible active front.
+- Removed shared-member empty state cards from the friend list and removed the "Accounts blocking you" panel.
+
+---
+
+## [2026-04-29] D022 - Safer Settings Account Controls
+
+**Decision:** Add bidirectional account type switching and schedule account deletion behind a 72-hour recovery window instead of immediate deletion.
+
+**Justification:**
+- Users may need to move between singlet and system account modes as self-understanding changes.
+- Changing from system to singlet deserves an explicit warning because system-specific data may be hidden, changed, or removed by future behavior.
+- Account deletion must protect users during distress by requiring deliberate confirmation and giving time to recover.
+
+**Implementation:**
+- Added `deletionRequestedAt` and `deletionScheduledFor` fields to `systems`.
+- Added `DELETE /api/account/deletion` to schedule deletion after typing the account email and acknowledging the 72-hour recovery window.
+- Added `POST /api/account/deletion` to cancel scheduled deletion.
+- Added `scripts/purge-scheduled-deletions.cjs` as a dry-run-first purge mechanism for accounts past the recovery window.
+- Updated Settings with account type controls, a system-to-singlet warning panel, and a guarded deletion/recovery section.
+- Updated Mist Gray theme tokens and CSS variables so it is visually distinct from Night Bloom.
+
+---

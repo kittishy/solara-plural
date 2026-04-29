@@ -12,6 +12,8 @@
     "cleanup:dupes:apply": "node scripts/cleanup-dupes.cjs --apply",
     "cleanup:validation": "node scripts/cleanup-validation-data.cjs",
     "cleanup:validation:apply": "node scripts/cleanup-validation-data.cjs --apply",
+    "cleanup:scheduled-deletions": "node scripts/purge-scheduled-deletions.cjs",
+    "cleanup:scheduled-deletions:apply": "node scripts/purge-scheduled-deletions.cjs --apply",
     "validate:friends-flow": "node scripts/validate-friends-flow.cjs",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",

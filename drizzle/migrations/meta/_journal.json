@@ -36,6 +36,13 @@
       "when": 1777363200000,
       "tag": "0004_safe_hummingbird",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1777493403629,
+      "tag": "0005_melted_riptide",
+      "breakpoints": true
     }
   ]
 }

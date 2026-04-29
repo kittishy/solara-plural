@@ -1,10 +1,24 @@
 import { createId } from '@paralleldrive/cuid2';
-import { and, eq, inArray, or } from 'drizzle-orm';
+import { and, eq, inArray, isNull, or } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { db } from '@/lib/db';
-import { systemBlocks, systemFriendRequests, systemFriendships, systems } from '@/lib/db/schema';
+import {
+  frontEntries,
+  members,
+  systemBlocks,
+  systemFriendMemberShares,
+  systemFriendRequests,
+  systemFriendships,
+  systems,
+} from '@/lib/db/schema';
 import { err, ok, requireAuth } from '@/lib/api/helpers';
-import { canonicalFriendPair, normalizeEmail } from '@/lib/friends';
+import {
+  canonicalFriendPair,
+  normalizeEmail,
+  parseStoredFieldVisibilityJson,
+  type FriendMemberFieldVisibility,
+  type FriendMemberVisibility,
+} from '@/lib/friends';
 
 function mapRequestPayload(body: unknown): { email: string; message: string | null } {
   const payload = body as { email?: unknown; message?: unknown };
@@ -15,6 +29,33 @@ function mapRequestPayload(body: unknown): { email: string; message: string | nu
     email,
     message: message.length > 0 ? message : null,
   };
+}
+
+function parseMemberTags(value: string | null): string[] {
+  if (!value) return [];
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed.filter((tag): tag is string => typeof tag === 'string') : [];
+  } catch {
+    return [];
+  }
+}
+
+function parseMemberIds(value: string): string[] {
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed.filter((id): id is string => typeof id === 'string') : [];
+  } catch {
+    return [];
+  }
+}
+
+function visibleField<T>(
+  value: T,
+  fieldVisibility: FriendMemberFieldVisibility,
+  key: keyof FriendMemberFieldVisibility,
+): T | null {
+  return fieldVisibility[key] ? value : null;
 }
 
 // GET /api/friends
@@ -92,6 +133,98 @@ export async function GET() {
     : [];
 
   const relatedById = new Map(relatedProfiles.map((profile) => [profile.id, profile]));
+  const friendIds = friendships.map((friendship) => (
+    friendship.systemAId === auth.systemId ? friendship.systemBId : friendship.systemAId
+  ));
+
+  const [incomingShareRows, sharedMemberRows, activeFrontRows] = friendIds.length > 0
+    ? await Promise.all([
+        db.query.systemFriendMemberShares.findMany({
+          columns: {
+            ownerSystemId: true,
+            memberId: true,
+            visibility: true,
+            fieldVisibility: true,
+          },
+          where: and(
+            inArray(systemFriendMemberShares.ownerSystemId, friendIds),
+            eq(systemFriendMemberShares.friendSystemId, auth.systemId),
+          ),
+        }),
+        db.query.members.findMany({
+          columns: {
+            id: true,
+            systemId: true,
+            name: true,
+            pronouns: true,
+            avatarUrl: true,
+            description: true,
+            color: true,
+            role: true,
+            tags: true,
+            isArchived: true,
+          },
+          where: inArray(members.systemId, friendIds),
+          orderBy: (member, { asc }) => [asc(member.name)],
+        }),
+        db.query.frontEntries.findMany({
+          columns: {
+            id: true,
+            systemId: true,
+            memberIds: true,
+            startedAt: true,
+          },
+          where: and(
+            inArray(frontEntries.systemId, friendIds),
+            isNull(frontEntries.endedAt),
+          ),
+        }),
+      ])
+    : [[], [], []];
+
+  const shareByMemberId = new Map(incomingShareRows.map((row) => [row.memberId, row]));
+  const sharedMembersByFriendId = new Map<string, Array<{
+    id: string;
+    name: string;
+    pronouns: string | null;
+    avatarUrl: string | null;
+    description: string | null;
+    color: string | null;
+    role: string | null;
+    tags: string[];
+    visibility: FriendMemberVisibility;
+  }>>();
+  const visibleMemberIdsByFriendId = new Map<string, Set<string>>();
+
+  for (const member of sharedMemberRows) {
+    if (member.isArchived === 1) continue;
+    const share = shareByMemberId.get(member.id);
+    if (!share || share.visibility === 'hidden') continue;
+
+    const visibility = share.visibility as FriendMemberVisibility;
+    const fieldVisibility = parseStoredFieldVisibilityJson(share.fieldVisibility, visibility);
+    const visibleMember = {
+      id: member.id,
+      name: member.name,
+      pronouns: visibleField(member.pronouns, fieldVisibility, 'pronouns'),
+      avatarUrl: visibleField(member.avatarUrl, fieldVisibility, 'avatarUrl'),
+      description: visibleField(member.description, fieldVisibility, 'description'),
+      color: visibleField(member.color, fieldVisibility, 'color'),
+      role: visibleField(member.role, fieldVisibility, 'role'),
+      tags: fieldVisibility.tags ? parseMemberTags(member.tags) : [],
+      visibility,
+    };
+
+    const existing = sharedMembersByFriendId.get(member.systemId) ?? [];
+    existing.push(visibleMember);
+    sharedMembersByFriendId.set(member.systemId, existing);
+
+    const visibleIds = visibleMemberIdsByFriendId.get(member.systemId) ?? new Set<string>();
+    visibleIds.add(member.id);
+    visibleMemberIdsByFriendId.set(member.systemId, visibleIds);
+  }
+
+  const activeFrontByFriendId = new Map(activeFrontRows.map((row) => [row.systemId, row]));
 
   const friends = friendships
     .map((friendship) => {
@@ -109,6 +242,24 @@ export async function GET() {
         avatarEmoji: profile.avatarEmoji,
         avatarUrl: profile.avatarUrl,
         connectedAt: friendship.createdAt,
+        sharedMembers: sharedMembersByFriendId.get(profile.id) ?? [],
+        currentFront: (() => {
+          const activeFront = activeFrontByFriendId.get(profile.id);
+          if (!activeFront) return null;
+
+          const visibleIds = visibleMemberIdsByFriendId.get(profile.id) ?? new Set<string>();
+          const parsedFrontMemberIds = parseMemberIds(activeFront.memberIds);
+          const frontMemberIds = parsedFrontMemberIds.filter((id) => visibleIds.has(id));
+          const visibleFrontMembers = (sharedMembersByFriendId.get(profile.id) ?? [])
+            .filter((member) => frontMemberIds.includes(member.id));
+
+          if (visibleFrontMembers.length === 0) return null;
+
+          return {
+            startedAt: activeFront.startedAt,
+            members: visibleFrontMembers,
+          };
+        })(),
       };
     })
     .filter((entry): entry is NonNullable<typeof entry> => Boolean(entry));

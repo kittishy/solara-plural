@@ -20,6 +20,8 @@ Represents a plural system (user account).
 | avatarUrl | text | nullable | Optional profile avatar image URL |
 | email | text | UNIQUE NOT NULL | Login email |
 | passwordHash | text | NOT NULL | bcrypt hash |
+| deletionRequestedAt | integer | nullable | When account deletion was requested |
+| deletionScheduledFor | integer | nullable | Earliest time the account can be permanently purged after the 72h recovery window |
 | createdAt | integer | NOT NULL | Unix timestamp |
 | updatedAt | integer | NOT NULL | Unix timestamp |
 

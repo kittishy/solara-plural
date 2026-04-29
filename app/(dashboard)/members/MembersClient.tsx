@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import Image from 'next/image';
+import DynamicAvatarImage from '@/components/ui/DynamicAvatarImage';
 import { useState, useMemo } from 'react';
 import useSWR from 'swr';
 import { apiFetcher, swrKeys } from '@/lib/swr';
@@ -167,11 +167,8 @@ export default function MembersClient({
                 aria-hidden="true"
               >
                 {member.avatarUrl ? (
-                  <Image
-                    src={member.avatarUrl}
+                  <DynamicAvatarImage src={member.avatarUrl}
                     alt=""
-                    width={48}
-                    height={48}
                     className="w-full h-full object-cover"
                   />
                 ) : (

@@ -22,6 +22,9 @@ function parseAvatarUrl(value: unknown): string | null {
   if (typeof value !== 'string') return null;
   const trimmed = value.trim();
   if (!trimmed) return null;
+  if (/^data:image\/(jpeg|jpg|png|webp);base64,/i.test(trimmed) && trimmed.length <= 600_000) {
+    return trimmed;
+  }
 
   try {
     const parsed = new URL(trimmed);
@@ -88,7 +91,7 @@ export async function PUT(request: Request) {
   const avatarUrl = parseAvatarUrl(payload.avatarUrl);
 
   if (avatarMode === 'url' && !avatarUrl) {
-    return err('Please provide a valid image URL (http/https) for URL avatar mode.', 400);
+    return err('Please provide a valid image URL for URL avatar mode.', 400);
   }
 
   const description = parseDescription(payload.description);

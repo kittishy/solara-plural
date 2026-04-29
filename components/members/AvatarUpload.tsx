@@ -1,7 +1,8 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import Image from 'next/image';
+import DynamicAvatarImage from '@/components/ui/DynamicAvatarImage';
+import { prepareAvatarDataUrl } from '@/lib/client/avatar-upload';
 
 interface AvatarUploadProps {
   currentUrl?: string | null;
@@ -10,7 +11,7 @@ interface AvatarUploadProps {
   onUpload: (url: string) => void;
 }
 
-const MAX_FILE_BYTES = 10 * 1024 * 1024; // 10 MB
+const MAX_FILE_BYTES = 20 * 1024 * 1024; // 20 MB
 
 export default function AvatarUpload({
   currentUrl,
@@ -36,7 +37,7 @@ export default function AvatarUpload({
 
     // Client-side size guard
     if (file.size > MAX_FILE_BYTES) {
-      setError('File is too large — max 10 MB.');
+      setError('File is too large - max 20 MB.');
       // Reset input so the same file can be re-selected after fixing
       e.target.value = '';
       return;
@@ -48,18 +49,9 @@ export default function AvatarUpload({
     setIsUploading(true);
 
     try {
-      const form = new FormData();
-      form.append('file', file);
-
-      const res = await fetch('/api/upload', { method: 'POST', body: form });
-
-      if (!res.ok) {
-        throw new Error(`Server error ${res.status}`);
-      }
-
-      const json = (await res.json()) as { success: boolean; data: { url: string } };
-      setPreviewUrl(json.data.url);
-      onUpload(json.data.url);
+      const dataUrl = await prepareAvatarDataUrl(file);
+      setPreviewUrl(dataUrl);
+      onUpload(dataUrl);
     } catch {
       // Revert preview on failure
       setPreviewUrl(currentUrl ?? null);
@@ -92,11 +84,8 @@ export default function AvatarUpload({
       >
         {/* Image or initial */}
         {previewUrl ? (
-          <Image
-            src={previewUrl}
+          <DynamicAvatarImage src={previewUrl}
             alt={`${memberName}'s avatar`}
-            width={96}
-            height={96}
             className="w-full h-full object-cover"
           />
         ) : (

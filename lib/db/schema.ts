@@ -12,6 +12,8 @@ export const systems = sqliteTable('systems', {
   email:        text('email').notNull().unique(),
   passwordHash: text('password_hash').notNull(),
   accountType:  text('account_type').notNull().default('system'),
+  deletionRequestedAt: integer('deletion_requested_at', { mode: 'timestamp' }),
+  deletionScheduledFor: integer('deletion_scheduled_for', { mode: 'timestamp' }),
   createdAt:    integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(strftime('%s', 'now'))`),
   updatedAt:    integer('updated_at', { mode: 'timestamp' }).notNull().default(sql`(strftime('%s', 'now'))`),
 });

@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { signOut } from 'next-auth/react';
-import { LanguageSelector } from '@/components/language/LanguageSelector';
 import { useLanguage } from '@/components/providers/LanguageProvider';
 import {
   applySolaraTheme,
@@ -259,8 +258,6 @@ export function Sidebar({ systemName }: SidebarProps) {
                 {t('nav.appearanceSettings')}
               </Link>
             </div>
-
-            <LanguageSelector />
           </div>
         )}
       </div>

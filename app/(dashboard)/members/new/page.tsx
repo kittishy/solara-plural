@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import Image from 'next/image';
+import DynamicAvatarImage from '@/components/ui/DynamicAvatarImage';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { revalidateMembersAndFront } from '@/lib/swr';
@@ -135,7 +135,7 @@ export default function NewMemberPage() {
               style={!form.avatarUrl ? { backgroundColor: form.color } : undefined}
             >
               {form.avatarUrl ? (
-                <Image src={form.avatarUrl} alt="Avatar preview" width={48} height={48} className="w-full h-full object-cover" />
+                <DynamicAvatarImage src={form.avatarUrl} alt="Avatar preview" className="w-full h-full object-cover" />
               ) : (
                 form.name ? form.name[0].toUpperCase() : '?'
               )}

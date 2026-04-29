@@ -1,12 +1,24 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import Image from 'next/image';
+import DynamicAvatarImage from '@/components/ui/DynamicAvatarImage';
 
 type AccountType = 'system' | 'singlet';
 type ShareVisibility = 'hidden' | 'profile' | 'full';
 type ShareFieldKey = 'pronouns' | 'description' | 'avatarUrl' | 'color' | 'role' | 'tags' | 'notes';
 type ShareFieldVisibility = Record<ShareFieldKey, boolean>;
+
+type VisibleFriendMember = {
+  id: string;
+  name: string;
+  pronouns: string | null;
+  avatarUrl: string | null;
+  description: string | null;
+  color: string | null;
+  role: string | null;
+  tags: string[];
+  visibility: ShareVisibility;
+};
 
 type FriendSummary = {
   friendshipId: string;
@@ -18,6 +30,11 @@ type FriendSummary = {
   avatarEmoji?: string | null;
   avatarUrl?: string | null;
   connectedAt: string;
+  sharedMembers: VisibleFriendMember[];
+  currentFront: {
+    startedAt: string;
+    members: VisibleFriendMember[];
+  } | null;
 };
 
 type IncomingRequest = {
@@ -677,24 +694,25 @@ export default function FriendsClient() {
           <ul className="space-y-3">
             {payload.friends.map((friend) => {
               const sharing = sharingByFriendId[friend.id];
+              const showCurrentFront = friend.accountType === 'system' && friend.currentFront;
 
               return (
                 <li key={friend.friendshipId} className="rounded-xl border border-border-soft bg-surface-alt/50 p-4">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="flex items-start gap-3">
                       <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center overflow-hidden rounded-full border border-border/60 bg-surface">
-                        {friend.avatarMode === 'url' && isLikelyHttpUrl(friend.avatarUrl) ? (
-                          <Image src={friend.avatarUrl} alt={friend.name} width={40} height={40} className="h-full w-full object-cover" />
+                        {friend.avatarMode === 'url' && isLikelyAvatarImageSource(friend.avatarUrl) ? (
+                          <DynamicAvatarImage src={friend.avatarUrl} alt={friend.name} className="h-full w-full object-cover" />
                         ) : (
                           <span className="text-base leading-none">{friend.avatarEmoji?.trim() || '☀️'}</span>
                         )}
                       </div>
                       <div>
-                      <p className="text-sm font-semibold text-text">{friend.name}</p>
-                      <p className="text-xs text-muted">
-                        {ACCOUNT_LABEL[friend.accountType]} - Connected {formatDate(friend.connectedAt)}
-                      </p>
-                      {friend.description && <p className="text-xs text-subtle mt-2">{friend.description}</p>}
+                        <p className="text-sm font-semibold text-text">{friend.name}</p>
+                        <p className="text-xs text-muted">
+                          {ACCOUNT_LABEL[friend.accountType]} - Connected {formatDate(friend.connectedAt)}
+                        </p>
+                        {friend.description && <p className="text-xs text-subtle mt-2">{friend.description}</p>}
                       </div>
                     </div>
 
@@ -725,6 +743,31 @@ export default function FriendsClient() {
                       </button>
                     </div>
                   </div>
+
+                  {showCurrentFront && (
+                    <div className="mt-4">
+                      <div className="rounded-xl border border-front/35 bg-front-soft/20 p-3 shadow-front-glow">
+                        <div className="mb-2 flex flex-wrap items-center gap-2">
+                          <span className="relative inline-flex h-2.5 w-2.5" aria-hidden="true">
+                            <span className="absolute inline-flex h-full w-full animate-pulse-ring rounded-full bg-front opacity-60" />
+                            <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-front" />
+                          </span>
+                          <p className="text-xs font-semibold text-text">
+                            Currently fronting
+                          </p>
+                          <span className="text-[11px] text-subtle">
+                            since {formatTime(showCurrentFront.startedAt)}
+                          </span>
+                        </div>
+
+                        <div className="flex flex-wrap gap-2">
+                          {showCurrentFront.members.map((member) => (
+                            <FriendMemberChip key={member.id} member={member} compact />
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   {sharing?.open && (
                     <div className="mt-3 rounded-lg border border-border-soft bg-surface/70 p-3">
@@ -805,9 +848,9 @@ export default function FriendsClient() {
         )}
       </section>
 
-      <section className="grid gap-4 md:grid-cols-2" aria-label="Block status">
+      <section aria-labelledby="blocked-by-you-heading">
         <article className="card p-5">
-          <h3 className="text-base font-semibold text-text">Blocked by you</h3>
+          <h3 id="blocked-by-you-heading" className="text-base font-semibold text-text">Blocked by you</h3>
           <p className="text-xs text-muted mt-1">You can unblock any time.</p>
 
           {payload?.blocks.blockedByMe.length ? (
@@ -835,29 +878,37 @@ export default function FriendsClient() {
             <p className="text-sm text-muted mt-2">No blocked accounts.</p>
           )}
         </article>
-
-        <article className="card p-5">
-          <h3 className="text-base font-semibold text-text">Accounts blocking you</h3>
-          <p className="text-xs text-muted mt-1">These accounts cannot receive your invites right now.</p>
-
-          {payload?.blocks.blockedMe.length ? (
-            <ul className="mt-3 space-y-2">
-              {payload.blocks.blockedMe.map((entry) => (
-                <li key={entry.blockId} className="rounded-lg border border-border-soft bg-surface-alt/50 px-3 py-2">
-                  <p className="text-sm font-medium text-text">{entry.system.name}</p>
-                  <p className="text-xs text-muted">{ACCOUNT_LABEL[entry.system.accountType]}</p>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-sm text-muted mt-2">No one is blocking your account.</p>
-          )}
-        </article>
       </section>
 
       <p className="text-xs text-subtle">
         Account: {payload?.account.name ?? 'Unknown'} ({payload ? ACCOUNT_LABEL[payload.account.accountType] : '-'}) - Pending requests: {totalPending}
       </p>
+    </div>
+  );
+}
+
+function FriendMemberChip({ member, compact = false }: { member: VisibleFriendMember; compact?: boolean }) {
+  const sizeClass = compact ? 'h-7 w-7 text-[11px]' : 'h-8 w-8 text-xs';
+
+  return (
+    <div className="inline-flex min-h-[36px] max-w-full items-center gap-2 rounded-full border border-border/50 bg-surface px-2.5 py-1.5 text-sm text-text">
+      <span
+        className={`${sizeClass} flex flex-shrink-0 items-center justify-center overflow-hidden rounded-full font-bold text-bg ring-1 ring-border/50`}
+        style={!member.avatarUrl ? { backgroundColor: member.color ?? '#a78bfa' } : undefined}
+        aria-hidden="true"
+      >
+        {member.avatarUrl && isLikelyAvatarImageSource(member.avatarUrl) ? (
+          <DynamicAvatarImage src={member.avatarUrl} alt="" className="h-full w-full object-cover" />
+        ) : (
+          member.name[0]?.toUpperCase() ?? '?'
+        )}
+      </span>
+      <span className="min-w-0">
+        <span className="block truncate font-medium leading-tight">{member.name}</span>
+        {!compact && member.pronouns && (
+          <span className="block truncate text-[11px] leading-tight text-muted">{member.pronouns}</span>
+        )}
+      </span>
     </div>
   );
 }
@@ -876,14 +927,21 @@ function formatDate(value: string): string {
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
+function formatTime(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'unknown time';
+  return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+}
+
 function isLikelyEmail(value: string): boolean {
   const email = value.trim().toLowerCase();
   if (!email || email.length > 254) return false;
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
-function isLikelyHttpUrl(value: string | null | undefined): value is string {
+function isLikelyAvatarImageSource(value: string | null | undefined): value is string {
   if (!value) return false;
+  if (/^data:image\/(jpeg|jpg|png|webp);base64,/i.test(value)) return true;
   try {
     const parsed = new URL(value);
     return parsed.protocol === 'http:' || parsed.protocol === 'https:';

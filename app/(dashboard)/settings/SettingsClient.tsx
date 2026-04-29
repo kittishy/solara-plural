@@ -1,8 +1,10 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import Image from 'next/image';
+import { LanguageSelector } from '@/components/language/LanguageSelector';
+import DynamicAvatarImage from '@/components/ui/DynamicAvatarImage';
 import { signOut } from 'next-auth/react';
+import { prepareAvatarDataUrl } from '@/lib/client/avatar-upload';
 import {
   applySolaraTheme,
   DEFAULT_SOLARA_THEME,
@@ -21,6 +23,8 @@ type SettingsSystem = {
   avatarMode?: string | null;
   avatarEmoji?: string | null;
   avatarUrl?: string | null;
+  deletionRequestedAt?: Date | string | null;
+  deletionScheduledFor?: Date | string | null;
 };
 
 type ActionStatus = {
@@ -72,7 +76,7 @@ type ImportEnvelope = {
 const IMPORT_OPTIONS_STORAGE_KEY = 'solara.settings.importOptions';
 const DEFAULT_AVATAR_EMOJI = '☀️';
 const AVATAR_PRESETS = ['☀️', '🌙', '⭐', '🌸', '💜', '✨', '🫷', '🌿', '🫧', '🧭'] as const;
-const MAX_AVATAR_FILE_BYTES = 10 * 1024 * 1024;
+const MAX_AVATAR_FILE_BYTES = 20 * 1024 * 1024;
 
 type AvatarMode = 'emoji' | 'url';
 const DEFAULT_IMPORT_OPTIONS: ImportOptions = {
@@ -95,12 +99,18 @@ export default function SettingsClient({ system }: { system: SettingsSystem | nu
   const [importing, setImporting] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [changingAccountType, setChangingAccountType] = useState(false);
+  const [accountTypeWarningOpen, setAccountTypeWarningOpen] = useState(false);
   const [savingProfile, setSavingProfile] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [avatarUploadError, setAvatarUploadError] = useState<string | null>(null);
+  const [deletionBusy, setDeletionBusy] = useState(false);
+  const [deletionConfirmEmail, setDeletionConfirmEmail] = useState('');
+  const [deletionAcknowledged, setDeletionAcknowledged] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
   const [status, setStatus] = useState<ActionStatus | null>(null);
   const [accountType, setAccountType] = useState<'system' | 'singlet'>(toAccountType(system?.accountType));
+  const [deletionRequestedAt, setDeletionRequestedAt] = useState<Date | string | null>(system?.deletionRequestedAt ?? null);
+  const [deletionScheduledFor, setDeletionScheduledFor] = useState<Date | string | null>(system?.deletionScheduledFor ?? null);
   const [themeId, setThemeId] = useState<SolaraThemeId>(DEFAULT_SOLARA_THEME);
   const [avatarMode, setAvatarMode] = useState<AvatarMode>('emoji');
   const [avatarEmoji, setAvatarEmoji] = useState<string>(DEFAULT_AVATAR_EMOJI);
@@ -122,6 +132,8 @@ export default function SettingsClient({ system }: { system: SettingsSystem | nu
 
   useEffect(() => {
     setAccountType(toAccountType(system?.accountType));
+    setDeletionRequestedAt(system?.deletionRequestedAt ?? null);
+    setDeletionScheduledFor(system?.deletionScheduledFor ?? null);
     setProfileName(system?.name ?? '');
     setProfileDescription(system?.description ?? '');
     setAvatarMode(toAvatarMode(system?.avatarMode));
@@ -224,16 +236,20 @@ export default function SettingsClient({ system }: { system: SettingsSystem | nu
     }
   }
 
-  async function upgradeToSystem() {
+  async function updateAccountType(nextAccountType: 'system' | 'singlet', acknowledgeDataRisk = false) {
     if (changingAccountType) return;
+    if (nextAccountType === accountType) return;
     setChangingAccountType(true);
-    setStatus({ type: 'info', message: 'Upgrading your account to system...' });
+    setStatus({
+      type: 'info',
+      message: nextAccountType === 'system' ? 'Changing your account to system...' : 'Changing your account to singlet...',
+    });
 
     try {
       const res = await fetch('/api/account/type', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ accountType: 'system' }),
+        body: JSON.stringify({ accountType: nextAccountType, acknowledgeDataRisk }),
       });
 
       const payload = await readJsonResponse(res);
@@ -241,8 +257,14 @@ export default function SettingsClient({ system }: { system: SettingsSystem | nu
         throw new Error(payload.error ?? 'Could not update your account type.');
       }
 
-      setAccountType('system');
-      setStatus({ type: 'success', message: 'Your account is now a full system account.' });
+      setAccountType(nextAccountType);
+      setAccountTypeWarningOpen(false);
+      setStatus({
+        type: 'success',
+        message: nextAccountType === 'system'
+          ? 'Your account is now a system account.'
+          : 'Your account is now a singlet account.',
+      });
     } catch (error) {
       setStatus({
         type: 'error',
@@ -250,6 +272,74 @@ export default function SettingsClient({ system }: { system: SettingsSystem | nu
       });
     } finally {
       setChangingAccountType(false);
+    }
+  }
+
+  async function scheduleAccountDeletion() {
+    if (deletionBusy || !system?.email) return;
+    setDeletionBusy(true);
+    setStatus({ type: 'info', message: 'Scheduling account deletion recovery window...' });
+
+    try {
+      const res = await fetch('/api/account/deletion', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          confirmEmail: deletionConfirmEmail,
+          acknowledgeRecoveryWindow: deletionAcknowledged,
+        }),
+      });
+
+      const payload = await readJsonResponse<{
+        deletionRequestedAt: Date | string | null;
+        deletionScheduledFor: Date | string | null;
+      }>(res);
+
+      if (!payload.success) {
+        throw new Error(payload.error ?? 'Could not schedule account deletion.');
+      }
+
+      setDeletionRequestedAt(payload.data.deletionRequestedAt);
+      setDeletionScheduledFor(payload.data.deletionScheduledFor);
+      setDeletionConfirmEmail('');
+      setDeletionAcknowledged(false);
+      setStatus({ type: 'success', message: 'Deletion scheduled. You can cancel it from Settings for the next 72 hours.' });
+    } catch (error) {
+      setStatus({
+        type: 'error',
+        message: error instanceof Error ? error.message : 'Could not schedule account deletion.',
+      });
+    } finally {
+      setDeletionBusy(false);
+    }
+  }
+
+  async function cancelAccountDeletion() {
+    if (deletionBusy) return;
+    setDeletionBusy(true);
+    setStatus({ type: 'info', message: 'Canceling scheduled account deletion...' });
+
+    try {
+      const res = await fetch('/api/account/deletion', { method: 'POST' });
+      const payload = await readJsonResponse<{
+        deletionRequestedAt: Date | string | null;
+        deletionScheduledFor: Date | string | null;
+      }>(res);
+
+      if (!payload.success) {
+        throw new Error(payload.error ?? 'Could not cancel account deletion.');
+      }
+
+      setDeletionRequestedAt(null);
+      setDeletionScheduledFor(null);
+      setStatus({ type: 'success', message: 'Account deletion canceled. Your data remains active.' });
+    } catch (error) {
+      setStatus({
+        type: 'error',
+        message: error instanceof Error ? error.message : 'Could not cancel account deletion.',
+      });
+    } finally {
+      setDeletionBusy(false);
     }
   }
 
@@ -267,29 +357,19 @@ export default function SettingsClient({ system }: { system: SettingsSystem | nu
 
     setAvatarUploadError(null);
     if (file.size > MAX_AVATAR_FILE_BYTES) {
-      setAvatarUploadError('File is too large — max 10 MB.');
+      setAvatarUploadError('File is too large - max 20 MB.');
       e.target.value = '';
       return;
     }
 
     setUploadingAvatar(true);
-    setStatus({ type: 'info', message: 'Uploading avatar image...' });
+    setStatus({ type: 'info', message: 'Preparing avatar image...' });
 
     try {
-      const form = new FormData();
-      form.append('file', file);
-      const res = await fetch('/api/upload', { method: 'POST', body: form });
-      const payload = await readJsonResponse<{ url: string }>(res);
-      if (!payload.success) {
-        throw new Error(payload.error ?? 'Upload failed. Try another image.');
-      }
-      if (!payload.data?.url) {
-        throw new Error('Upload failed. Try another image.');
-      }
-
+      const dataUrl = await prepareAvatarDataUrl(file);
       setAvatarMode('url');
-      setAvatarUrl(payload.data.url);
-      setStatus({ type: 'success', message: 'Avatar uploaded. URL filled automatically.' });
+      setAvatarUrl(dataUrl);
+      setStatus({ type: 'success', message: 'Avatar ready. Save profile to keep it.' });
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Upload failed. Try again.';
       setAvatarUploadError(message);
@@ -309,8 +389,8 @@ export default function SettingsClient({ system }: { system: SettingsSystem | nu
       return;
     }
 
-    if (avatarMode === 'url' && !isValidImageUrl(avatarUrl)) {
-      setStatus({ type: 'error', message: 'Please provide a valid avatar image URL (http/https).' });
+    if (avatarMode === 'url' && !isValidAvatarImageSource(avatarUrl)) {
+      setStatus({ type: 'error', message: 'Please provide a valid avatar image URL.' });
       return;
     }
 
@@ -352,6 +432,9 @@ export default function SettingsClient({ system }: { system: SettingsSystem | nu
     await signOut({ callbackUrl: '/login' });
   }
 
+  const deletionIsScheduled = Boolean(deletionRequestedAt && deletionScheduledFor);
+  const deletionScheduledLabel = deletionScheduledFor ? formatDateTime(deletionScheduledFor) : null;
+
   return (
     <div className="space-y-6" aria-busy={importing || exporting}>
 
@@ -381,23 +464,69 @@ export default function SettingsClient({ system }: { system: SettingsSystem | nu
           )}
         </dl>
 
-        {accountType === 'singlet' && (
-          <div className="mt-4 rounded-xl border border-border-soft bg-surface-alt/40 p-4">
-            <h3 className="text-sm font-semibold text-text">Become a system account</h3>
-            <p className="text-xs text-muted mt-1">
-              If you later discover you are a system, you can upgrade in one click.
-            </p>
+        <div className="mt-4 rounded-xl border border-border-soft bg-surface-alt/40 p-4">
+          <h3 className="text-sm font-semibold text-text">Account type</h3>
+          <p className="text-xs text-muted mt-1">
+            Switch between singlet and system mode. System mode enables member/front features.
+          </p>
+          <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
             <button
               type="button"
-              onClick={upgradeToSystem}
-              disabled={changingAccountType}
-              className="btn-primary mt-3 min-h-[42px]"
+              onClick={() => accountType === 'system' ? undefined : void updateAccountType('system')}
+              disabled={changingAccountType || accountType === 'system'}
+              className={`min-h-[44px] rounded-xl border px-3 py-2 text-sm font-semibold transition-colors ${
+                accountType === 'system'
+                  ? 'border-primary/60 bg-primary/15 text-text'
+                  : 'border-border bg-surface text-muted hover:border-primary/40 hover:text-text'
+              }`}
+              aria-pressed={accountType === 'system'}
             >
-              {changingAccountType ? 'Updating...' : 'Upgrade to system'}
+              System
+            </button>
+            <button
+              type="button"
+              onClick={() => accountType === 'singlet' ? undefined : setAccountTypeWarningOpen(true)}
+              disabled={changingAccountType || accountType === 'singlet'}
+              className={`min-h-[44px] rounded-xl border px-3 py-2 text-sm font-semibold transition-colors ${
+                accountType === 'singlet'
+                  ? 'border-primary/60 bg-primary/15 text-text'
+                  : 'border-border bg-surface text-muted hover:border-primary/40 hover:text-text'
+              }`}
+              aria-pressed={accountType === 'singlet'}
+            >
+              Singlet
             </button>
           </div>
-        )}
+
+          {accountTypeWarningOpen && (
+            <div className="mt-3 rounded-xl border border-warning/40 bg-warning/10 p-3">
+              <h4 className="text-sm font-semibold text-text">Before changing to singlet</h4>
+              <p className="mt-1 text-xs text-muted">
+                Some system-specific data or future system-only features may be hidden, changed, or removed by this account type change. Your current data is not deleted by this button, but please export a backup if you are unsure.
+              </p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  className="btn-ghost min-h-[40px] border border-border px-3 text-sm"
+                  onClick={() => setAccountTypeWarningOpen(false)}
+                  disabled={changingAccountType}
+                >
+                  Keep system
+                </button>
+                <button
+                  type="button"
+                  className="btn-danger min-h-[40px] px-3 text-sm"
+                  onClick={() => void updateAccountType('singlet', true)}
+                  disabled={changingAccountType}
+                >
+                  {changingAccountType ? 'Changing...' : 'I understand, change to singlet'}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       </section>
+      <LanguageSelector variant="card" className="card p-6 border-border bg-surface-alt/40 shadow-none" />
 
       <section className="card p-6" aria-labelledby="settings-profile-heading">
         <h2 id="settings-profile-heading" className="text-lg font-semibold text-text mb-1">
@@ -409,8 +538,8 @@ export default function SettingsClient({ system }: { system: SettingsSystem | nu
 
         <div className="flex flex-col sm:flex-row sm:items-start gap-4 mb-4">
           <div className="h-20 w-20 rounded-full border border-border bg-surface-alt flex items-center justify-center overflow-hidden">
-            {avatarMode === 'url' && isValidImageUrl(avatarUrl) ? (
-              <Image src={avatarUrl} alt="Avatar preview" width={80} height={80} className="h-full w-full object-cover" />
+            {avatarMode === 'url' && isValidAvatarImageSource(avatarUrl) ? (
+              <DynamicAvatarImage src={avatarUrl} alt="Avatar preview" className="h-full w-full object-cover" />
             ) : (
               <span className="text-4xl leading-none">{avatarEmoji || DEFAULT_AVATAR_EMOJI}</span>
             )}
@@ -454,7 +583,7 @@ export default function SettingsClient({ system }: { system: SettingsSystem | nu
                 >
                   {uploadingAvatar ? 'Uploading...' : 'Upload image'}
                 </button>
-                <p className="text-xs text-subtle">Use URL or upload via catbox (max 10 MB).</p>
+                <p className="text-xs text-subtle">Use URL or upload a local image (max 20 MB).</p>
               </div>
               {avatarUploadError && (
                 <p role="alert" className="text-xs text-error">{avatarUploadError}</p>
@@ -501,6 +630,77 @@ export default function SettingsClient({ system }: { system: SettingsSystem | nu
             </button>
           ))}
         </div>
+      </section>
+
+      <section className="card p-6 border-error/25" aria-labelledby="settings-danger-heading">
+        <h2 id="settings-danger-heading" className="text-lg font-semibold text-error mb-1">
+          Account recovery and deletion
+        </h2>
+        <p className="text-muted text-sm mb-4">
+          Schedule account deletion only if you are sure. You get 72 hours to cancel before a future purge can remove data.
+        </p>
+
+        {deletionIsScheduled ? (
+          <div className="rounded-xl border border-warning/45 bg-warning/10 p-4">
+            <h3 className="text-sm font-semibold text-text">Deletion is scheduled</h3>
+            <p className="mt-1 text-sm text-muted">
+              Your account is in the recovery window. Data is still recoverable until {deletionScheduledLabel ?? 'the scheduled time'}.
+            </p>
+            <button
+              type="button"
+              onClick={cancelAccountDeletion}
+              disabled={deletionBusy}
+              className="btn-primary mt-3 min-h-[44px] w-full justify-center sm:w-auto"
+            >
+              {deletionBusy ? 'Canceling...' : 'Cancel deletion and recover account'}
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-3 rounded-xl border border-error/25 bg-error/5 p-4">
+            <div>
+              <h3 className="text-sm font-semibold text-text">Schedule account deletion</h3>
+              <p className="mt-1 text-xs text-muted">
+                This starts a 72-hour recovery window. To prevent accidental deletion, type your account email before scheduling.
+              </p>
+            </div>
+
+            <label className="block">
+              <span className="label">Type your email to confirm</span>
+              <input
+                className="input"
+                value={deletionConfirmEmail}
+                onChange={(event) => setDeletionConfirmEmail(event.target.value)}
+                placeholder={system?.email ?? 'you@example.com'}
+                autoComplete="off"
+              />
+            </label>
+
+            <label className="flex items-start gap-3 rounded-lg border border-border-soft bg-surface/40 p-3 text-sm text-muted">
+              <input
+                type="checkbox"
+                className="mt-1 h-4 w-4 accent-primary"
+                checked={deletionAcknowledged}
+                onChange={(event) => setDeletionAcknowledged(event.target.checked)}
+              />
+              <span>
+                I understand this schedules account deletion and I can cancel it from Settings within 72 hours.
+              </span>
+            </label>
+
+            <button
+              type="button"
+              onClick={scheduleAccountDeletion}
+              disabled={
+                deletionBusy ||
+                !deletionAcknowledged ||
+                deletionConfirmEmail.trim().toLowerCase() !== (system?.email ?? '').toLowerCase()
+              }
+              className="btn-danger min-h-[48px] w-full justify-center text-base font-semibold disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {deletionBusy ? 'Scheduling...' : 'Schedule deletion with 72h recovery'}
+            </button>
+          </div>
+        )}
       </section>
 
       <section className="card p-6" aria-labelledby="settings-session-heading">
@@ -876,6 +1076,18 @@ function asCount(value: unknown): number {
   return typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : 0;
 }
 
+function formatDateTime(value: Date | string): string {
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return 'the scheduled time';
+  return date.toLocaleString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+}
+
 function toAccountType(value: unknown): 'system' | 'singlet' {
   return value === 'singlet' ? 'singlet' : 'system';
 }
@@ -884,9 +1096,10 @@ function toAvatarMode(value: unknown): AvatarMode {
   return value === 'url' ? 'url' : 'emoji';
 }
 
-function isValidImageUrl(value: string): boolean {
+function isValidAvatarImageSource(value: string): boolean {
   const trimmed = value.trim();
   if (!trimmed) return false;
+  if (/^data:image\/(jpeg|jpg|png|webp);base64,/i.test(trimmed)) return true;
 
   try {
     const parsed = new URL(trimmed);
@@ -899,7 +1112,13 @@ function isValidImageUrl(value: string): boolean {
 async function readJsonResponse<T = unknown>(res: Response): Promise<ApiResponse<T>> {
   const contentType = res.headers.get('content-type') ?? '';
   if (!contentType.includes('application/json')) {
-    return { success: false, error: 'The server returned an unexpected response. Please sign in again.' };
+    if (res.status === 401) {
+      return { success: false, error: 'Session expired. Please sign in again.' };
+    }
+    if (res.status === 413) {
+      return { success: false, error: 'Image payload is too large. Try a smaller image.' };
+    }
+    return { success: false, error: `Unexpected server response (HTTP ${res.status}). Please try again.` };
   }
 
   return res.json();

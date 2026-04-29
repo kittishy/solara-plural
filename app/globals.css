@@ -131,6 +131,35 @@ html[data-solara-theme='ocean'] {
   --theme-front-soft-rgb: 109 40 217;
 }
 
+html[data-solara-theme='mist'] {
+  --theme-bg: #191b1b;
+  --theme-bg-rgb: 25 27 27;
+  --theme-surface: #222625;
+  --theme-surface-rgb: 34 38 37;
+  --theme-surface-alt: #2c3130;
+  --theme-surface-alt-rgb: 44 49 48;
+  --theme-border: #46504c;
+  --theme-border-rgb: 70 80 76;
+  --theme-border-soft: #37403c;
+  --theme-border-soft-rgb: 55 64 60;
+  --theme-text: #ebe8df;
+  --theme-text-rgb: 235 232 223;
+  --theme-muted: #b9b4aa;
+  --theme-muted-rgb: 185 180 170;
+  --theme-subtle: #8f887e;
+  --theme-subtle-rgb: 143 136 126;
+  --theme-primary: #c8d0c4;
+  --theme-primary-rgb: 200 208 196;
+  --theme-primary-soft: #5f6d64;
+  --theme-primary-soft-rgb: 95 109 100;
+  --theme-primary-glow: #e3e8dc;
+  --theme-primary-glow-rgb: 227 232 220;
+  --theme-front: #e8b7c4;
+  --theme-front-rgb: 232 183 196;
+  --theme-front-soft: #7b4151;
+  --theme-front-soft-rgb: 123 65 81;
+}
+
 @layer base {
   html {
     background-color: var(--theme-bg);

@@ -2,7 +2,7 @@ import { type NextRequest } from 'next/server';
 import { requireAuth, ok, err } from '@/lib/api/helpers';
 
 const CATBOX_API_URL = 'https://catbox.moe/user/api.php';
-const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
+const MAX_FILE_SIZE_BYTES = 20 * 1024 * 1024; // 20 MB
 const ALLOWED_MIME_TYPES = new Set([
   'image/jpeg',
   'image/png',
@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
 
   // --- Validate file size ---
   if (file.size > MAX_FILE_SIZE_BYTES) {
-    return err('File exceeds the 10 MB size limit', 413);
+    return err('File exceeds the 20 MB size limit', 413);
   }
 
   // --- Forward to catbox.moe ---
@@ -51,6 +51,10 @@ export async function POST(request: NextRequest) {
   try {
     catboxResponse = await fetch(CATBOX_API_URL, {
       method: 'POST',
+      headers: {
+        Accept: 'text/plain',
+        'User-Agent': 'SolaraPlural/0.1 avatar-upload',
+      },
       body: catboxForm,
     });
   } catch {
@@ -58,8 +62,10 @@ export async function POST(request: NextRequest) {
   }
 
   if (!catboxResponse.ok) {
+    const responseText = (await catboxResponse.text().catch(() => '')).trim();
+    const detail = responseText ? `: ${responseText.slice(0, 180)}` : '';
     return err(
-      `catbox.moe returned an error (HTTP ${catboxResponse.status})`,
+      `catbox.moe returned an error (HTTP ${catboxResponse.status})${detail}`,
       502,
     );
   }

@@ -18,6 +18,8 @@ export default async function SettingsPage() {
       avatarMode: true,
       avatarEmoji: true,
       avatarUrl: true,
+      deletionRequestedAt: true,
+      deletionScheduledFor: true,
       createdAt: true,
       updatedAt: true,
     },

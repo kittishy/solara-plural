@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState, useTransition } from 'react';
-import Image from 'next/image';
+import DynamicAvatarImage from '@/components/ui/DynamicAvatarImage';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import type { FrontEntry } from '@/lib/db/schema';
@@ -29,11 +29,8 @@ function MemberAvatar({ member, size }: { member: FrontMember; size: 'xs' | 'sm'
 
   if (member.avatarUrl) {
     return (
-      <Image
-        src={member.avatarUrl}
+      <DynamicAvatarImage src={member.avatarUrl}
         alt={member.name}
-        width={40}
-        height={40}
         className={`${cls} flex-shrink-0 rounded-full object-cover ring-1 ring-border/50`}
       />
     );

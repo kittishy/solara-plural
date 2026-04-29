@@ -3,7 +3,7 @@ import { members, frontEntries } from '@/lib/db/schema';
 import { eq, and, desc, like } from 'drizzle-orm';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import Image from 'next/image';
+import DynamicAvatarImage from '@/components/ui/DynamicAvatarImage';
 import { requireSystemId } from '@/lib/auth/session';
 
 function formatDuration(start: Date, end: Date): string {
@@ -75,11 +75,8 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
           aria-hidden
         >
           {member.avatarUrl ? (
-            <Image
-              src={member.avatarUrl}
+            <DynamicAvatarImage src={member.avatarUrl}
               alt=""
-              width={96}
-              height={96}
               className="w-full h-full object-cover"
             />
           ) : (
