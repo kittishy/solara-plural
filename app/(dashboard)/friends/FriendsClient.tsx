@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import Image from 'next/image';
 
 type AccountType = 'system' | 'singlet';
 type ShareVisibility = 'hidden' | 'profile' | 'full';
@@ -683,7 +684,7 @@ export default function FriendsClient() {
                     <div className="flex items-start gap-3">
                       <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center overflow-hidden rounded-full border border-border/60 bg-surface">
                         {friend.avatarMode === 'url' && isLikelyHttpUrl(friend.avatarUrl) ? (
-                          <img src={friend.avatarUrl} alt={friend.name} className="h-full w-full object-cover" />
+                          <Image src={friend.avatarUrl} alt={friend.name} width={40} height={40} className="h-full w-full object-cover" />
                         ) : (
                           <span className="text-base leading-none">{friend.avatarEmoji?.trim() || '☀️'}</span>
                         )}

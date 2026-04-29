@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import Image from 'next/image';
 import { signOut } from 'next-auth/react';
 import {
   applySolaraTheme,
@@ -409,8 +410,7 @@ export default function SettingsClient({ system }: { system: SettingsSystem | nu
         <div className="flex flex-col sm:flex-row sm:items-start gap-4 mb-4">
           <div className="h-20 w-20 rounded-full border border-border bg-surface-alt flex items-center justify-center overflow-hidden">
             {avatarMode === 'url' && isValidImageUrl(avatarUrl) ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={avatarUrl} alt="Avatar preview" className="h-full w-full object-cover" />
+              <Image src={avatarUrl} alt="Avatar preview" width={80} height={80} className="h-full w-full object-cover" />
             ) : (
               <span className="text-4xl leading-none">{avatarEmoji || DEFAULT_AVATAR_EMOJI}</span>
             )}

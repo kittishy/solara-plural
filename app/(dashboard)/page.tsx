@@ -2,6 +2,7 @@ import { db } from '@/lib/db';
 import { frontEntries, members, systemNotes, systems } from '@/lib/db/schema';
 import { and, eq, isNull } from 'drizzle-orm';
 import Link from 'next/link';
+import Image from 'next/image';
 import { requireSystemId } from '@/lib/auth/session';
 import { DashboardGreeting, LocalizedTime, LocalizedToday } from '@/components/language/DashboardI18n';
 import { Trans } from '@/components/language/Trans';
@@ -93,9 +94,11 @@ export default async function DashboardPage() {
                 {frontingMembers.map((member) => (
                   <div key={member.id} className="flex items-center gap-2 rounded-full border border-border/50 bg-surface-alt px-3 py-1.5">
                     {member.avatarUrl ? (
-                      <img
+                      <Image
                         src={member.avatarUrl}
                         alt={member.name}
+                        width={24}
+                        height={24}
                         className="h-6 w-6 rounded-full object-cover ring-1 ring-border/50"
                       />
                     ) : (

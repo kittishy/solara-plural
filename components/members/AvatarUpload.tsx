@@ -1,6 +1,7 @@
 'use client';
 
 import { useRef, useState } from 'react';
+import Image from 'next/image';
 
 interface AvatarUploadProps {
   currentUrl?: string | null;
@@ -91,9 +92,11 @@ export default function AvatarUpload({
       >
         {/* Image or initial */}
         {previewUrl ? (
-          <img
+          <Image
             src={previewUrl}
             alt={`${memberName}'s avatar`}
+            width={96}
+            height={96}
             className="w-full h-full object-cover"
           />
         ) : (

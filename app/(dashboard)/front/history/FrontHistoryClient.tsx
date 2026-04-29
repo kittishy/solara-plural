@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState, useTransition } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { formatDuration, formatFrontEntryRange, toDatetimeLocalValue } from '@/lib/front';
@@ -39,9 +40,11 @@ function MemberAvatar({ m, size }: { m: HistoryMember; size: 'sm' | 'md' }) {
   const cls = size === 'sm' ? 'w-8 h-8 text-xs' : 'w-10 h-10 text-sm';
   if (m.avatarUrl) {
     return (
-      <img
+      <Image
         src={m.avatarUrl}
         alt={m.name}
+        width={40}
+        height={40}
         className={`${cls} rounded-full object-cover flex-shrink-0 ring-1 ring-border/50`}
       />
     );
@@ -282,11 +285,13 @@ export default function FrontHistoryClient({
                     <div className="flex -space-x-3 flex-shrink-0 pt-0.5">
                       {entryMembers.slice(0, 3).map((m) => (
                         m.avatarUrl ? (
-                          <img
+                          <Image
                             key={m.id}
                             src={m.avatarUrl}
                             alt={m.name}
                             title={m.name}
+                            width={40}
+                            height={40}
                             className="w-10 h-10 rounded-full object-cover border-2 border-surface ring-1 ring-border/20"
                           />
                         ) : (
