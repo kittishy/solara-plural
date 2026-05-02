@@ -115,21 +115,31 @@ export function MobileNav() {
   const pathname = usePathname();
   const { t } = useLanguage();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [isMenuClosing, setIsMenuClosing] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
   const menuIsActive = menuItems.some((item) => isActive(pathname, item.href));
 
+  function closeMenu() {
+    setIsMenuClosing(true);
+    setTimeout(() => {
+      setMenuOpen(false);
+      setIsMenuClosing(false);
+    }, 140);
+  }
+
   useEffect(() => {
-    setMenuOpen(false);
+    if (menuOpen) closeMenu();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname]);
 
   useEffect(() => {
     function closeOnOutsideClick(event: PointerEvent) {
       if (!menuRef.current) return;
-      if (!menuRef.current.contains(event.target as Node)) setMenuOpen(false);
+      if (!menuRef.current.contains(event.target as Node)) closeMenu();
     }
 
     function closeOnEscape(event: KeyboardEvent) {
-      if (event.key === 'Escape') setMenuOpen(false);
+      if (event.key === 'Escape') closeMenu();
     }
 
     if (menuOpen) {
@@ -150,9 +160,9 @@ export function MobileNav() {
       aria-label={t('nav.mobilePrimary')}
     >
       <div ref={menuRef} className="relative flex items-end gap-2">
-        {menuOpen && (
+        {(menuOpen || isMenuClosing) && (
           <div
-            className="absolute bottom-[calc(100%+0.5rem)] right-0 w-48 rounded-xl border border-border bg-surface/95 p-2 shadow-card backdrop-blur-xl animate-slide-up"
+            className={`absolute bottom-[calc(100%+0.5rem)] right-0 w-48 rounded-xl border border-border bg-surface/95 p-2 shadow-card backdrop-blur-xl ${isMenuClosing ? 'animate-slide-down' : 'animate-slide-up'}`}
             role="menu"
             aria-label={t('nav.moreMenu')}
           >
@@ -166,7 +176,7 @@ export function MobileNav() {
                   prefetch={true}
                   role="menuitem"
                   aria-current={current ? 'page' : undefined}
-                  onClick={() => setMenuOpen(false)}
+                  onClick={closeMenu}
                   className={`flex min-h-[48px] items-center gap-3 rounded-lg px-3 text-sm font-medium transition-colors ${
                     current ? 'bg-primary/15 text-text' : 'text-muted hover:bg-surface-alt hover:text-text'
                   }`}
@@ -215,7 +225,7 @@ export function MobileNav() {
 
         <button
           type="button"
-          onClick={() => setMenuOpen((open) => !open)}
+          onClick={() => menuOpen ? closeMenu() : setMenuOpen(true)}
           aria-label={t('nav.moreOptions')}
           aria-expanded={menuOpen}
           aria-haspopup="menu"

@@ -55,6 +55,7 @@ export default function FrontTracker({ members, activeFront }: Props) {
   const [query, setQuery] = useState('');
   const [isMobilePickerOpen, setIsMobilePickerOpen] = useState(false);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [justStarted, setJustStarted] = useState(false);
 
   function toggleMember(id: string) {
     setSelected((prev) => (
@@ -78,6 +79,8 @@ export default function FrontTracker({ members, activeFront }: Props) {
     }
 
     setFeedback({ type: 'success', message: activeFront ? t('front.switched') : t('front.started') });
+    setJustStarted(true);
+    setTimeout(() => setJustStarted(false), 600);
     revalidateMembersAndFront();
     revalidateFrontHistory();
     startTransition(() => router.refresh());
@@ -127,10 +130,11 @@ export default function FrontTracker({ members, activeFront }: Props) {
   return (
     <div className="space-y-4">
       {activeFront ? (
-        <section className="card border-front/40 p-5 shadow-front-glow" aria-label={t('front.currentSession')}>
+        <section className={`card border-front/40 p-5 shadow-front-glow transition-all duration-300 ${justStarted ? 'scale-[1.015] shadow-[0_0_24px_rgba(167,139,250,0.3)]' : ''}`} aria-label={t('front.currentSession')}>
           <div className="mb-4 flex items-center gap-2.5">
             <span className="relative inline-flex h-3 w-3" aria-hidden="true">
               <span className="absolute inline-flex h-full w-full animate-pulse-ring rounded-full bg-front opacity-60" />
+              <span className="absolute inline-flex h-full w-full animate-pulse-ring-outer rounded-full bg-front" />
               <span className="relative inline-flex h-3 w-3 rounded-full bg-front shadow-[0_0_8px_rgba(249,168,212,0.7)]" />
             </span>
             <h2 className="text-lg font-semibold tracking-tight text-text">{t('front.currentlyFronting')}</h2>
@@ -160,7 +164,7 @@ export default function FrontTracker({ members, activeFront }: Props) {
           </div>
         </section>
       ) : (
-        <section className="card border-dashed border-border/50 p-5 md:p-6">
+        <section className="card animate-fade-in border-dashed border-border/50 p-5 md:p-6">
           <div className="mb-2 flex items-center gap-3">
             <span className="flex h-9 w-9 items-center justify-center rounded-full border border-primary/30 bg-primary/10 text-primary" aria-hidden="true">
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
@@ -395,7 +399,7 @@ export default function FrontTracker({ members, activeFront }: Props) {
               type="button"
               onClick={startFront}
               disabled={selected.length === 0 || isPending}
-              className="btn-primary min-h-[52px] w-full text-base font-semibold shadow-glow transition-all duration-200 active:scale-[0.98]"
+              className="btn-primary min-h-[52px] w-full text-base font-semibold shadow-glow transition-all duration-200 active:scale-[0.97]"
             >
               {isPending
                 ? activeFront ? t('front.switching') : t('front.starting')

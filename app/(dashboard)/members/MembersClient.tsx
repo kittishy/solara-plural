@@ -53,6 +53,8 @@ export default function MembersClient({
     { fallbackData: initialFront }
   );
 
+  const isLoading = !membersData && !initialMembers;
+
   const parsed = mergeMembersWithFront(membersData, frontData);
 
   const filtered = useMemo(() => {
@@ -72,8 +74,26 @@ export default function MembersClient({
     ? `${filtered.length} of ${parsed.length} member${parsed.length !== 1 ? 's' : ''}`
     : `${parsed.length} member${parsed.length !== 1 ? 's' : ''} in your system`;
 
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="space-y-2">
+            <div className="h-8 w-32 animate-pulse rounded-lg bg-surface-alt" />
+            <div className="h-4 w-24 animate-pulse rounded-lg bg-surface-alt" />
+          </div>
+        </div>
+        <div className="grid gap-3 md:grid-cols-2">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="card h-24 animate-pulse bg-surface-alt/60" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-6">
+    <div className="animate-fade-in space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-text">Members</h1>
@@ -147,7 +167,7 @@ export default function MembersClient({
           </p>
         </div>
       ) : (
-        <div className="grid gap-3 md:grid-cols-2 min-w-0">
+        <div key={query.trim() || 'all'} className="stagger-children grid gap-3 md:grid-cols-2 min-w-0">
           {filtered.map((member) => (
             <Link
               key={member.id}
@@ -201,6 +221,7 @@ export default function MembersClient({
                   <div className="badge-front mt-2" aria-label="Currently fronting">
                     <span className="relative inline-flex h-2 w-2" aria-hidden="true">
                       <span className="absolute inline-flex h-full w-full rounded-full bg-front opacity-60 animate-pulse-ring" />
+                      <span className="absolute inline-flex h-full w-full rounded-full bg-front animate-pulse-ring-outer" />
                       <span className="relative inline-flex rounded-full h-2 w-2 bg-front shadow-[0_0_6px_rgba(249,168,212,0.7)]" />
                     </span>
                     IN FRONT

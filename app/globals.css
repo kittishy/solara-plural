@@ -42,6 +42,9 @@
   /* Transition system */
   --transition-base: 150ms ease;
   --transition-medium: 200ms ease;
+
+  /* Theme switching transition */
+  transition: background-color 300ms ease, color 300ms ease, border-color 300ms ease;
 }
 
 html[data-solara-theme='sunrise'] {
@@ -296,18 +299,35 @@ html[data-solara-theme='mist'] {
 
   .animate-fade-in  { animation: fade-in  200ms ease both; }
   .animate-slide-up { animation: slide-up 200ms ease both; }
+
+  @keyframes slide-down {
+    from { opacity: 1; transform: translateY(0); }
+    to   { opacity: 0; transform: translateY(6px); }
+  }
+
+  .animate-slide-down { animation: slide-down 150ms ease both; }
   .animate-pulse-ring {
     animation: pulse-ring 2s ease-out infinite;
   }
 
+  @keyframes pulse-ring-outer {
+    0%   { transform: scale(1);    opacity: 0.35; }
+    70%  { transform: scale(2.6);  opacity: 0; }
+    100% { transform: scale(2.6);  opacity: 0; }
+  }
+
+  .animate-pulse-ring-outer {
+    animation: pulse-ring-outer 2s ease-out 0.6s infinite;
+  }
+
   /* ─── Stagger entrance animation ─────────────────────────── */
   @keyframes stagger-fade-up {
-    from { opacity: 0; transform: translateY(12px); }
+    from { opacity: 0; transform: translateY(6px); }
     to   { opacity: 1; transform: translateY(0); }
   }
 
   .stagger-children > * {
-    animation: stagger-fade-up 300ms ease both;
+    animation: stagger-fade-up 220ms ease both;
   }
   .stagger-children > *:nth-child(1) { animation-delay: 0ms; }
   .stagger-children > *:nth-child(2) { animation-delay: 60ms; }
@@ -351,6 +371,13 @@ html[data-solara-theme='mist'] {
     background:
       radial-gradient(ellipse 60% 40% at 20% 50%, rgba(167,139,250,0.07) 0%, transparent 70%),
       radial-gradient(ellipse 40% 60% at 80% 30%, rgba(249,168,212,0.05) 0%, transparent 70%);
+  }
+
+  /* Ultra-subtle aurora for dashboard layout — lower opacity to avoid distraction */
+  .aurora-bg-subtle {
+    background:
+      radial-gradient(ellipse 60% 40% at 20% 50%, rgba(167,139,250,0.04) 0%, transparent 70%),
+      radial-gradient(ellipse 40% 60% at 80% 30%, rgba(249,168,212,0.03) 0%, transparent 70%);
   }
 
   /* ─── Auth page animated background ──────────────────────── */

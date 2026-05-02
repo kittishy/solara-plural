@@ -55,7 +55,7 @@ export default async function DashboardPage() {
     : [];
 
   return (
-    <div className="space-y-5 md:space-y-6">
+    <div className="animate-fade-in space-y-5 md:space-y-6">
       <section className="-mx-4 px-4 py-4 md:mx-0 md:px-0 md:py-0">
         <p className="text-sm font-medium text-muted">
           <LocalizedToday />
@@ -65,7 +65,7 @@ export default async function DashboardPage() {
         </h1>
       </section>
 
-      <section aria-label="Quick navigation" className="grid grid-cols-2 gap-3 md:hidden">
+      <section aria-label="Quick navigation" className="stagger-children grid grid-cols-2 gap-3 md:hidden">
         <HomeTile href="/front" label={<Trans k="nav.front" />} detail={frontingMembers.length > 0 ? <><span>{frontingMembers.length}</span> <Trans k="dashboard.active" /></> : <Trans k="dashboard.startOrSwitch" />} />
         <HomeTile href="/members" label={<Trans k="nav.members" />} detail={<><span>{memberCount}</span> <Trans k="dashboard.saved" /></>} />
         <HomeTile href="/notes/new" label={<Trans k="dashboard.newNote" />} detail={<Trans k="dashboard.captureContext" />} />
@@ -73,7 +73,7 @@ export default async function DashboardPage() {
         <HomeTile href="/friends" label={<Trans k="nav.friends" />} detail={<Trans k="dashboard.inviteAndConnect" />} />
       </section>
 
-      <section aria-label="System summary" className="grid grid-cols-3 gap-2 md:gap-3">
+      <section aria-label="System summary" className="stagger-children grid grid-cols-3 gap-2 md:gap-3">
         <StatCard href="/members" label={<Trans k="nav.members" />} value={memberCount} />
         <StatCard href="/notes" label={<Trans k="nav.notes" />} value={noteCount} />
         <StatCard href="/front" label={<Trans k="nav.front" />} value={frontingMembers.length} active={frontingMembers.length > 0} />
@@ -162,7 +162,7 @@ export default async function DashboardPage() {
               <Link
                 key={note.id}
                 href={`/notes/${note.id}`}
-                className="block rounded-xl border border-border/60 bg-surface-alt/40 px-4 py-3 transition-colors hover:border-primary/30 hover:bg-surface-alt/70"
+                className="block rounded-xl border border-border/60 bg-surface-alt/40 px-4 py-3 transition-all duration-150 hover:border-primary/30 hover:bg-surface-alt/70 hover:-translate-y-px active:scale-[0.99]"
               >
                 <p className="line-clamp-1 text-sm font-medium text-text">{note.title ?? <Trans k="dashboard.untitledNote" />}</p>
                 <p className="mt-1 line-clamp-2 text-xs text-muted">{note.content}</p>
@@ -177,7 +177,7 @@ export default async function DashboardPage() {
 
 function HomeTile({ href, label, detail }: { href: string; label: React.ReactNode; detail: React.ReactNode }) {
   return (
-    <Link href={href} className="min-h-[76px] rounded-xl border border-border bg-surface px-4 py-3 transition-colors active:bg-surface-alt">
+    <Link href={href} className="card-interactive min-h-[76px] rounded-xl border border-border bg-surface px-4 py-3 transition-all duration-150 hover:shadow-glow active:scale-[0.98] active:bg-surface-alt">
       <span className="block text-base font-semibold text-text">{label}</span>
       <span className="mt-1 block text-sm text-muted">{detail}</span>
     </Link>
@@ -186,7 +186,7 @@ function HomeTile({ href, label, detail }: { href: string; label: React.ReactNod
 
 function StatCard({ href, label, value, active = false }: { href: string; label: React.ReactNode; value: number; active?: boolean }) {
   return (
-    <Link href={href} className={`card p-3 md:p-4 transition-all hover:shadow-glow ${active ? 'border-front/40 shadow-front-glow' : ''}`}>
+    <Link href={href} className={`card card-interactive p-3 md:p-4 transition-all hover:shadow-glow ${active ? 'border-front/40 shadow-front-glow' : ''}`}>
       <p className="text-xs font-semibold text-muted md:uppercase md:tracking-wide">{label}</p>
       <p className={`mt-1 text-2xl font-bold md:text-3xl ${active ? 'text-front' : 'text-text'}`}>{value}</p>
     </Link>
