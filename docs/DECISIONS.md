@@ -397,3 +397,23 @@
 - Kept dedupe/link protections and preview-first flow intact for PluralKit.
 
 ---
+
+## [2026-05-02] D025 - Apply-mode PluralKit Sync Also Updates Current Front
+
+**Decision:** Extend PluralKit member sync so `apply: true` also syncs the current front state end-to-end, while keeping preview mode member-only.
+
+**Justification:**
+- Users asked for practical automation where local front status follows what they already maintain in PluralKit.
+- Reusing the existing explicit apply action keeps this behavior consent-based (no background polling or hidden writes).
+- Current-front sync can be implemented safely from existing identity links without introducing front-history import complexity.
+
+**Implementation:**
+- `POST /api/integrations/member-sync` now fetches `GET /systems/@me/fronters` when `apply: true`.
+- After applying member operations, route now maps fronting external IDs through `member_external_links` and updates `front_entries`.
+- Behavior:
+  - If PluralKit has fronters with linked local members: end active front and start a synced current front.
+  - If PluralKit has no fronters: end local active front.
+  - If no linked local members are found: skip front update and report reason.
+- Settings integration summary now shows a front-sync status line for applied syncs.
+
+---

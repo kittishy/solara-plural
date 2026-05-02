@@ -1,0 +1,28 @@
+- generic [ref=e3]:
+  - generic [ref=e4]:
+    - generic [ref=e8]: ☀️
+    - heading "Solara Plural" [level=1] [ref=e9]
+    - paragraph [ref=e10]: Your warm space, waiting for you
+  - generic [ref=e11]:
+    - heading "Welcome back" [level=2] [ref=e12]
+    - generic [ref=e13]:
+      - generic [ref=e14]:
+        - generic [ref=e15]: Language
+        - combobox "Language" [ref=e16] [cursor=pointer]:
+          - option "English" [selected]
+          - option "Português brasileiro"
+          - option "Español"
+      - generic [ref=e17]:
+        - generic [ref=e18]: Email
+        - textbox "Email" [ref=e19]:
+          - /placeholder: your@email.com
+      - generic [ref=e20]:
+        - generic [ref=e21]: Password
+        - textbox "Password" [ref=e22]:
+          - /placeholder: ••••••••
+      - button "Sign in" [ref=e23] [cursor=pointer]
+  - paragraph [ref=e24]:
+    - text: New here?
+    - link "Create a system or singlet account" [ref=e25] [cursor=pointer]:
+      - /url: /register
+  - paragraph [ref=e26]: Solara Plural - a safe space for plural systems

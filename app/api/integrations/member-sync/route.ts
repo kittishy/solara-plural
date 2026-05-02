@@ -1,9 +1,10 @@
 import { db } from '@/lib/db';
-import { memberExternalLinks, members } from '@/lib/db/schema';
+import { frontEntries, memberExternalLinks, members } from '@/lib/db/schema';
 import { requireAuth, ok, err } from '@/lib/api/helpers';
 import { createId } from '@paralleldrive/cuid2';
-import { and, eq, or } from 'drizzle-orm';
+import { and, eq, inArray, isNull, or } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
+import { parseMemberIds, serializeMemberIds } from '@/lib/front';
 import {
   PROVIDERS,
   mapPluralKitMember,
@@ -51,6 +52,14 @@ type SyncOperation = {
 type FetchMembersResult = {
   remoteSystemId: string | null;
   externalMembers: ExternalMember[];
+  currentFrontExternalIds: string[];
+};
+
+type FrontSyncResult = {
+  status: 'started' | 'ended' | 'unchanged' | 'skipped';
+  remoteFrontCount: number;
+  appliedMemberCount: number;
+  reason?: string;
 };
 
 type SyncTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
@@ -92,6 +101,7 @@ export async function POST(request: Request) {
       fetchExternalMembers({
         provider,
         token,
+        includeFrontState: apply,
       }),
     ]);
 
@@ -102,8 +112,11 @@ export async function POST(request: Request) {
       options,
     });
 
+    let frontSync: FrontSyncResult | null = null;
+
     if (apply) {
       await applySyncPlan(auth.systemId, plan.operations as SyncOperation[]);
+      frontSync = await syncFrontFromPluralKit(auth.systemId, remote.currentFrontExternalIds);
       revalidatePath('/');
       revalidatePath('/members');
       revalidatePath('/front');
@@ -117,6 +130,7 @@ export async function POST(request: Request) {
       summary: plan.summary,
       operations: compactOperations(plan.operations as SyncOperation[]),
       operationLimit: MAX_PREVIEW_OPERATIONS,
+      frontSync,
     });
   } catch (error) {
     if (error instanceof RemoteSyncError) {
@@ -135,26 +149,33 @@ function parseProvider(value: unknown): SyncProvider | null {
 async function fetchExternalMembers(input: {
   provider: SyncProvider;
   token: string;
+  includeFrontState: boolean;
 }): Promise<FetchMembersResult> {
-  return fetchPluralKitMembers(input.token);
+  return fetchPluralKitMembers(input.token, input.includeFrontState);
 }
 
-async function fetchPluralKitMembers(token: string): Promise<FetchMembersResult> {
+async function fetchPluralKitMembers(token: string, includeFrontState: boolean): Promise<FetchMembersResult> {
   const headers = {
     Authorization: token,
     'User-Agent': SOLARA_USER_AGENT,
     Accept: 'application/json',
   };
 
-  const [system, rawMembers] = await Promise.all([
+  const [system, rawMembers, rawFront] = await Promise.all([
     remoteJson(`${PLURALKIT_BASE_URL}/systems/@me`, { headers }),
     remoteJson(`${PLURALKIT_BASE_URL}/systems/@me/members`, { headers }),
+    includeFrontState
+      ? remoteJson(`${PLURALKIT_BASE_URL}/systems/@me/fronters`, { headers })
+      : Promise.resolve([]),
   ]);
 
   const membersList = asArray(rawMembers).map((raw) => mapPluralKitMember(toRecord(raw))).filter(isExternalMember);
+  const currentFrontExternalIds = asArray(rawFront)
+    .map((raw) => mapPluralKitMember(toRecord(raw)).externalId)
+    .filter((value): value is string => typeof value === 'string' && value.trim().length > 0);
   const remoteSystemId = readId(system, ['uuid', 'id']);
 
-  return { remoteSystemId, externalMembers: membersList };
+  return { remoteSystemId, externalMembers: membersList, currentFrontExternalIds };
 }
 
 async function remoteJson(url: string, init: RequestInit): Promise<unknown> {
@@ -287,6 +308,126 @@ async function applySyncPlan(systemId: string, operations: SyncOperation[]) {
       await upsertExternalLink(tx, systemId, operation.memberId, operation.link, now);
     }
   });
+}
+
+async function syncFrontFromPluralKit(systemId: string, currentFrontExternalIds: string[]): Promise<FrontSyncResult> {
+  const remoteIds = Array.from(new Set(currentFrontExternalIds.map((id) => id.trim()).filter(Boolean)));
+
+  if (remoteIds.length === 0) {
+    const ended = await db
+      .update(frontEntries)
+      .set({ endedAt: new Date() })
+      .where(and(eq(frontEntries.systemId, systemId), isNull(frontEntries.endedAt)))
+      .returning({ id: frontEntries.id });
+
+    return {
+      status: ended.length > 0 ? 'ended' : 'unchanged',
+      remoteFrontCount: 0,
+      appliedMemberCount: 0,
+      reason: ended.length > 0 ? 'remote_front_empty' : 'already_empty',
+    };
+  }
+
+  const linkedRows = await db
+    .select({
+      memberId: memberExternalLinks.memberId,
+      externalId: memberExternalLinks.externalId,
+      externalSecondaryId: memberExternalLinks.externalSecondaryId,
+    })
+    .from(memberExternalLinks)
+    .where(and(
+      eq(memberExternalLinks.systemId, systemId),
+      eq(memberExternalLinks.provider, PROVIDERS.PLURALKIT),
+      or(
+        inArray(memberExternalLinks.externalId, remoteIds),
+        inArray(memberExternalLinks.externalSecondaryId, remoteIds),
+      ),
+    ));
+
+  const memberIds = new Set<string>();
+  for (const row of linkedRows) {
+    if (row.externalId && remoteIds.includes(row.externalId)) memberIds.add(row.memberId);
+    if (row.externalSecondaryId && remoteIds.includes(row.externalSecondaryId)) memberIds.add(row.memberId);
+  }
+
+  if (memberIds.size === 0) {
+    return {
+      status: 'skipped',
+      remoteFrontCount: remoteIds.length,
+      appliedMemberCount: 0,
+      reason: 'no_linked_members_for_front',
+    };
+  }
+
+  const localMembers = await db
+    .select({ id: members.id })
+    .from(members)
+    .where(and(
+      eq(members.systemId, systemId),
+      eq(members.isArchived, 0),
+      inArray(members.id, Array.from(memberIds)),
+    ));
+
+  const resolvedMemberIds = Array.from(new Set(localMembers.map((member) => member.id)));
+  if (resolvedMemberIds.length === 0) {
+    return {
+      status: 'skipped',
+      remoteFrontCount: remoteIds.length,
+      appliedMemberCount: 0,
+      reason: 'linked_members_not_available',
+    };
+  }
+
+  const activeFront = await db.query.frontEntries.findFirst({
+    where: and(eq(frontEntries.systemId, systemId), isNull(frontEntries.endedAt)),
+  });
+
+  if (activeFront) {
+    try {
+      const activeMemberIds = parseMemberIds(activeFront.memberIds);
+      if (sameMemberSet(activeMemberIds, resolvedMemberIds)) {
+        return {
+          status: 'unchanged',
+          remoteFrontCount: remoteIds.length,
+          appliedMemberCount: resolvedMemberIds.length,
+          reason: 'already_in_sync',
+        };
+      }
+    } catch {
+      // If corrupted local data exists, replace with a clean synced front entry.
+    }
+  }
+
+  const now = new Date();
+  await db.transaction(async (tx) => {
+    await tx
+      .update(frontEntries)
+      .set({ endedAt: now })
+      .where(and(eq(frontEntries.systemId, systemId), isNull(frontEntries.endedAt)));
+
+    await tx.insert(frontEntries).values({
+      id: createId(),
+      systemId,
+      memberIds: serializeMemberIds(resolvedMemberIds),
+      startedAt: now,
+      endedAt: null,
+      note: 'Synced from PluralKit',
+      createdAt: now,
+    });
+  });
+
+  return {
+    status: 'started',
+    remoteFrontCount: remoteIds.length,
+    appliedMemberCount: resolvedMemberIds.length,
+    reason: 'applied_remote_front',
+  };
+}
+
+function sameMemberSet(a: string[], b: string[]) {
+  if (a.length !== b.length) return false;
+  const setB = new Set(b);
+  return a.every((value) => setB.has(value));
 }
 
 async function upsertExternalLink(

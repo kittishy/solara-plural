@@ -121,6 +121,12 @@ type SyncResult = {
   summary: SyncSummary;
   operations: SyncOperationPreview[];
   operationLimit: number;
+  frontSync?: {
+    status: 'started' | 'ended' | 'unchanged' | 'skipped';
+    remoteFrontCount: number;
+    appliedMemberCount: number;
+    reason?: string;
+  } | null;
 };
 
 const IMPORT_OPTIONS_STORAGE_KEY = 'solara.settings.importOptions';
@@ -974,6 +980,12 @@ export default function SettingsClient({ system }: { system: SettingsSystem | nu
               <SummaryStat label="Unchanged" value={lastSyncResult.summary.unchanged} />
             </dl>
 
+            {lastSyncResult.applied && lastSyncResult.frontSync && (
+              <p className="mt-3 rounded-lg border border-front/30 bg-front/10 px-3 py-2 text-xs text-text">
+                {frontSyncSummaryLabel(lastSyncResult.frontSync)}
+              </p>
+            )}
+
             {lastSyncResult.operations.length > 0 && (
               <ul className="mt-3 max-h-64 space-y-2 overflow-auto pr-1">
                 {lastSyncResult.operations.map((operation) => (
@@ -1302,6 +1314,22 @@ function toApiSyncOptions(options: SyncOptions) {
 function createSyncSummaryMessage(summary: SyncSummary, applied: boolean): string {
   const verb = applied ? 'Sync applied' : 'Preview ready';
   return `${verb}: ${summary.create} create, ${summary.update} update, ${summary.link} link, ${summary.skip} skip.`;
+}
+
+function frontSyncSummaryLabel(frontSync: NonNullable<SyncResult['frontSync']>): string {
+  if (frontSync.status === 'started') {
+    return `Front synced with ${frontSync.appliedMemberCount} member${frontSync.appliedMemberCount === 1 ? '' : 's'}.`;
+  }
+
+  if (frontSync.status === 'ended') {
+    return 'Front ended because PluralKit currently has no fronters.';
+  }
+
+  if (frontSync.status === 'unchanged') {
+    return 'Front already matched PluralKit.';
+  }
+
+  return 'Front sync was skipped (missing local links for current fronters).';
 }
 
 function syncActionLabel(action: SyncOperationPreview['action']): string {
