@@ -475,3 +475,21 @@
 - API responses and export payloads do not expose decrypted tokens.
 
 ---
+
+## [2026-05-02] D028 - Front route is source of truth for outbound PluralKit switch updates
+
+**Decision:** Move the PluralKit front write behavior to the same place where local front state changes (`POST/DELETE /api/front`) and use `POST /systems/@me/switches` for outbound provider updates.
+
+**Justification:**
+- The reported production symptom (`Current fronters: (no fronter)`) indicates local front changes were not mirrored to PluralKit at the moment users front/switched out.
+- Updating fronters only inside integration apply flow is insufficient because normal front changes happen in `/api/front` and may occur long after member sync.
+- PluralKit's official write endpoint for current front is switch creation (`POST /systems/{systemRef}/switches`), including empty `members` for switch-out.
+
+**Implementation:**
+- Added `lib/integrations/pluralkit-front-sync.js` as a focused, testable sync helper.
+- `POST /api/front` now attempts a best-effort outbound PluralKit switch update after local DB update.
+- `DELETE /api/front` now attempts a best-effort outbound PluralKit switch-out.
+- Failures are observable via structured logs and response metadata (`pluralKitSync`) without blocking local front persistence.
+- Added `scripts/pluralkit-front-sync.test.cjs` coverage for token missing, missing links, provider success, and provider rejection cases.
+
+---

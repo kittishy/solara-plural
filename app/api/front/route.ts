@@ -1,10 +1,96 @@
 import { db } from '@/lib/db';
-import { frontEntries, members } from '@/lib/db/schema';
+import { frontEntries, memberExternalLinks, members, systemIntegrations } from '@/lib/db/schema';
 import { eq, and, isNull, inArray } from 'drizzle-orm';
 import { requireAuth, ok, err } from '@/lib/api/helpers';
 import { createId } from '@paralleldrive/cuid2';
 import { parseMemberIds, serializeMemberIds } from '@/lib/front';
 import { revalidatePath } from 'next/cache';
+import { decryptIntegrationToken } from '@/lib/integrations/token-crypto';
+import { createPluralKitFrontSync } from '@/lib/integrations/pluralkit-front-sync.js';
+
+async function readPersistedPluralKitToken(systemId: string): Promise<string | null> {
+  const [integration] = await db
+    .select({ encryptedToken: systemIntegrations.encryptedToken })
+    .from(systemIntegrations)
+    .where(and(
+      eq(systemIntegrations.systemId, systemId),
+      eq(systemIntegrations.provider, 'pluralkit'),
+    ))
+    .limit(1);
+
+  if (!integration?.encryptedToken) return null;
+
+  try {
+    return decryptIntegrationToken(integration.encryptedToken);
+  } catch {
+    return null;
+  }
+}
+
+async function resolvePluralKitExternalIds(systemId: string, localMemberIds: string[]) {
+  if (localMemberIds.length === 0) {
+    return { externalMemberIds: [], missingCount: 0 };
+  }
+
+  const links = await db
+    .select({ memberId: memberExternalLinks.memberId, externalId: memberExternalLinks.externalId })
+    .from(memberExternalLinks)
+    .where(and(
+      eq(memberExternalLinks.systemId, systemId),
+      eq(memberExternalLinks.provider, 'pluralkit'),
+      inArray(memberExternalLinks.memberId, localMemberIds),
+    ));
+
+  const byMemberId = new Map<string, string>();
+  for (const link of links) {
+    if (!link.memberId || !link.externalId) continue;
+    byMemberId.set(link.memberId, link.externalId);
+  }
+
+  const externalMemberIds: string[] = [];
+  let missingCount = 0;
+  for (const memberId of localMemberIds) {
+    const externalId = byMemberId.get(memberId);
+    if (!externalId) {
+      missingCount += 1;
+      continue;
+    }
+    externalMemberIds.push(externalId);
+  }
+
+  return {
+    externalMemberIds,
+    missingCount,
+  };
+}
+
+const syncFrontToPluralKit = createPluralKitFrontSync({
+  readPersistedToken: readPersistedPluralKitToken,
+  resolveExternalIds: resolvePluralKitExternalIds,
+});
+
+type PluralKitSyncMeta = {
+  status: 'synced' | 'skipped' | 'failed';
+  reason: string;
+  details: Record<string, unknown> | null;
+};
+
+function toPluralKitSyncMeta(value: unknown): PluralKitSyncMeta {
+  const source = typeof value === 'object' && value !== null ? value as Record<string, unknown> : {};
+  const status = source.status;
+  const safeStatus: PluralKitSyncMeta['status'] =
+    status === 'synced' || status === 'skipped' || status === 'failed'
+      ? status
+      : 'failed';
+
+  return {
+    status: safeStatus,
+    reason: typeof source.reason === 'string' && source.reason.trim() ? source.reason : 'unknown',
+    details: typeof source.details === 'object' && source.details !== null
+      ? source.details as Record<string, unknown>
+      : null,
+  };
+}
 
 // GET /api/front — get current active front entry
 export async function GET() {
@@ -81,7 +167,24 @@ export async function POST(request: Request) {
   revalidatePath('/members');
   revalidatePath('/front/history');
 
-  return ok({ ...newEntry[0], memberIds: uniqueMemberIds }, 201);
+  let pluralKitSync: PluralKitSyncMeta | null = null;
+
+  try {
+    const providerSync = await syncFrontToPluralKit(auth.systemId, uniqueMemberIds);
+    pluralKitSync = toPluralKitSyncMeta(providerSync);
+  } catch (error) {
+    console.error('[front-sync] pluralKit sync crashed unexpectedly', {
+      systemId: auth.systemId,
+      error: error instanceof Error ? error.message : 'unknown_error',
+    });
+    pluralKitSync = {
+      status: 'failed',
+      reason: 'unexpected_error',
+      details: null,
+    };
+  }
+
+  return ok({ ...newEntry[0], memberIds: uniqueMemberIds, pluralKitSync }, 201);
 }
 
 // DELETE /api/front — end the current front entry
@@ -102,5 +205,23 @@ export async function DELETE() {
   revalidatePath('/front');
   revalidatePath('/members');
   revalidatePath('/front/history');
-  return ok({ ended: true, entry: updated[0] });
+
+  let pluralKitSync: PluralKitSyncMeta | null = null;
+
+  try {
+    const providerSync = await syncFrontToPluralKit(auth.systemId, []);
+    pluralKitSync = toPluralKitSyncMeta(providerSync);
+  } catch (error) {
+    console.error('[front-sync] pluralKit switch-out crashed unexpectedly', {
+      systemId: auth.systemId,
+      error: error instanceof Error ? error.message : 'unknown_error',
+    });
+    pluralKitSync = {
+      status: 'failed',
+      reason: 'unexpected_error',
+      details: null,
+    };
+  }
+
+  return ok({ ended: true, entry: updated[0], pluralKitSync });
 }
