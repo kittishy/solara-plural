@@ -493,3 +493,23 @@
 - Added `scripts/pluralkit-front-sync.test.cjs` coverage for token missing, missing links, provider success, and provider rejection cases.
 
 ---
+
+## [2026-05-02] D029 - Partial front mapping should sync mapped members and expose sync diagnostics
+
+**Decision:** Change outbound PluralKit front sync behavior to proceed when mapping is partial (at least one local member maps to an external PluralKit member), and return structured diagnostics for incident debugging.
+
+**Justification:**
+- Production reports showed local front changes succeeding while PluralKit remained `(no fronter)` even with a valid token.
+- The previous behavior skipped the entire outbound switch whenever any local member lacked a `member_external_links` mapping, causing frequent all-or-nothing failures during mixed-linked fronts.
+- Reliability incidents need traceable metadata (`requestId`, provider status, reason code, HTTP status, mapped/unmapped members) without exposing secrets.
+
+**Implementation:**
+- Updated `lib/integrations/pluralkit-front-sync.js` to:
+  - allow partial mapping sync,
+  - skip only when zero members are mapped,
+  - return structured result metadata (`providerStatus`, `httpStatus`, `reasonCode`, `mappedCount`, `unmappedIds`).
+- Updated `POST/DELETE /api/front` to include safe sync diagnostics and `requestId` in `pluralKitSync` response payload.
+- Added structured logs with event/reason/request correlation fields and no token leakage.
+- Updated `scripts/pluralkit-front-sync.test.cjs` to cover partial-mapping success and new diagnostic shape.
+
+---

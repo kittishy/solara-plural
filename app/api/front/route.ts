@@ -29,7 +29,11 @@ async function readPersistedPluralKitToken(systemId: string): Promise<string | n
 
 async function resolvePluralKitExternalIds(systemId: string, localMemberIds: string[]) {
   if (localMemberIds.length === 0) {
-    return { externalMemberIds: [], missingCount: 0 };
+    return {
+      externalMemberIds: [],
+      resolvedLocalMemberIds: [],
+      unresolvedLocalMemberIds: [],
+    };
   }
 
   const links = await db
@@ -48,19 +52,22 @@ async function resolvePluralKitExternalIds(systemId: string, localMemberIds: str
   }
 
   const externalMemberIds: string[] = [];
-  let missingCount = 0;
+  const resolvedLocalMemberIds: string[] = [];
+  const unresolvedLocalMemberIds: string[] = [];
   for (const memberId of localMemberIds) {
     const externalId = byMemberId.get(memberId);
     if (!externalId) {
-      missingCount += 1;
+      unresolvedLocalMemberIds.push(memberId);
       continue;
     }
     externalMemberIds.push(externalId);
+    resolvedLocalMemberIds.push(memberId);
   }
 
   return {
     externalMemberIds,
-    missingCount,
+    resolvedLocalMemberIds,
+    unresolvedLocalMemberIds,
   };
 }
 
@@ -70,12 +77,17 @@ const syncFrontToPluralKit = createPluralKitFrontSync({
 });
 
 type PluralKitSyncMeta = {
+  requestId: string;
   status: 'synced' | 'skipped' | 'failed';
-  reason: string;
+  providerStatus: 'ok' | 'error' | 'skipped' | 'unknown';
+  reasonCode: string;
+  httpStatus: number | null;
+  mappedCount: number;
+  unmappedIds: string[];
   details: Record<string, unknown> | null;
 };
 
-function toPluralKitSyncMeta(value: unknown): PluralKitSyncMeta {
+function toPluralKitSyncMeta(value: unknown, requestId: string): PluralKitSyncMeta {
   const source = typeof value === 'object' && value !== null ? value as Record<string, unknown> : {};
   const status = source.status;
   const safeStatus: PluralKitSyncMeta['status'] =
@@ -84,12 +96,32 @@ function toPluralKitSyncMeta(value: unknown): PluralKitSyncMeta {
       : 'failed';
 
   return {
+    requestId,
     status: safeStatus,
-    reason: typeof source.reason === 'string' && source.reason.trim() ? source.reason : 'unknown',
+    providerStatus:
+      source.providerStatus === 'ok' || source.providerStatus === 'error' || source.providerStatus === 'skipped'
+        ? source.providerStatus
+        : 'unknown',
+    reasonCode: typeof source.reasonCode === 'string' && source.reasonCode.trim() ? source.reasonCode : 'unknown',
+    httpStatus: typeof source.httpStatus === 'number' && Number.isFinite(source.httpStatus)
+      ? source.httpStatus
+      : null,
+    mappedCount: typeof source.mappedCount === 'number' && Number.isFinite(source.mappedCount)
+      ? source.mappedCount
+      : 0,
+    unmappedIds: Array.isArray(source.unmappedIds)
+      ? source.unmappedIds.filter((value): value is string => typeof value === 'string' && value.trim().length > 0)
+      : [],
     details: typeof source.details === 'object' && source.details !== null
       ? source.details as Record<string, unknown>
       : null,
   };
+}
+
+function getRequestId(request: Request): string {
+  const incoming = request.headers.get('x-request-id') || request.headers.get('x-correlation-id');
+  if (incoming && incoming.trim()) return incoming.trim().slice(0, 120);
+  return `front_${createId()}`;
 }
 
 // GET /api/front — get current active front entry
@@ -121,6 +153,7 @@ export async function POST(request: Request) {
   const auth = await requireAuth();
   if (auth.error) return auth.error;
 
+  const requestId = getRequestId(request);
   const body = await request.json();
   const { memberIds, note } = body;
 
@@ -170,16 +203,23 @@ export async function POST(request: Request) {
   let pluralKitSync: PluralKitSyncMeta | null = null;
 
   try {
-    const providerSync = await syncFrontToPluralKit(auth.systemId, uniqueMemberIds);
-    pluralKitSync = toPluralKitSyncMeta(providerSync);
+    const providerSync = await syncFrontToPluralKit(auth.systemId, uniqueMemberIds, { requestId });
+    pluralKitSync = toPluralKitSyncMeta(providerSync, requestId);
   } catch (error) {
     console.error('[front-sync] pluralKit sync crashed unexpectedly', {
+      event: 'pluralkit_front_sync_unexpected_error',
+      requestId,
       systemId: auth.systemId,
       error: error instanceof Error ? error.message : 'unknown_error',
     });
     pluralKitSync = {
+      requestId,
       status: 'failed',
-      reason: 'unexpected_error',
+      providerStatus: 'error',
+      reasonCode: 'unexpected_error',
+      httpStatus: null,
+      mappedCount: 0,
+      unmappedIds: [],
       details: null,
     };
   }
@@ -191,6 +231,7 @@ export async function POST(request: Request) {
 export async function DELETE() {
   const auth = await requireAuth();
   if (auth.error) return auth.error;
+  const requestId = `front_${createId()}`;
 
   const updated = await db.update(frontEntries)
     .set({ endedAt: new Date() })
@@ -209,16 +250,23 @@ export async function DELETE() {
   let pluralKitSync: PluralKitSyncMeta | null = null;
 
   try {
-    const providerSync = await syncFrontToPluralKit(auth.systemId, []);
-    pluralKitSync = toPluralKitSyncMeta(providerSync);
+    const providerSync = await syncFrontToPluralKit(auth.systemId, [], { requestId });
+    pluralKitSync = toPluralKitSyncMeta(providerSync, requestId);
   } catch (error) {
     console.error('[front-sync] pluralKit switch-out crashed unexpectedly', {
+      event: 'pluralkit_front_sync_unexpected_error',
+      requestId,
       systemId: auth.systemId,
       error: error instanceof Error ? error.message : 'unknown_error',
     });
     pluralKitSync = {
+      requestId,
       status: 'failed',
-      reason: 'unexpected_error',
+      providerStatus: 'error',
+      reasonCode: 'unexpected_error',
+      httpStatus: null,
+      mappedCount: 0,
+      unmappedIds: [],
       details: null,
     };
   }

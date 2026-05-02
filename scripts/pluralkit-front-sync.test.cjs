@@ -23,23 +23,33 @@ test('sync skips when no persisted token exists', async () => {
 
   const result = await sync('system-1', ['member-a']);
   assert.equal(result.status, 'skipped');
-  assert.equal(result.reason, 'missing_saved_token');
+  assert.equal(result.reasonCode, 'missing_saved_token');
+  assert.equal(result.providerStatus, 'skipped');
+  assert.deepEqual(result.unmappedIds, ['member-a']);
 });
 
-test('sync skips when one or more members are not linked', async () => {
+test('sync proceeds when one or more members are not linked', async () => {
   const sync = createPluralKitFrontSync({
     readPersistedToken: async () => 'pk-token',
-    resolveExternalIds: async () => ({ externalMemberIds: ['pk-member-a'], missingCount: 1 }),
-    fetchImpl: async () => {
-      throw new Error('fetch should not be called');
-    },
+    resolveExternalIds: async () => ({
+      externalMemberIds: ['pk-member-a'],
+      resolvedLocalMemberIds: ['member-a'],
+      unresolvedLocalMemberIds: ['member-b'],
+    }),
+    fetchImpl: async () => ({
+      ok: true,
+      status: 200,
+      text: async () => JSON.stringify({ id: 'switch-1' }),
+    }),
     logger: { info() {}, warn() {}, error() {} },
   });
 
   const result = await sync('system-1', ['member-a', 'member-b']);
-  assert.equal(result.status, 'skipped');
-  assert.equal(result.reason, 'missing_member_links');
-  assert.deepEqual(result.details, { missingCount: 1 });
+  assert.equal(result.status, 'synced');
+  assert.equal(result.reasonCode, 'partial_member_links');
+  assert.equal(result.providerStatus, 'ok');
+  assert.equal(result.mappedCount, 1);
+  assert.deepEqual(result.unmappedIds, ['member-b']);
 });
 
 test('sync pushes switch to pluralKit when mapping is complete', async () => {
@@ -60,7 +70,9 @@ test('sync pushes switch to pluralKit when mapping is complete', async () => {
 
   const result = await sync('system-1', ['member-a', 'member-b']);
   assert.equal(result.status, 'synced');
-  assert.equal(result.reason, 'switch_created');
+  assert.equal(result.reasonCode, 'switch_created');
+  assert.equal(result.providerStatus, 'ok');
+  assert.equal(result.httpStatus, 200);
   assert.equal(seen.length, 1);
   assert.equal(seen[0].url, 'https://api.pluralkit.me/v2/systems/@me/switches');
   assert.equal(seen[0].init.method, 'POST');
@@ -81,7 +93,8 @@ test('sync reports provider failure when pluralKit rejects the switch update', a
 
   const result = await sync('system-1', []);
   assert.equal(result.status, 'failed');
-  assert.equal(result.reason, 'provider_rejected_switch');
+  assert.equal(result.reasonCode, 'provider_rejected_switch');
+  assert.equal(result.providerStatus, 'error');
   assert.equal(result.details.statusCode, 401);
   assert.equal(result.details.message, 'unauthorized token');
 });
