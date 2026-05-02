@@ -13,6 +13,8 @@ interface AvatarUploadProps {
 
 const MAX_FILE_BYTES = 20 * 1024 * 1024; // 20 MB
 
+type Mode = 'upload' | 'url';
+
 export default function AvatarUpload({
   currentUrl,
   memberColor,
@@ -23,6 +25,8 @@ export default function AvatarUpload({
   const [previewUrl, setPreviewUrl] = useState<string | null>(currentUrl ?? null);
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [mode, setMode] = useState<Mode>('upload');
+  const [urlInput, setUrlInput] = useState('');
 
   function triggerFilePicker() {
     inputRef.current?.click();
@@ -32,18 +36,14 @@ export default function AvatarUpload({
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Reset state
     setError(null);
 
-    // Client-side size guard
     if (file.size > MAX_FILE_BYTES) {
       setError('File is too large - max 20 MB.');
-      // Reset input so the same file can be re-selected after fixing
       e.target.value = '';
       return;
     }
 
-    // Optimistic local preview while uploading
     const localPreview = URL.createObjectURL(file);
     setPreviewUrl(localPreview);
     setIsUploading(true);
@@ -53,13 +53,37 @@ export default function AvatarUpload({
       setPreviewUrl(dataUrl);
       onUpload(dataUrl);
     } catch {
-      // Revert preview on failure
       setPreviewUrl(currentUrl ?? null);
       setError('Upload failed — try again?');
     } finally {
       setIsUploading(false);
-      // Clear input so re-selecting the same file fires onChange again
       e.target.value = '';
+    }
+  }
+
+  function handleUrlApply() {
+    const trimmed = urlInput.trim();
+    if (!trimmed) {
+      setError('Please enter a URL.');
+      return;
+    }
+    try {
+      new URL(trimmed);
+    } catch {
+      setError('Invalid URL — paste a full URL starting with https://');
+      return;
+    }
+    setError(null);
+    setPreviewUrl(trimmed);
+    onUpload(trimmed);
+    setUrlInput('');
+    setMode('upload');
+  }
+
+  function handleUrlKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleUrlApply();
     }
   }
 
@@ -67,22 +91,21 @@ export default function AvatarUpload({
 
   return (
     <div className="flex flex-col items-center gap-3">
-      {/* Avatar circle — clickable */}
+      {/* Avatar circle */}
       <button
         type="button"
-        onClick={triggerFilePicker}
-        disabled={isUploading}
+        onClick={mode === 'upload' ? triggerFilePicker : undefined}
+        disabled={isUploading || mode === 'url'}
         aria-label={`${previewUrl ? 'Change' : 'Upload'} avatar photo for ${memberName}`}
         className={`
           relative w-24 h-24 rounded-full flex-shrink-0 overflow-hidden
           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-bg
           transition-all duration-150
-          ${isUploading ? 'cursor-not-allowed' : 'cursor-pointer'}
+          ${isUploading || mode === 'url' ? 'cursor-default' : 'cursor-pointer'}
           group
         `}
         style={!previewUrl ? { backgroundColor: memberColor } : undefined}
       >
-        {/* Image or initial */}
         {previewUrl ? (
           <DynamicAvatarImage src={previewUrl}
             alt={`${memberName}'s avatar`}
@@ -97,8 +120,7 @@ export default function AvatarUpload({
           </span>
         )}
 
-        {/* Hover overlay — camera icon */}
-        {!isUploading && (
+        {!isUploading && mode === 'upload' && (
           <span
             aria-hidden
             className="
@@ -112,32 +134,74 @@ export default function AvatarUpload({
           </span>
         )}
 
-        {/* Upload spinner overlay */}
         {isUploading && (
           <span
             aria-hidden
             className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full"
           >
-            <span
-              className="w-8 h-8 rounded-full border-2 border-surface border-t-primary animate-spin"
-            />
+            <span className="w-8 h-8 rounded-full border-2 border-surface border-t-primary animate-spin" />
           </span>
         )}
       </button>
 
-      {/* Upload button label — secondary affordance for discoverability */}
-      <button
-        type="button"
-        onClick={triggerFilePicker}
-        disabled={isUploading}
-        className="text-sm text-primary hover:text-primary/80 transition-colors duration-150 focus-visible:outline-none focus-visible:underline disabled:opacity-50 disabled:cursor-not-allowed"
-      >
-        {isUploading ? 'Uploading…' : previewUrl ? 'Change photo' : 'Upload photo'}
-      </button>
+      {/* Mode toggle */}
+      <div className="flex items-center gap-1 text-xs rounded-full bg-surface-alt p-0.5">
+        <button
+          type="button"
+          onClick={() => { setMode('upload'); setError(null); }}
+          className={`px-3 py-1 rounded-full transition-colors duration-150 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary
+            ${mode === 'upload' ? 'bg-surface text-text shadow-sm' : 'text-muted hover:text-text'}`}
+        >
+          Upload
+        </button>
+        <button
+          type="button"
+          onClick={() => { setMode('url'); setError(null); }}
+          className={`px-3 py-1 rounded-full transition-colors duration-150 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary
+            ${mode === 'url' ? 'bg-surface text-text shadow-sm' : 'text-muted hover:text-text'}`}
+        >
+          URL
+        </button>
+      </div>
+
+      {/* Upload mode affordance */}
+      {mode === 'upload' && (
+        <button
+          type="button"
+          onClick={triggerFilePicker}
+          disabled={isUploading}
+          className="text-sm text-primary hover:text-primary/80 transition-colors duration-150 focus-visible:outline-none focus-visible:underline disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {isUploading ? 'Uploading…' : previewUrl ? 'Change photo' : 'Upload photo'}
+        </button>
+      )}
+
+      {/* URL mode input */}
+      {mode === 'url' && (
+        <div className="flex gap-2 w-full max-w-xs">
+          <input
+            type="url"
+            value={urlInput}
+            onChange={(e) => setUrlInput(e.target.value)}
+            onKeyDown={handleUrlKeyDown}
+            placeholder="https://example.com/image.png"
+            className="input text-sm flex-1 min-w-0"
+            aria-label="Avatar image URL"
+            autoFocus
+          />
+          <button
+            type="button"
+            onClick={handleUrlApply}
+            className="btn-primary text-sm px-3 py-1.5 whitespace-nowrap"
+          >
+            Apply
+          </button>
+        </div>
+      )}
 
       {/* Error message */}
       {error && (
-        <p role="alert" className="text-xs text-error text-center max-w-[160px]">
+        <p role="alert" className="text-xs text-error text-center max-w-xs">
           {error}
         </p>
       )}
