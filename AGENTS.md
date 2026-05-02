@@ -124,3 +124,13 @@ To facilitate OpenCode CLI autocomplete (via Tab), the following agents are expl
 - **qa** (`qa`) — Quality assurance agent. Runs tests, checks responsiveness, and identifies bugs.
 - **designer** (`ui`) — UI/UX agent. Applies the design system, aesthetics, and user experience patterns.
 - **deployer** (`dep`) — Deployment agent. Handles Vercel configuration and deployment checks.
+
+---
+
+## 8. STRICT DELEGATION POLICY (Codex-like Behavior)
+
+To ensure the AI system behaves correctly and utilizes specialized agents (like Codex does), rather than attempting to resolve everything in a generic context:
+1. **Never create temporary agents on the fly**.
+2. **Always invoke existing agents** using their exact names or aliases (e.g., `@builder`, `@qa`, `@reviewer`, `@designer`, `@deployer`).
+3. **Orchestrator Role**: If you receive a complex task, break it down and explicitly hand off the respective parts to the registered agents. Do not attempt to bypass them by doing all the specialized work yourself.
+4. **Autonomous Company Team Workflow**: Act as the Project Manager / Tech Lead. When receiving an order from the user, *spontaneously* break down the work and proactively invoke the necessary team members (e.g., `@designer`, `@builder`, `@qa`) in sequence. Do not wait for the user to manually trigger each agent; coordinate the execution automatically as a cohesive company team.

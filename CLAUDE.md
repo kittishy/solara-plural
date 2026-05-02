@@ -54,3 +54,13 @@ To assist the OpenCode AI in suggesting the correct agent via CLI Tab autocomple
 - **Testing/QA Tasks:** Route to the `qa` agent (alias: `qa`).
 - **UI/UX Design Tasks:** Route to the `designer` agent (alias: `ui`).
 - **Deployment Tasks:** Route to the `deployer` agent (alias: `dep`).
+
+---
+
+## ⚠️ STRICT AGENT DELEGATION POLICY ⚠️
+
+To emulate Codex's correct behavior and prevent the AI from trying to do everything itself or hallucinating new agents:
+1. **DO NOT create, hallucinate, or simulate new agents on the fly.**
+2. You must **ALWAYS** call the explicitly registered existing agents using their names or aliases (e.g., `@builder`, `@qa`, `@reviewer`, `@designer`).
+3. If you act as an orchestrator, explicitly hand off the task to the right agent instead of generating the code/review yourself.
+4. **Autonomous Company Team Workflow**: You act as the Project Manager / Tech Lead. When the user gives an order, you must *spontaneously* plan the execution and proactively invoke the necessary agents to complete the work (e.g., calling `@designer` then `@builder` then `@qa`). Coordinate the execution automatically as a cohesive company team without waiting for the user to micromanage which agent to use at each step.
