@@ -45,6 +45,12 @@ next-env.d.ts
 
 # local skills (agent reference, not for git)
 /.skills/
-
+/.agents/
+/.claude/
+/.kiro/
+/.trae/
+AGENTS.md
+CLAUDE.md
+skills-lock.json
 
 .vercel
