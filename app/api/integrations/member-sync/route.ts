@@ -1,10 +1,11 @@
 import { db } from '@/lib/db';
-import { frontEntries, memberExternalLinks, members } from '@/lib/db/schema';
+import { frontEntries, memberExternalLinks, members, systemIntegrations } from '@/lib/db/schema';
 import { requireAuth, ok, err } from '@/lib/api/helpers';
 import { createId } from '@paralleldrive/cuid2';
 import { and, eq, inArray, isNull, or } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { parseMemberIds, serializeMemberIds } from '@/lib/front';
+import { decryptIntegrationToken, encryptIntegrationToken } from '@/lib/integrations/token-crypto';
 import {
   PROVIDERS,
   mapPluralKitMember,
@@ -88,8 +89,12 @@ export async function POST(request: Request) {
   const provider = parseProvider(body.provider);
   if (!provider) return err('Choose PluralKit before syncing.');
 
-  const token = typeof body.token === 'string' ? body.token.trim() : '';
-  if (!token) return err('Integration token is required.');
+  const providedToken = typeof body.token === 'string' ? body.token.trim() : '';
+  const persistedToken = providedToken
+    ? null
+    : await readPersistedToken(auth.systemId, provider);
+  const token = providedToken || persistedToken || '';
+  if (!token) return err('Integration token is required. Add one in Settings or include it in the sync request.');
 
   const apply = body.apply === true;
   const options = sanitizeSyncOptions(body.options);
@@ -104,6 +109,10 @@ export async function POST(request: Request) {
         includeFrontState: apply,
       }),
     ]);
+
+    if (providedToken) {
+      await upsertPersistedToken(auth.systemId, provider, providedToken);
+    }
 
     const plan = planMemberSync({
       existingMembers,
@@ -139,6 +148,47 @@ export async function POST(request: Request) {
 
     return err('Sync failed before anything was changed. Please try again.', 500);
   }
+}
+
+async function readPersistedToken(systemId: string, provider: SyncProvider): Promise<string | null> {
+  const [integration] = await db
+    .select({ encryptedToken: systemIntegrations.encryptedToken })
+    .from(systemIntegrations)
+    .where(and(
+      eq(systemIntegrations.systemId, systemId),
+      eq(systemIntegrations.provider, provider),
+    ))
+    .limit(1);
+
+  if (!integration?.encryptedToken) return null;
+
+  try {
+    return decryptIntegrationToken(integration.encryptedToken);
+  } catch {
+    return null;
+  }
+}
+
+async function upsertPersistedToken(systemId: string, provider: SyncProvider, token: string) {
+  const now = new Date();
+
+  await db
+    .insert(systemIntegrations)
+    .values({
+      id: createId(),
+      systemId,
+      provider,
+      encryptedToken: encryptIntegrationToken(token),
+      createdAt: now,
+      updatedAt: now,
+    })
+    .onConflictDoUpdate({
+      target: [systemIntegrations.systemId, systemIntegrations.provider],
+      set: {
+        encryptedToken: encryptIntegrationToken(token),
+        updatedAt: now,
+      },
+    });
 }
 
 function parseProvider(value: unknown): SyncProvider | null {

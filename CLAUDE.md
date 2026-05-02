@@ -42,3 +42,15 @@ Read `docs/PROJECT_STYLE_GUIDE.md` for design tokens (NEVER overwrite this file)
 4. Keep UI warm, human, accessible
 5. Use TypeScript strict typing
 6. Test before declaring done
+
+---
+
+## OpenCode Agent Workflows
+
+To assist the OpenCode AI in suggesting the correct agent via CLI Tab autocomplete, follow these workflow routing rules:
+
+- **Build/Develop Tasks:** Route to the `builder` agent (alias: `b`).
+- **Code Review Tasks:** Route to the `reviewer` agent (alias: `rev`).
+- **Testing/QA Tasks:** Route to the `qa` agent (alias: `qa`).
+- **UI/UX Design Tasks:** Route to the `designer` agent (alias: `ui`).
+- **Deployment Tasks:** Route to the `deployer` agent (alias: `dep`).

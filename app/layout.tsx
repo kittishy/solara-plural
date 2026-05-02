@@ -33,8 +33,14 @@ export default function RootLayout({
                   var theme = localStorage.getItem(key);
                   if (theme) document.documentElement.setAttribute('data-solara-theme', theme);
                   var language = localStorage.getItem('solara.language');
+                  var pathname = window.location.pathname;
+                  var parts = pathname.split('/').filter(Boolean);
+                  var localeFromPath = parts[0];
                   if (language === 'pt-BR' || language === 'es' || language === 'en') {
-                    document.documentElement.lang = language;
+                    var finalLanguage = (localeFromPath === 'pt-BR' || localeFromPath === 'es' || localeFromPath === 'en')
+                      ? localeFromPath
+                      : language;
+                    document.documentElement.lang = finalLanguage;
                   }
                 } catch (_) {}
               })();

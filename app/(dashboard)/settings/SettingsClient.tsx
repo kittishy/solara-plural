@@ -129,6 +129,13 @@ type SyncResult = {
   } | null;
 };
 
+type PluralKitConnectionStatus = {
+  hasLinkedMembers: boolean;
+  hasSavedToken?: boolean;
+  linkedMembers: number;
+  lastSyncedAt: string | null;
+};
+
 const IMPORT_OPTIONS_STORAGE_KEY = 'solara.settings.importOptions';
 const DEFAULT_AVATAR_EMOJI = '☀️';
 const AVATAR_PRESETS = ['☀️', '🌙', '⭐', '🌸', '💜', '✨', '🫷', '🌿', '🫧', '🧭'] as const;
@@ -167,7 +174,13 @@ const DEFAULT_SYNC_OPTIONS: SyncOptions = {
   },
 };
 
-export default function SettingsClient({ system }: { system: SettingsSystem | null }) {
+export default function SettingsClient({
+  system,
+  pluralKitConnection,
+}: {
+  system: SettingsSystem | null;
+  pluralKitConnection: PluralKitConnectionStatus;
+}) {
   const [importing, setImporting] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [changingAccountType, setChangingAccountType] = useState(false);
@@ -194,6 +207,7 @@ export default function SettingsClient({ system }: { system: SettingsSystem | nu
   const [lastImportSummary, setLastImportSummary] = useState<ImportSummary | null>(null);
   const [syncOptions, setSyncOptions] = useState<SyncOptions>(DEFAULT_SYNC_OPTIONS);
   const [pluralKitToken, setPluralKitToken] = useState('');
+  const [hasSavedPluralKitToken, setHasSavedPluralKitToken] = useState(Boolean(pluralKitConnection.hasSavedToken));
   const [lastSyncResult, setLastSyncResult] = useState<SyncResult | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const avatarUploadRef = useRef<HTMLInputElement>(null);
@@ -316,7 +330,7 @@ export default function SettingsClient({ system }: { system: SettingsSystem | nu
     if (syncingProvider) return;
 
     const token = pluralKitToken.trim();
-    if (!token) {
+    if (!token && !hasSavedPluralKitToken) {
       setStatus({
         type: 'error',
         message: 'PluralKit token is required.',
@@ -348,6 +362,7 @@ export default function SettingsClient({ system }: { system: SettingsSystem | nu
       }
 
       setLastSyncResult(payload.data);
+      if (token) setHasSavedPluralKitToken(true);
       setStatus({
         type: 'success',
         message: createSyncSummaryMessage(payload.data.summary, payload.data.applied),
@@ -852,7 +867,7 @@ export default function SettingsClient({ system }: { system: SettingsSystem | nu
           Integrations
         </h2>
         <p className="text-muted text-sm mb-5">
-          Preview and import members from PluralKit without storing tokens.
+          Preview and import members from PluralKit with encrypted token storage.
         </p>
 
         <section className="mb-5 rounded-xl border border-border bg-surface-alt/40 p-4">
@@ -935,6 +950,28 @@ export default function SettingsClient({ system }: { system: SettingsSystem | nu
                 autoComplete="off"
               />
             </label>
+
+            <p className="mt-2 text-xs text-subtle">
+              Tokens are stored encrypted on the server and never returned to the browser.
+            </p>
+
+            {hasSavedPluralKitToken && (
+              <p className="mt-2 text-xs text-success">
+                Saved token detected for this account. You can run Preview/Apply after refresh without retyping.
+              </p>
+            )}
+
+            {pluralKitConnection.hasLinkedMembers && (
+              <div className="mt-3 rounded-lg border border-success/35 bg-success/10 px-3 py-2">
+                <p className="text-xs text-text">
+                  PluralKit linked ({pluralKitConnection.linkedMembers} member{pluralKitConnection.linkedMembers === 1 ? '' : 's'} connected).
+                </p>
+                <p className="mt-1 text-xs text-muted">
+                  Token value stays hidden in UI by design.
+                  {pluralKitConnection.lastSyncedAt ? ` Last sync: ${formatDateTime(pluralKitConnection.lastSyncedAt)}.` : ''}
+                </p>
+              </div>
+            )}
 
             <div className="mt-4 flex flex-wrap gap-2">
               <button

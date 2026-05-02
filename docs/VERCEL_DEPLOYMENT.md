@@ -28,6 +28,7 @@ Set these in Vercel for Production and Preview unless a variable is intentionall
 DATABASE_URL=libsql://your-database.turso.io
 DATABASE_AUTH_TOKEN=your-turso-auth-token
 NEXTAUTH_SECRET=your-random-secret
+INTEGRATIONS_TOKEN_SECRET=your-separate-random-secret
 NEXTAUTH_URL=https://solara-plural.vercel.app
 ```
 
@@ -39,6 +40,7 @@ Use sensitive or encrypted environment variable storage for secrets where availa
 vercel env add DATABASE_URL --sensitive
 vercel env add DATABASE_AUTH_TOKEN --sensitive
 vercel env add NEXTAUTH_SECRET --sensitive
+vercel env add INTEGRATIONS_TOKEN_SECRET --sensitive
 ```
 
 `NEXTAUTH_URL` should match the deployed site URL for production. For this project, use `https://solara-plural.vercel.app`. The `solara.vercel.app` alias is not owned by this project, so do not point auth there.
@@ -146,7 +148,7 @@ For PluralKit member sync:
 - Run preview before apply.
 - Confirm skipped ambiguous members are not created automatically.
 - Confirm repeated apply does not create duplicate members.
-- Confirm tokens are not written to export JSON or database rows.
+- Confirm tokens are not written to export JSON or plaintext DB columns (`system_integrations.encrypted_token` should be ciphertext only).
 
 ---
 

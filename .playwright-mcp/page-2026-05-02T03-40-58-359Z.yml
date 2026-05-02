@@ -1,0 +1,275 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - link "Skip to main content" [ref=e3] [cursor=pointer]:
+      - /url: "#main-content"
+    - complementary [ref=e4]:
+      - button "☀️ Solara Plural Solara" [ref=e6] [cursor=pointer]:
+        - generic [ref=e7]: ☀️
+        - generic [ref=e8]:
+          - paragraph [ref=e9]: Solara Plural
+          - paragraph [ref=e10]: Solara
+      - navigation "Primary navigation" [ref=e11]:
+        - link "Home" [ref=e12] [cursor=pointer]:
+          - /url: /
+          - img [ref=e14]
+          - text: Home
+        - link "Members" [ref=e17] [cursor=pointer]:
+          - /url: /members
+          - img [ref=e19]
+          - text: Members
+        - link "Front" [ref=e24] [cursor=pointer]:
+          - /url: /front
+          - img [ref=e26]
+          - text: Front
+        - link "Front history" [ref=e29] [cursor=pointer]:
+          - /url: /front/history
+          - img [ref=e31]
+          - text: Front history
+        - link "Notes" [ref=e34] [cursor=pointer]:
+          - /url: /notes
+          - img [ref=e36]
+          - text: Notes
+        - link "Friends" [ref=e39] [cursor=pointer]:
+          - /url: /friends
+          - img [ref=e41]
+          - text: Friends
+        - link "Settings" [ref=e46] [cursor=pointer]:
+          - /url: /settings
+          - img [ref=e49]
+          - text: Settings
+      - button "Sign out" [ref=e53] [cursor=pointer]:
+        - img [ref=e55]
+        - text: Sign out
+    - main [ref=e58]:
+      - generic [ref=e60]:
+        - generic [ref=e61]:
+          - heading "Settings" [level=1] [ref=e62]
+          - paragraph [ref=e63]: Manage your account profile and data
+        - generic [ref=e64]:
+          - region "Your Account" [ref=e65]:
+            - heading "Your Account" [level=2] [ref=e66]
+            - generic [ref=e67]:
+              - generic [ref=e68]:
+                - term [ref=e69]: Name
+                - definition [ref=e70]: Solara
+              - generic [ref=e71]:
+                - term [ref=e72]: Email
+                - definition [ref=e73]: solara.julia.a@gmail.com
+              - generic [ref=e74]:
+                - term [ref=e75]: Type
+                - definition [ref=e76]: System
+            - generic [ref=e77]:
+              - heading "Account type" [level=3] [ref=e78]
+              - paragraph [ref=e79]: Switch between singlet and system mode. System mode enables member/front features.
+              - generic [ref=e80]:
+                - button "System" [disabled] [pressed] [ref=e81]
+                - button "Singlet" [ref=e82] [cursor=pointer]
+          - region "Language" [ref=e83]:
+            - generic [ref=e84]:
+              - generic [ref=e85]:
+                - heading "Language" [level=2] [ref=e86]
+                - paragraph [ref=e87]: Choose the language used across Solara.
+              - generic [ref=e88]: EN
+            - radiogroup "Language" [ref=e89]:
+              - radio "English EN" [checked] [ref=e90] [cursor=pointer]:
+                - generic [ref=e91]: English
+                - generic [ref=e92]: EN
+              - radio "Português brasileiro PT-BR" [ref=e93] [cursor=pointer]:
+                - generic [ref=e94]: Português brasileiro
+                - generic [ref=e95]: PT-BR
+              - radio "Español ES" [ref=e96] [cursor=pointer]:
+                - generic [ref=e97]: Español
+                - generic [ref=e98]: ES
+          - region "Profile and avatar" [ref=e99]:
+            - heading "Profile and avatar" [level=2] [ref=e100]
+            - paragraph [ref=e101]: Choose a system avatar with emoji preset or image URL, with live preview.
+            - generic [ref=e102]:
+              - generic [ref=e104]: ☀️
+              - generic [ref=e105]:
+                - generic [ref=e106]:
+                  - generic [ref=e107]: Display name
+                  - textbox "Display name" [ref=e108]: Solara
+                - generic [ref=e109]:
+                  - generic [ref=e110]: Description
+                  - textbox "Description" [ref=e111]
+            - generic [ref=e112]:
+              - generic [ref=e113]:
+                - button "Emoji preset" [ref=e114] [cursor=pointer]
+                - button "Image URL" [ref=e115] [cursor=pointer]
+              - generic [ref=e116]:
+                - button "Use ☀️ as avatar" [pressed] [ref=e117] [cursor=pointer]: ☀️
+                - button "Use 🌙 as avatar" [ref=e118] [cursor=pointer]: 🌙
+                - button "Use ⭐ as avatar" [ref=e119] [cursor=pointer]: ⭐
+                - button "Use 🌸 as avatar" [ref=e120] [cursor=pointer]: 🌸
+                - button "Use 💜 as avatar" [ref=e121] [cursor=pointer]: 💜
+                - button "Use ✨ as avatar" [ref=e122] [cursor=pointer]: ✨
+                - button "Use 🫷 as avatar" [ref=e123] [cursor=pointer]: 🫷
+                - button "Use 🌿 as avatar" [ref=e124] [cursor=pointer]: 🌿
+                - button "Use 🫧 as avatar" [ref=e125] [cursor=pointer]: 🫧
+                - button "Use 🧭 as avatar" [ref=e126] [cursor=pointer]: 🧭
+            - button "Save profile" [ref=e127] [cursor=pointer]
+          - region "Appearance" [ref=e128]:
+            - heading "Appearance" [level=2] [ref=e129]
+            - paragraph [ref=e130]: Pick a theme that feels safe and comfortable for your system.
+            - generic [ref=e131]:
+              - button "Night Bloom Cozy violet default" [pressed] [ref=e132] [cursor=pointer]:
+                - paragraph [ref=e133]: Night Bloom
+                - paragraph [ref=e134]: Cozy violet default
+              - button "Sunrise Hearth Warm amber glow" [ref=e135] [cursor=pointer]:
+                - paragraph [ref=e136]: Sunrise Hearth
+                - paragraph [ref=e137]: Warm amber glow
+              - button "Forest Quiet Calm green atmosphere" [ref=e138] [cursor=pointer]:
+                - paragraph [ref=e139]: Forest Quiet
+                - paragraph [ref=e140]: Calm green atmosphere
+              - button "Ocean Drift Deep blue comfort" [ref=e141] [cursor=pointer]:
+                - paragraph [ref=e142]: Ocean Drift
+                - paragraph [ref=e143]: Deep blue comfort
+              - button "Mist Gray Warm gray quiet" [ref=e144] [cursor=pointer]:
+                - paragraph [ref=e145]: Mist Gray
+                - paragraph [ref=e146]: Warm gray quiet
+          - region "Account recovery and deletion" [ref=e147]:
+            - heading "Account recovery and deletion" [level=2] [ref=e148]
+            - paragraph [ref=e149]: Schedule account deletion only if you are sure. You get 72 hours to cancel before a future purge can remove data.
+            - generic [ref=e150]:
+              - generic [ref=e151]:
+                - heading "Schedule account deletion" [level=3] [ref=e152]
+                - paragraph [ref=e153]: This starts a 72-hour recovery window. To prevent accidental deletion, type your account email before scheduling.
+              - generic [ref=e154]:
+                - generic [ref=e155]: Type your email to confirm
+                - textbox "Type your email to confirm" [ref=e156]:
+                  - /placeholder: solara.julia.a@gmail.com
+                  - text: solara.julia.a@gmail.com
+              - generic [ref=e157]:
+                - checkbox "I understand this schedules account deletion and I can cancel it from Settings within 72 hours." [ref=e158]
+                - generic [ref=e159]: I understand this schedules account deletion and I can cancel it from Settings within 72 hours.
+              - button "Schedule deletion with 72h recovery" [disabled] [ref=e160]
+          - region "Session" [ref=e161]:
+            - heading "Session" [level=2] [ref=e162]
+            - paragraph [ref=e163]: You can sign out safely from this device here.
+            - button "Sign out from your account" [ref=e164] [cursor=pointer]: Sign out
+          - region "Integrations" [ref=e165]:
+            - heading "Integrations" [level=2] [ref=e166]
+            - paragraph [ref=e167]: Preview and import members from PluralKit with encrypted token storage.
+            - generic [ref=e168]:
+              - generic [ref=e169]:
+                - heading "Safe sync options" [level=3] [ref=e170]
+                - paragraph [ref=e171]: Defaults favor linking and filling blanks over overwriting local data.
+              - group "Safe sync options" [ref=e172]:
+                - generic [ref=e173] [cursor=pointer]:
+                  - generic [ref=e174]:
+                    - generic [ref=e176]: Update existing members
+                    - generic [ref=e177]: Fill empty local fields and link matched members.
+                  - switch "Update existing members" [checked] [ref=e178]
+                - generic [ref=e181] [cursor=pointer]:
+                  - generic [ref=e182]:
+                    - generic [ref=e184]: Import new members
+                    - generic [ref=e185]: Create members only when Solara finds no safe match.
+                  - switch "Import new members" [checked] [ref=e186]
+                - generic [ref=e189] [cursor=pointer]:
+                  - generic [ref=e190]:
+                    - generic [ref=e191]:
+                      - generic [ref=e192]: Smart duplicate detection
+                      - generic [ref=e193]: Recommended
+                    - generic [ref=e194]: Recommended. Ambiguous matches are skipped instead of guessed.
+                  - switch "Smart duplicate detection" [checked] [ref=e195]
+                - generic [ref=e198]:
+                  - paragraph [ref=e199]: Remote overwrites for non-empty fields
+                  - paragraph [ref=e200]: Leave these off unless you want remote data to replace local edits.
+                  - generic [ref=e201]:
+                    - generic [ref=e202] [cursor=pointer]:
+                      - generic [ref=e205]: Name
+                      - switch "Name" [ref=e206]
+                    - generic [ref=e209] [cursor=pointer]:
+                      - generic [ref=e212]: Pronouns
+                      - switch "Pronouns" [ref=e213]
+                    - generic [ref=e216] [cursor=pointer]:
+                      - generic [ref=e219]: Description
+                      - switch "Description" [ref=e220]
+                    - generic [ref=e223] [cursor=pointer]:
+                      - generic [ref=e226]: Avatar
+                      - switch "Avatar" [ref=e227]
+                    - generic [ref=e230] [cursor=pointer]:
+                      - generic [ref=e233]: Color
+                      - switch "Color" [ref=e234]
+                    - generic [ref=e237] [cursor=pointer]:
+                      - generic [ref=e240]: Role
+                      - switch "Role" [ref=e241]
+                    - generic [ref=e244] [cursor=pointer]:
+                      - generic [ref=e247]: Tags
+                      - switch "Tags" [ref=e248]
+                    - generic [ref=e251] [cursor=pointer]:
+                      - generic [ref=e254]: Notes
+                      - switch "Notes" [ref=e255]
+            - region "PluralKit" [ref=e259]:
+              - heading "PluralKit" [level=3] [ref=e260]
+              - generic [ref=e261]:
+                - generic [ref=e262]: System token
+                - textbox "System token" [ref=e263]:
+                  - /placeholder: pk;token
+                  - text: s0mbr4g4t0
+              - paragraph [ref=e264]: Tokens are stored encrypted on the server and never returned to the browser.
+              - generic [ref=e265]:
+                - button "Preview" [ref=e266] [cursor=pointer]
+                - button "Apply sync" [ref=e267] [cursor=pointer]
+          - region "Data" [ref=e268]:
+            - heading "Data" [level=2] [ref=e269]
+            - paragraph [ref=e270]: Export all your system data as a JSON file, or import members from a JSON file.
+            - generic [ref=e271]:
+              - generic [ref=e272]:
+                - heading "Import options" [level=3] [ref=e273]
+                - paragraph [ref=e274]: Choose how Solara should merge members to reduce duplicate headaches.
+              - group "Import options" [ref=e275]:
+                - generic [ref=e276] [cursor=pointer]:
+                  - generic [ref=e277]:
+                    - generic [ref=e279]: Update existing members
+                    - generic [ref=e280]: Apply selected field overrides when a member already exists.
+                  - switch "Update existing members" [checked] [ref=e281]
+                - generic [ref=e284] [cursor=pointer]:
+                  - generic [ref=e285]:
+                    - generic [ref=e287]: Import new members
+                    - generic [ref=e288]: Create members that are not currently in your system.
+                  - switch "Import new members" [checked] [ref=e289]
+                - generic [ref=e292] [cursor=pointer]:
+                  - generic [ref=e293]:
+                    - generic [ref=e294]:
+                      - generic [ref=e295]: Smart duplicate detection
+                      - generic [ref=e296]: Recommended
+                    - generic [ref=e297]: Recommended. Uses safer matching so similar entries are skipped instead of duplicated.
+                  - switch "Smart duplicate detection" [checked] [ref=e298]
+                - generic [ref=e301]:
+                  - paragraph [ref=e302]: Field overrides for existing members
+                  - paragraph [ref=e303]: Pick which fields can be overwritten during updates.
+                  - generic [ref=e304]:
+                    - generic [ref=e305] [cursor=pointer]:
+                      - generic [ref=e308]: Name
+                      - switch "Name" [ref=e309]
+                    - generic [ref=e312] [cursor=pointer]:
+                      - generic [ref=e315]: Pronouns
+                      - switch "Pronouns" [checked] [ref=e316]
+                    - generic [ref=e319] [cursor=pointer]:
+                      - generic [ref=e322]: Description
+                      - switch "Description" [checked] [ref=e323]
+                    - generic [ref=e326] [cursor=pointer]:
+                      - generic [ref=e329]: Avatar
+                      - switch "Avatar" [checked] [ref=e330]
+                    - generic [ref=e333] [cursor=pointer]:
+                      - generic [ref=e336]: Color
+                      - switch "Color" [checked] [ref=e337]
+                    - generic [ref=e340] [cursor=pointer]:
+                      - generic [ref=e343]: Role
+                      - switch "Role" [checked] [ref=e344]
+                    - generic [ref=e347] [cursor=pointer]:
+                      - generic [ref=e350]: Tags
+                      - switch "Tags" [checked] [ref=e351]
+                    - generic [ref=e354] [cursor=pointer]:
+                      - generic [ref=e357]: Notes
+                      - switch "Notes" [checked] [ref=e358]
+            - generic [ref=e361]:
+              - button "Download export" [ref=e362] [cursor=pointer]
+              - button "Import members" [ref=e363] [cursor=pointer]
+              - button "Choose JSON file to import members" [ref=e364]
+          - region "About Solara Plural" [ref=e365]:
+            - heading "About Solara Plural" [level=2] [ref=e366]
+            - paragraph [ref=e367]: A warm, open-source space for plural systems. Built with care.
+            - paragraph [ref=e368]: v0.1.0 — MVP alpha
+  - alert [ref=e369]

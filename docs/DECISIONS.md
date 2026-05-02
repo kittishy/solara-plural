@@ -361,6 +361,28 @@
 
 ---
 
+## [2026-05-02] D027 - Automatic i18n via locale-prefixed URLs + middleware negotiation
+
+**Decision:** Implement automatic internationalization using locale-prefixed URLs (`/en/*`, `/pt-BR/*`, `/es/*`) resolved by middleware, with server-side language negotiation (`Accept-Language`) and persistent preference via cookie/local storage.
+
+**Justification:**
+- Locale-prefixed URLs make language state explicit, shareable, and production-safe for server rendering.
+- Middleware-based negotiation allows first visit language detection before UI hydration.
+- Cookie persistence respects user choice across sessions and devices where browser settings differ.
+- Keeping the existing translation dictionary/provider avoids adding new dependencies and keeps the implementation aligned with current stack conventions.
+
+**Implementation:**
+- Added robust i18n helpers in `lib/i18n.ts` for language normalization, `Accept-Language` parsing, locale path handling, and fallback behavior.
+- Updated `middleware.ts` to:
+  - redirect non-localized routes to locale-prefixed routes,
+  - detect language from `solara.locale` cookie or `Accept-Language`,
+  - rewrite localized routes back to internal app routes,
+  - persist locale cookie.
+- Updated `LanguageProvider` to sync language with URL locale and persist preference in both cookie and `localStorage`.
+- Updated root layout boot script to honor locale from URL first, with stored language as fallback.
+
+---
+
 ## [2026-05-01] D023 - Preview-first PluralKit and Simply Plural Member Sync
 
 **Decision:** Add PluralKit and Simply Plural member sync as a preview-first pull integration with stable external identity links. Do not add bidirectional remote writes or automatic deletion in this slice.
@@ -415,5 +437,41 @@
   - If PluralKit has no fronters: end local active front.
   - If no linked local members are found: skip front update and report reason.
 - Settings integration summary now shows a front-sync status line for applied syncs.
+
+---
+
+## [2026-05-02] D026 - Harden Integration Link Metadata to Prevent Secret Persistence
+
+**Decision:** Restrict `member_external_links.metadata` to an allowlisted provider-safe payload instead of blindly persisting arbitrary provider metadata.
+
+**Justification:**
+- Integration tokens are intentionally request-only and must never be persisted in DB rows.
+- Even when current provider mappers do not include tokens, defensive allowlisting prevents future regressions if upstream payload shapes or mapper behavior change.
+- This is a low-impact hardening step: no schema change, no API contract change, and no sync UX disruption.
+
+**Implementation:**
+- Updated `lib/integrations/member-sync-core.js` to sanitize link metadata per provider before serialization.
+- PluralKit metadata now stores only explicit safe fields (`shortId`, `uuid`, `displayName`, `birthday`, optional `externalPluralKitId`).
+- Added regression coverage in `scripts/member-sync-core.test.cjs` to ensure token-like keys are dropped from stored metadata.
+
+---
+
+## [2026-05-02] D027 - Persist PluralKit Token Only as Encrypted Credential
+
+**Decision:** Allow token reuse for PluralKit sync, but persist credentials only in encrypted form via `system_integrations.encrypted_token`.
+
+**Justification:**
+- Re-entering integration tokens on every sync adds friction and increases user error.
+- Persisting plaintext tokens would create an unacceptable exposure risk in DB snapshots and manual queries.
+- App-layer encryption at rest is a low-impact improvement compatible with current Turso/libSQL stack and existing sync route.
+
+**Implementation:**
+- Added `system_integrations` table (`system_id`, `provider`, `encrypted_token`) with uniqueness per system/provider.
+- `POST /api/integrations/member-sync` now:
+  - accepts explicit token input,
+  - encrypts and upserts it for future reuse,
+  - falls back to decrypting stored token when request token is omitted.
+- Encryption uses AES-256-GCM in `lib/integrations/token-crypto.ts` with `INTEGRATIONS_TOKEN_SECRET` (or `NEXTAUTH_SECRET` fallback).
+- API responses and export payloads do not expose decrypted tokens.
 
 ---

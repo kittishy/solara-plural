@@ -112,3 +112,15 @@ This repository contains a local copy of ALL skills in `.skills/`. **You MUST re
 5. **Prioritize accessibility and mobile experience**
 6. **Use TypeScript strict typing** throughout
 7. **Test before declaring done**
+
+---
+
+## 7. OpenCode Agents Configuration
+
+To facilitate OpenCode CLI autocomplete (via Tab), the following agents are explicitly registered with short, descriptive names and aliases:
+
+- **builder** (`b`) — Main developer agent. Builds features, writes code, and implements logic.
+- **reviewer** (`rev`) — Code reviewer agent. Focuses on code quality, strict TypeScript typing, and architectural consistency.
+- **qa** (`qa`) — Quality assurance agent. Runs tests, checks responsiveness, and identifies bugs.
+- **designer** (`ui`) — UI/UX agent. Applies the design system, aesthetics, and user experience patterns.
+- **deployer** (`dep`) — Deployment agent. Handles Vercel configuration and deployment checks.

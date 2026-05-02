@@ -1,4 +1,5 @@
 export const LANGUAGE_STORAGE_KEY = 'solara.language';
+export const LANGUAGE_COOKIE_KEY = 'solara.locale';
 
 export const LANGUAGES = [
   { code: 'en', label: 'English', shortLabel: 'EN', htmlLang: 'en' },
@@ -7,11 +8,80 @@ export const LANGUAGES = [
 ] as const;
 
 export type Language = (typeof LANGUAGES)[number]['code'];
+export const SUPPORTED_LANGUAGES = LANGUAGES.map((language) => language.code);
 
 export const DEFAULT_LANGUAGE: Language = 'en';
 
 export function isLanguage(value: unknown): value is Language {
   return typeof value === 'string' && LANGUAGES.some((language) => language.code === value);
+}
+
+export function normalizePreferredLanguage(value: string | null | undefined): Language | null {
+  if (!value) return null;
+  const normalized = value.trim().toLowerCase();
+  if (!normalized) return null;
+
+  if (normalized.startsWith('pt')) return 'pt-BR';
+  if (normalized.startsWith('es')) return 'es';
+  if (normalized.startsWith('en')) return 'en';
+  if (isLanguage(value)) return value;
+  return null;
+}
+
+export function detectLanguageFromAcceptLanguage(headerValue: string | null | undefined): Language {
+  if (!headerValue) return DEFAULT_LANGUAGE;
+
+  const candidates = headerValue
+    .split(',')
+    .map((entry) => {
+      const [tag, qValue] = entry.trim().split(';');
+      const parsedWeight = qValue?.trim().startsWith('q=')
+        ? Number.parseFloat(qValue.trim().slice(2))
+        : 1;
+      return {
+        tag,
+        weight: Number.isFinite(parsedWeight) ? parsedWeight : 1,
+      };
+    })
+    .sort((a, b) => b.weight - a.weight);
+
+  for (const candidate of candidates) {
+    const matched = normalizePreferredLanguage(candidate.tag);
+    if (matched) return matched;
+  }
+
+  return DEFAULT_LANGUAGE;
+}
+
+export function getLanguageFromPathname(pathname: string): {
+  language: Language | null;
+  pathnameWithoutLanguage: string;
+} {
+  const segments = pathname.split('/').filter(Boolean);
+  const maybeLanguage = segments[0];
+
+  if (!maybeLanguage || !isLanguage(maybeLanguage)) {
+    return {
+      language: null,
+      pathnameWithoutLanguage: pathname || '/',
+    };
+  }
+
+  const rest = segments.slice(1).join('/');
+  return {
+    language: maybeLanguage,
+    pathnameWithoutLanguage: rest ? `/${rest}` : '/',
+  };
+}
+
+export function localizePathname(pathname: string, language: Language): string {
+  const { pathnameWithoutLanguage } = getLanguageFromPathname(pathname);
+  if (pathnameWithoutLanguage === '/') return `/${language}`;
+  return `/${language}${pathnameWithoutLanguage}`;
+}
+
+export function stripLanguageFromPathname(pathname: string): string {
+  return getLanguageFromPathname(pathname).pathnameWithoutLanguage;
 }
 
 export const translations = {

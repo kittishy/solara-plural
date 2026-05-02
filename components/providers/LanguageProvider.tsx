@@ -1,14 +1,19 @@
 'use client';
 
-import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
 import {
   DEFAULT_LANGUAGE,
+  LANGUAGE_COOKIE_KEY,
   LANGUAGES,
   LANGUAGE_STORAGE_KEY,
   type Language,
   type TranslationKey,
+  getLanguageFromPathname,
   interpolate,
   isLanguage,
+  localizePathname,
+  normalizePreferredLanguage,
   translations,
 } from '@/lib/i18n';
 
@@ -24,7 +29,20 @@ type LanguageContextValue = {
 
 const LanguageContext = createContext<LanguageContextValue | null>(null);
 
-function readInitialLanguage(): Language {
+function readInitialLanguage(pathname?: string | null): Language {
+  const pathLanguage = pathname ? getLanguageFromPathname(pathname).language : null;
+  if (pathLanguage) return pathLanguage;
+
+  if (typeof document !== 'undefined') {
+    const cookieEntry = document.cookie
+      .split(';')
+      .map((entry) => entry.trim())
+      .find((entry) => entry.startsWith(`${LANGUAGE_COOKIE_KEY}=`));
+    const cookieValue = cookieEntry?.split('=')[1];
+    const fromCookie = normalizePreferredLanguage(cookieValue);
+    if (fromCookie) return fromCookie;
+  }
+
   if (typeof window === 'undefined') return DEFAULT_LANGUAGE;
 
   try {
@@ -34,10 +52,7 @@ function readInitialLanguage(): Language {
     // Local storage is optional.
   }
 
-  const browserLanguage = window.navigator.language;
-  if (browserLanguage.startsWith('pt')) return 'pt-BR';
-  if (browserLanguage.startsWith('es')) return 'es';
-  return DEFAULT_LANGUAGE;
+  return normalizePreferredLanguage(window.navigator.language) ?? DEFAULT_LANGUAGE;
 }
 
 function getTranslation(language: Language, key: TranslationKey) {
@@ -61,11 +76,24 @@ function getTranslation(language: Language, key: TranslationKey) {
 }
 
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
-  const [language, setLanguageState] = useState<Language>(DEFAULT_LANGUAGE);
+  const router = useRouter();
+  const pathname = usePathname();
+  const [language, setLanguageState] = useState<Language>(() => readInitialLanguage(pathname));
 
   useEffect(() => {
-    setLanguageState(readInitialLanguage());
-  }, []);
+    const pathLanguage = pathname ? getLanguageFromPathname(pathname).language : null;
+    if (!pathLanguage || pathLanguage === language) return;
+    setLanguageState(pathLanguage);
+  }, [pathname, language]);
+
+  const setLanguage = useCallback((nextLanguage: Language) => {
+    setLanguageState(nextLanguage);
+
+    const localizedPath = localizePathname(pathname ?? '/', nextLanguage);
+    const currentSearch = typeof window !== 'undefined' ? window.location.search : '';
+    const nextUrl = currentSearch ? `${localizedPath}${currentSearch}` : localizedPath;
+    router.replace(nextUrl);
+  }, [pathname, router]);
 
   useEffect(() => {
     const htmlLang = LANGUAGES.find((item) => item.code === language)?.htmlLang ?? 'en';
@@ -76,6 +104,8 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
     } catch {
       // Local storage is optional.
     }
+
+    document.cookie = `${LANGUAGE_COOKIE_KEY}=${encodeURIComponent(language)}; Max-Age=31536000; Path=/; SameSite=Lax`;
   }, [language]);
 
   const value = useMemo<LanguageContextValue>(() => {
@@ -89,12 +119,12 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
 
     return {
       language,
-      setLanguage: setLanguageState,
+      setLanguage,
       t,
       formatDate: (date, options) => normalizeDate(date).toLocaleDateString(language, options),
       formatTime: (date, options) => normalizeDate(date).toLocaleTimeString(language, options),
     };
-  }, [language]);
+  }, [language, setLanguage]);
 
   return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>;
 }

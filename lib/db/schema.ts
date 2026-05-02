@@ -96,6 +96,19 @@ export const memberExternalLinks = sqliteTable('member_external_links', {
   memberProviderUnique: uniqueIndex('ux_member_external_links_member_provider').on(t.systemId, t.memberId, t.provider),
 }));
 
+// Stored integration credentials (encrypted server-side)
+export const systemIntegrations = sqliteTable('system_integrations', {
+  id:             text('id').primaryKey(),
+  systemId:       text('system_id').notNull().references(() => systems.id, { onDelete: 'cascade' }),
+  provider:       text('provider').notNull(),
+  encryptedToken: text('encrypted_token').notNull(),
+  createdAt:      integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(strftime('%s', 'now'))`),
+  updatedAt:      integer('updated_at', { mode: 'timestamp' }).notNull().default(sql`(strftime('%s', 'now'))`),
+}, (t) => ({
+  systemProviderUnique: uniqueIndex('ux_system_integrations_system_provider').on(t.systemId, t.provider),
+  providerIdx: index('idx_system_integrations_provider').on(t.provider),
+}));
+
 // Friend Member Sharing
 export const systemFriendMemberShares = sqliteTable('system_friend_member_shares', {
   id:             text('id').primaryKey(),
@@ -153,6 +166,8 @@ export type Member = typeof members.$inferSelect;
 export type NewMember = typeof members.$inferInsert;
 export type MemberExternalLink = typeof memberExternalLinks.$inferSelect;
 export type NewMemberExternalLink = typeof memberExternalLinks.$inferInsert;
+export type SystemIntegration = typeof systemIntegrations.$inferSelect;
+export type NewSystemIntegration = typeof systemIntegrations.$inferInsert;
 export type SystemFriendMemberShare = typeof systemFriendMemberShares.$inferSelect;
 export type NewSystemFriendMemberShare = typeof systemFriendMemberShares.$inferInsert;
 export type FrontEntry = typeof frontEntries.$inferSelect;

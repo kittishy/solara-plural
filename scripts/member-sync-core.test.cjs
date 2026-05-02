@@ -123,3 +123,43 @@ test('skips duplicate names in the external source before creating members', () 
   assert.equal(result.summary.skip, 2);
   assert.equal(result.summary.skippedReasons.ambiguous_source_name, 2);
 });
+
+test('link metadata keeps only allowlisted PluralKit fields', () => {
+  const result = planMemberSync({
+    existingMembers: [],
+    existingLinks: [],
+    externalMembers: [
+      {
+        ...mapPluralKitMember({
+          id: 'pk-short',
+          uuid: 'pk-uuid',
+          name: 'Aster',
+          display_name: 'Aster Prime',
+          birthday: '2000-01-01',
+        }),
+        metadata: {
+          shortId: 'pk-short',
+          uuid: 'pk-uuid',
+          displayName: 'Aster Prime',
+          birthday: '2000-01-01',
+          token: 'should-not-persist',
+          accessToken: 'also-should-not-persist',
+          nested: { anything: true },
+        },
+      },
+    ],
+    options: {},
+  });
+
+  assert.equal(result.summary.create, 1);
+  const metadata = JSON.parse(result.operations[0].link.metadata);
+  assert.deepEqual(metadata, {
+    shortId: 'pk-short',
+    uuid: 'pk-uuid',
+    displayName: 'Aster Prime',
+    birthday: '2000-01-01',
+  });
+  assert.equal('token' in metadata, false);
+  assert.equal('accessToken' in metadata, false);
+  assert.equal('nested' in metadata, false);
+});

@@ -82,6 +82,30 @@ Indexes and constraints:
 
 ---
 
+### system_integrations
+
+Stores provider integration credentials encrypted at rest for optional token reuse.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| id | text | PRIMARY KEY | CUID/UUID |
+| systemId | text | FK → systems.id | Owner system |
+| provider | text | NOT NULL | `pluralkit` |
+| encryptedToken | text | NOT NULL | AES-256-GCM encrypted token payload |
+| createdAt | integer | NOT NULL | Unix timestamp |
+| updatedAt | integer | NOT NULL | Unix timestamp |
+
+Indexes and constraints:
+- `ux_system_integrations_system_provider(systemId, provider)`
+- `idx_system_integrations_provider(provider)`
+
+**Notes:**
+- Plaintext integration tokens are not persisted in DB columns.
+- Encryption/decryption happens in the app layer using server-only secrets.
+- Export JSON does not include this table.
+
+---
+
 ### front_entries
 
 Records a front session (who was fronting, when).

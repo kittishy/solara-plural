@@ -307,13 +307,19 @@ Solara should borrow architecture habits, not external implementation code:
 ### New integration surface
 - `POST /api/integrations/member-sync`
   - Supports `provider: "pluralkit"`.
-  - Accepts a token for the current request only; tokens are not persisted.
+  - Accepts a token per request and can reuse an encrypted persisted token when available.
   - `apply: false` returns a dry-run preview.
   - `apply: true` refetches remote data, replans, and applies the safe plan transactionally.
 
 ### Provider behavior
 - PluralKit reads `GET /systems/@me` and `GET /systems/@me/members` from `https://api.pluralkit.me/v2`.
 - PluralKit requests include an identifying `User-Agent`.
+
+### Integration credential storage
+- Integration credentials are stored in `system_integrations` as encrypted payloads (`encrypted_token`).
+- Encryption uses AES-256-GCM in app layer (`lib/integrations/token-crypto.ts`) with `INTEGRATIONS_TOKEN_SECRET` (or `NEXTAUTH_SECRET` fallback).
+- Decrypted tokens are used only in server runtime when sending provider requests.
+- `system_integrations` is not included in export payloads.
 
 ### Merge invariants
 - Identity links live in `member_external_links`.
