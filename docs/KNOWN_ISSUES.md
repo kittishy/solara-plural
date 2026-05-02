@@ -75,6 +75,18 @@ Production PWA install should use real PNG icons, at least 192x192 and 512x512, 
 **Expected Behavior:**
 Plan and test a framework upgrade separately, or choose a patched compatible version if one becomes available.
 
+### [ISSUE-010] External provider front sync is not implemented yet
+
+**Status:** Open
+**Priority:** Medium
+**Area:** Backend | Integrations | Data
+
+**Description:**
+PluralKit models front as switches with a member list. The current integration slice intentionally syncs members only.
+
+**Expected Behavior:**
+Future front integration should have a separate preview/conflict model before importing or pushing front history.
+
 ---
 
 ## Resolved Issues
@@ -150,5 +162,29 @@ Unauthenticated API fetches received `302` redirects to `/login`, which client c
 Middleware imported full Auth.js config, including bcrypt credential verification, producing Edge runtime warnings and a larger middleware bundle.
 
 **Resolved in:** 2026-04-25 edge-safe auth split
+
+---
+
+### [ISSUE-011] Current front accepted unowned member IDs
+
+**Status:** Resolved
+**Priority:** High
+**Area:** Backend | Data
+
+**Description:**
+`POST /api/front` accepted any non-empty string in `memberIds`, while historical front routes validated membership ownership.
+
+**Resolved in:** 2026-05-01 external integration hardening pass
+
+### [ISSUE-012] Export parsed stored JSON without fallback
+
+**Status:** Resolved
+**Priority:** Medium
+**Area:** Backend | Data Portability
+
+**Description:**
+`GET /api/export` used direct `JSON.parse` for member tags and front member IDs. Corrupted stored JSON could break export.
+
+**Resolved in:** 2026-05-01 external integration hardening pass
 
 ---

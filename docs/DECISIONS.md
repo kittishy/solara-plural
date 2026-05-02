@@ -360,3 +360,40 @@
 - Updated Mist Gray theme tokens and CSS variables so it is visually distinct from Night Bloom.
 
 ---
+
+## [2026-05-01] D023 - Preview-first PluralKit and Simply Plural Member Sync
+
+**Decision:** Add PluralKit and Simply Plural member sync as a preview-first pull integration with stable external identity links. Do not add bidirectional remote writes or automatic deletion in this slice.
+
+**Justification:**
+- Many accounts already imported members from PluralKit or Simply Plural, so name-only importing would create duplicates.
+- External provider tokens are sensitive and should not be stored for this first production-safe integration.
+- PluralKit and Simply Plural have different front/history models; member identity linking is the safest first foundation before any future front sync.
+- Preview/apply lets users see create/update/link/skip counts before changing local data.
+
+**Implementation:**
+- Added `member_external_links` with unique provider/external and member/provider constraints.
+- Added `POST /api/integrations/member-sync` for PluralKit and Simply Plural member preview/apply.
+- PluralKit reads members with required `User-Agent`; Simply Plural supports production and pretesting base URLs.
+- Added merge planner tests covering external links, Simply Plural `pkId` to PluralKit cross-linking, ambiguous names, non-overwrite defaults, and duplicate remote names.
+- Added Settings UI for tokens, provider selection, preview/apply, cautious sync options, and summary output.
+- Hardened current front member validation and export JSON parsing around integration-adjacent data.
+
+---
+
+## [2026-05-02] D024 - Remove Simply Plural Token Integration From Production Sync
+
+**Decision:** Remove Simply Plural from the active member sync integration and keep only PluralKit preview/apply flow.
+
+**Justification:**
+- Simply Plural token access is no longer viable for users, making the integration path non-operational.
+- Keeping a non-functional token flow in production settings increases confusion and support risk.
+- Restricting to PluralKit preserves the existing duplicate-safe sync planner without introducing unstable fallback behavior.
+
+**Implementation:**
+- Removed Simply Plural fields and actions from Settings integrations UI.
+- Removed Simply Plural provider handling from `POST /api/integrations/member-sync`.
+- Removed Simply Plural mapper/types/tests from the member sync core slice.
+- Kept dedupe/link protections and preview-first flow intact for PluralKit.
+
+---

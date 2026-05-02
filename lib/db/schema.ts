@@ -76,6 +76,26 @@ export const members = sqliteTable('members', {
   systemIdx: index('idx_members_system_id').on(t.systemId),
 }));
 
+// External member identity links
+export const memberExternalLinks = sqliteTable('member_external_links', {
+  id:                  text('id').primaryKey(),
+  systemId:            text('system_id').notNull().references(() => systems.id, { onDelete: 'cascade' }),
+  memberId:            text('member_id').notNull().references(() => members.id, { onDelete: 'cascade' }),
+  provider:            text('provider').notNull(),
+  externalId:          text('external_id').notNull(),
+  externalSecondaryId: text('external_secondary_id'),
+  externalName:        text('external_name'),
+  metadata:            text('metadata'),
+  lastSyncedAt:        integer('last_synced_at', { mode: 'timestamp' }).notNull(),
+  createdAt:           integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(strftime('%s', 'now'))`),
+  updatedAt:           integer('updated_at', { mode: 'timestamp' }).notNull().default(sql`(strftime('%s', 'now'))`),
+}, (t) => ({
+  memberIdx: index('idx_member_external_links_member_id').on(t.memberId),
+  providerExternalUnique: uniqueIndex('ux_member_external_links_provider_external').on(t.systemId, t.provider, t.externalId),
+  providerSecondaryIdx: index('idx_member_external_links_provider_secondary').on(t.systemId, t.provider, t.externalSecondaryId),
+  memberProviderUnique: uniqueIndex('ux_member_external_links_member_provider').on(t.systemId, t.memberId, t.provider),
+}));
+
 // Friend Member Sharing
 export const systemFriendMemberShares = sqliteTable('system_friend_member_shares', {
   id:             text('id').primaryKey(),
@@ -131,6 +151,8 @@ export type SystemBlock = typeof systemBlocks.$inferSelect;
 export type NewSystemBlock = typeof systemBlocks.$inferInsert;
 export type Member = typeof members.$inferSelect;
 export type NewMember = typeof members.$inferInsert;
+export type MemberExternalLink = typeof memberExternalLinks.$inferSelect;
+export type NewMemberExternalLink = typeof memberExternalLinks.$inferInsert;
 export type SystemFriendMemberShare = typeof systemFriendMemberShares.$inferSelect;
 export type NewSystemFriendMemberShare = typeof systemFriendMemberShares.$inferInsert;
 export type FrontEntry = typeof frontEntries.$inferSelect;

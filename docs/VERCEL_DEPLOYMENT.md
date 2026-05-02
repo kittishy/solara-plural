@@ -57,6 +57,7 @@ vercel env add NEXTAUTH_SECRET --sensitive
 - [ ] `public/manifest.json` exists if `app/layout.tsx` references `/manifest.json`.
 - [ ] Remote image hostnames are restricted before public production use.
 - [ ] Import/export actions have visible success and error states.
+- [ ] Run `npm run db:migrate` before deploying member sync changes that depend on `member_external_links`.
 - [ ] Destructive scripts are documented before use against production.
 
 ---
@@ -136,6 +137,16 @@ After a deployment:
 - Test mobile navigation and keyboard focus.
 
 Record failures in `docs/KNOWN_ISSUES.md` and resolved changes in `docs/CHANGELOG.md`.
+
+### Integration Verification
+
+For PluralKit member sync:
+
+- Use a non-production or disposable account first.
+- Run preview before apply.
+- Confirm skipped ambiguous members are not created automatically.
+- Confirm repeated apply does not create duplicate members.
+- Confirm tokens are not written to export JSON or database rows.
 
 ---
 

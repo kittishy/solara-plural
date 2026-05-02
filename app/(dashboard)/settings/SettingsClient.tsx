@@ -73,6 +73,56 @@ type ImportEnvelope = {
   importOptions: ImportOptions;
 } & Record<string, unknown>;
 
+type SyncProvider = 'pluralkit';
+
+type SyncOverrides = {
+  name: boolean;
+  pronouns: boolean;
+  description: boolean;
+  avatarUrl: boolean;
+  color: boolean;
+  role: boolean;
+  tags: boolean;
+  notes: boolean;
+};
+
+type SyncOptions = {
+  updateExistingMembers: boolean;
+  importNewMembers: boolean;
+  smartDuplicateDetection: boolean;
+  overrides: SyncOverrides;
+};
+
+type SyncSummary = {
+  fetched: number;
+  create: number;
+  update: number;
+  link: number;
+  skip: number;
+  unchanged: number;
+  skippedReasons?: Record<string, number>;
+};
+
+type SyncOperationPreview = {
+  action: 'create' | 'update' | 'link' | 'skip' | 'unchanged';
+  provider: SyncProvider;
+  externalId: string;
+  externalSecondaryId: string | null;
+  name: string;
+  reason: string;
+  memberId: string | null;
+  changedFields: string[];
+};
+
+type SyncResult = {
+  provider: SyncProvider;
+  applied: boolean;
+  remoteSystemId: string | null;
+  summary: SyncSummary;
+  operations: SyncOperationPreview[];
+  operationLimit: number;
+};
+
 const IMPORT_OPTIONS_STORAGE_KEY = 'solara.settings.importOptions';
 const DEFAULT_AVATAR_EMOJI = '☀️';
 const AVATAR_PRESETS = ['☀️', '🌙', '⭐', '🌸', '💜', '✨', '🫷', '🌿', '🫧', '🧭'] as const;
@@ -95,6 +145,22 @@ const DEFAULT_IMPORT_OPTIONS: ImportOptions = {
   },
 };
 
+const DEFAULT_SYNC_OPTIONS: SyncOptions = {
+  updateExistingMembers: true,
+  importNewMembers: true,
+  smartDuplicateDetection: true,
+  overrides: {
+    name: false,
+    pronouns: false,
+    description: false,
+    avatarUrl: false,
+    color: false,
+    role: false,
+    tags: false,
+    notes: false,
+  },
+};
+
 export default function SettingsClient({ system }: { system: SettingsSystem | null }) {
   const [importing, setImporting] = useState(false);
   const [exporting, setExporting] = useState(false);
@@ -107,6 +173,7 @@ export default function SettingsClient({ system }: { system: SettingsSystem | nu
   const [deletionConfirmEmail, setDeletionConfirmEmail] = useState('');
   const [deletionAcknowledged, setDeletionAcknowledged] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
+  const [syncingProvider, setSyncingProvider] = useState<SyncProvider | null>(null);
   const [status, setStatus] = useState<ActionStatus | null>(null);
   const [accountType, setAccountType] = useState<'system' | 'singlet'>(toAccountType(system?.accountType));
   const [deletionRequestedAt, setDeletionRequestedAt] = useState<Date | string | null>(system?.deletionRequestedAt ?? null);
@@ -119,6 +186,9 @@ export default function SettingsClient({ system }: { system: SettingsSystem | nu
   const [profileDescription, setProfileDescription] = useState<string>(system?.description ?? '');
   const [importOptions, setImportOptions] = useState<ImportOptions>(DEFAULT_IMPORT_OPTIONS);
   const [lastImportSummary, setLastImportSummary] = useState<ImportSummary | null>(null);
+  const [syncOptions, setSyncOptions] = useState<SyncOptions>(DEFAULT_SYNC_OPTIONS);
+  const [pluralKitToken, setPluralKitToken] = useState('');
+  const [lastSyncResult, setLastSyncResult] = useState<SyncResult | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const avatarUploadRef = useRef<HTMLInputElement>(null);
 
@@ -233,6 +303,56 @@ export default function SettingsClient({ system }: { system: SettingsSystem | nu
     } finally {
       setImporting(false);
       if (fileRef.current) fileRef.current.value = '';
+    }
+  }
+
+  async function handleMemberSync(provider: SyncProvider, apply: boolean) {
+    if (syncingProvider) return;
+
+    const token = pluralKitToken.trim();
+    if (!token) {
+      setStatus({
+        type: 'error',
+        message: 'PluralKit token is required.',
+      });
+      return;
+    }
+
+    setSyncingProvider(provider);
+    setStatus({
+      type: 'info',
+      message: apply ? 'Applying safe member sync...' : 'Previewing member sync...',
+    });
+
+    try {
+      const res = await fetch('/api/integrations/member-sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          provider,
+          token,
+          apply,
+          options: toApiSyncOptions(syncOptions),
+        }),
+      });
+
+      const payload = await readJsonResponse<SyncResult>(res);
+      if (!payload.success) {
+        throw new Error(payload.error ?? 'Sync failed. Please try again.');
+      }
+
+      setLastSyncResult(payload.data);
+      setStatus({
+        type: 'success',
+        message: createSyncSummaryMessage(payload.data.summary, payload.data.applied),
+      });
+    } catch (error) {
+      setStatus({
+        type: 'error',
+        message: error instanceof Error ? error.message : 'Sync failed. Please try again.',
+      });
+    } finally {
+      setSyncingProvider(null);
     }
   }
 
@@ -436,7 +556,7 @@ export default function SettingsClient({ system }: { system: SettingsSystem | nu
   const deletionScheduledLabel = deletionScheduledFor ? formatDateTime(deletionScheduledFor) : null;
 
   return (
-    <div className="space-y-6" aria-busy={importing || exporting}>
+    <div className="space-y-6" aria-busy={importing || exporting || Boolean(syncingProvider)}>
 
       {/* ── Your System ─────────────────────────────────────────── */}
       <section className="card p-6" aria-labelledby="settings-system-heading">
@@ -721,7 +841,163 @@ export default function SettingsClient({ system }: { system: SettingsSystem | nu
         </button>
       </section>
 
-      <hr className="border-border/30" />
+      <section id="integrations" className="card p-6 scroll-mt-6" aria-labelledby="settings-integrations-heading">
+        <h2 id="settings-integrations-heading" className="text-lg font-semibold text-text mb-1">
+          Integrations
+        </h2>
+        <p className="text-muted text-sm mb-5">
+          Preview and import members from PluralKit without storing tokens.
+        </p>
+
+        <section className="mb-5 rounded-xl border border-border bg-surface-alt/40 p-4">
+          <div className="mb-3">
+            <h3 id="sync-options-heading" className="text-base font-semibold text-text">Safe sync options</h3>
+            <p className="text-sm text-muted mt-1">
+              Defaults favor linking and filling blanks over overwriting local data.
+            </p>
+          </div>
+
+          <div role="group" aria-labelledby="sync-options-heading" className="space-y-2">
+            <SettingsToggle
+              id="sync-update-existing-members"
+              label="Update existing members"
+              description="Fill empty local fields and link matched members."
+              checked={syncOptions.updateExistingMembers}
+              onChange={(checked) => setSyncOptions((prev) => ({ ...prev, updateExistingMembers: checked }))}
+              disabled={Boolean(syncingProvider)}
+            />
+
+            <SettingsToggle
+              id="sync-import-new-members"
+              label="Import new members"
+              description="Create members only when Solara finds no safe match."
+              checked={syncOptions.importNewMembers}
+              onChange={(checked) => setSyncOptions((prev) => ({ ...prev, importNewMembers: checked }))}
+              disabled={Boolean(syncingProvider)}
+            />
+
+            <SettingsToggle
+              id="sync-smart-duplicate-detection"
+              label="Smart duplicate detection"
+              description="Recommended. Ambiguous matches are skipped instead of guessed."
+              checked={syncOptions.smartDuplicateDetection}
+              onChange={(checked) => setSyncOptions((prev) => ({ ...prev, smartDuplicateDetection: checked }))}
+              disabled={Boolean(syncingProvider)}
+              recommended
+            />
+
+            <div className="mt-2 rounded-lg border border-border-soft bg-surface/60 p-3">
+              <p className="text-sm font-medium text-text">Remote overwrites for non-empty fields</p>
+              <p className="text-xs text-subtle mt-1 mb-3">
+                Leave these off unless you want remote data to replace local edits.
+              </p>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {SYNC_FIELD_OVERRIDE_ROWS.map((field) => (
+                  <SettingsToggle
+                    key={field.key}
+                    id={`sync-override-${field.key}`}
+                    label={field.label}
+                    checked={syncOptions.overrides[field.key]}
+                    onChange={(checked) => setSyncOptions((prev) => ({
+                      ...prev,
+                      overrides: {
+                        ...prev.overrides,
+                        [field.key]: checked,
+                      },
+                    }))}
+                    disabled={Boolean(syncingProvider) || !syncOptions.updateExistingMembers}
+                    compact
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <div className="grid grid-cols-1 gap-4">
+          <section className="rounded-xl border border-border bg-surface-alt/40 p-4" aria-labelledby="pluralkit-sync-heading">
+            <h3 id="pluralkit-sync-heading" className="text-base font-semibold text-text">PluralKit</h3>
+            <label className="mt-3 block">
+              <span className="label">System token</span>
+              <input
+                className="input"
+                type="password"
+                value={pluralKitToken}
+                onChange={(event) => setPluralKitToken(event.target.value)}
+                placeholder="pk;token"
+                autoComplete="off"
+              />
+            </label>
+
+            <div className="mt-4 flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => void handleMemberSync('pluralkit', false)}
+                disabled={Boolean(syncingProvider)}
+                className="btn-ghost min-h-[42px] border border-border px-3 text-sm"
+              >
+                {syncingProvider === 'pluralkit' ? 'Checking...' : 'Preview'}
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleMemberSync('pluralkit', true)}
+                disabled={Boolean(syncingProvider)}
+                className="btn-primary min-h-[42px] px-3 text-sm"
+              >
+                {syncingProvider === 'pluralkit' ? 'Syncing...' : 'Apply sync'}
+              </button>
+            </div>
+          </section>
+        </div>
+
+        {lastSyncResult && (
+          <section
+            className="mt-4 rounded-xl border border-border-soft bg-surface-alt/40 p-4"
+            aria-label="Latest integration sync summary"
+          >
+            <div className="mb-3 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+              <h3 className="text-sm font-semibold text-text">
+                Latest PluralKit {lastSyncResult.applied ? 'sync' : 'preview'}
+              </h3>
+              {lastSyncResult.remoteSystemId && (
+                <p className="text-xs text-subtle">Remote system: {lastSyncResult.remoteSystemId}</p>
+              )}
+            </div>
+
+            <dl className="grid grid-cols-2 gap-2 text-sm sm:grid-cols-3 lg:grid-cols-6">
+              <SummaryStat label="Fetched" value={lastSyncResult.summary.fetched} />
+              <SummaryStat label="Create" value={lastSyncResult.summary.create} />
+              <SummaryStat label="Update" value={lastSyncResult.summary.update} />
+              <SummaryStat label="Link" value={lastSyncResult.summary.link} />
+              <SummaryStat label="Skip" value={lastSyncResult.summary.skip} />
+              <SummaryStat label="Unchanged" value={lastSyncResult.summary.unchanged} />
+            </dl>
+
+            {lastSyncResult.operations.length > 0 && (
+              <ul className="mt-3 max-h-64 space-y-2 overflow-auto pr-1">
+                {lastSyncResult.operations.map((operation) => (
+                  <li
+                    key={`${operation.provider}:${operation.externalId}:${operation.action}`}
+                    className="rounded-lg border border-border-soft bg-surface/70 p-2 text-sm"
+                  >
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className={syncActionClassName(operation.action)}>
+                        {syncActionLabel(operation.action)}
+                      </span>
+                      <span className="font-medium text-text">{operation.name}</span>
+                    </div>
+                    <p className="mt-1 text-xs text-muted">
+                      {syncReasonLabel(operation.reason)}
+                      {operation.changedFields.length > 0 ? ` - ${operation.changedFields.join(', ')}` : ''}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        )}
+      </section>
 
       {/* ── Data Import / Export ─────────────────────────────────── */}
       <section id="data" className="card p-6 scroll-mt-6" aria-labelledby="settings-data-heading">
@@ -858,8 +1134,6 @@ export default function SettingsClient({ system }: { system: SettingsSystem | nu
         )}
       </section>
 
-      <hr className="border-border/30" />
-
       {/* ── About ───────────────────────────────────────────────── */}
       <section className="card p-6" aria-labelledby="settings-about-heading">
         <h2 id="settings-about-heading" className="text-lg font-semibold text-text mb-2">
@@ -881,6 +1155,19 @@ const FIELD_OVERRIDE_ROWS: Array<{ key: FieldOverrideKey; label: string }> = [
   { key: 'pronouns', label: 'Pronouns' },
   { key: 'description', label: 'Description' },
   { key: 'avatar', label: 'Avatar' },
+  { key: 'color', label: 'Color' },
+  { key: 'role', label: 'Role' },
+  { key: 'tags', label: 'Tags' },
+  { key: 'notes', label: 'Notes' },
+];
+
+type SyncFieldOverrideKey = keyof SyncOverrides;
+
+const SYNC_FIELD_OVERRIDE_ROWS: Array<{ key: SyncFieldOverrideKey; label: string }> = [
+  { key: 'name', label: 'Name' },
+  { key: 'pronouns', label: 'Pronouns' },
+  { key: 'description', label: 'Description' },
+  { key: 'avatarUrl', label: 'Avatar' },
   { key: 'color', label: 'Color' },
   { key: 'role', label: 'Role' },
   { key: 'tags', label: 'Tags' },
@@ -1001,6 +1288,57 @@ function createImportSummaryMessage(summary: ImportSummary): string {
   }
 
   return `${parts.join(' · ')}.`;
+}
+
+function toApiSyncOptions(options: SyncOptions) {
+  return {
+    updateExistingMembers: options.updateExistingMembers,
+    importNewMembers: options.importNewMembers,
+    dedupeMode: options.smartDuplicateDetection ? 'smart' : 'strict',
+    overrideFields: options.overrides,
+  };
+}
+
+function createSyncSummaryMessage(summary: SyncSummary, applied: boolean): string {
+  const verb = applied ? 'Sync applied' : 'Preview ready';
+  return `${verb}: ${summary.create} create, ${summary.update} update, ${summary.link} link, ${summary.skip} skip.`;
+}
+
+function syncActionLabel(action: SyncOperationPreview['action']): string {
+  const labels: Record<SyncOperationPreview['action'], string> = {
+    create: 'Create',
+    update: 'Update',
+    link: 'Link',
+    skip: 'Skip',
+    unchanged: 'Same',
+  };
+  return labels[action];
+}
+
+function syncActionClassName(action: SyncOperationPreview['action']): string {
+  const base = 'rounded-full border px-2 py-0.5 text-[11px] font-semibold';
+  if (action === 'create') return `${base} border-success/40 bg-success/10 text-success`;
+  if (action === 'update') return `${base} border-primary/40 bg-primary/10 text-primary-glow`;
+  if (action === 'link') return `${base} border-front/40 bg-front/10 text-front`;
+  if (action === 'skip') return `${base} border-warning/40 bg-warning/10 text-warning`;
+  return `${base} border-border bg-surface-alt text-muted`;
+}
+
+function syncReasonLabel(reason: string): string {
+  const labels: Record<string, string> = {
+    'external-link': 'Matched by saved external link',
+    'cross-provider-link': 'Matched by external identity link',
+    dedupe: 'Matched by duplicate detection',
+    matched: 'Matched existing member',
+    new_external_member: 'New external member',
+    invalid_external_member: 'Skipped invalid remote member',
+    duplicate_external_id: 'Skipped duplicate remote ID',
+    ambiguous_source_name: 'Skipped ambiguous remote duplicate',
+    ambiguous_existing_match: 'Skipped ambiguous local match',
+    new_members_disabled: 'Skipped because new members are disabled',
+  };
+
+  return labels[reason] ?? reason.replace(/_/g, ' ');
 }
 
 function buildImportPayload(data: unknown, importOptions: ImportOptions): ImportEnvelope {

@@ -1,6 +1,6 @@
 import { db } from '@/lib/db';
-import { frontEntries } from '@/lib/db/schema';
-import { eq, and, isNull } from 'drizzle-orm';
+import { frontEntries, members } from '@/lib/db/schema';
+import { eq, and, isNull, inArray } from 'drizzle-orm';
 import { requireAuth, ok, err } from '@/lib/api/helpers';
 import { createId } from '@paralleldrive/cuid2';
 import { parseMemberIds, serializeMemberIds } from '@/lib/front';
@@ -42,6 +42,19 @@ export async function POST(request: Request) {
     return err('memberIds must be a non-empty array');
   }
 
+  if (!memberIds.every((memberId) => typeof memberId === 'string' && memberId.trim())) {
+    return err('memberIds must only include member IDs');
+  }
+
+  const uniqueMemberIds = Array.from(new Set(memberIds.map((memberId) => memberId.trim())));
+  const availableMembers = await db.query.members.findMany({
+    where: and(eq(members.systemId, auth.systemId), inArray(members.id, uniqueMemberIds)),
+  });
+
+  if (availableMembers.length !== uniqueMemberIds.length) {
+    return err('One or more memberIds are invalid');
+  }
+
   const now = new Date();
 
   // End any currently active front entry
@@ -56,7 +69,7 @@ export async function POST(request: Request) {
   const newEntry = await db.insert(frontEntries).values({
     id:        createId(),
     systemId:  auth.systemId,
-    memberIds: serializeMemberIds(memberIds),
+    memberIds: serializeMemberIds(uniqueMemberIds),
     startedAt: now,
     endedAt:   null,
     note:      note ?? null,
@@ -68,7 +81,7 @@ export async function POST(request: Request) {
   revalidatePath('/members');
   revalidatePath('/front/history');
 
-  return ok({ ...newEntry[0], memberIds }, 201);
+  return ok({ ...newEntry[0], memberIds: uniqueMemberIds }, 201);
 }
 
 // DELETE /api/front — end the current front entry

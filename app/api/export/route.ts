@@ -4,6 +4,7 @@ import { requireAuth } from '@/lib/api/helpers';
 import { db } from '@/lib/db';
 import {
   frontEntries,
+  memberExternalLinks,
   members,
   systemBlocks,
   systemFriendMemberShares,
@@ -26,7 +27,7 @@ export async function GET() {
     return NextResponse.json({ success: false, error: 'System profile not found.' }, { status: 404 });
   }
 
-  const [allMembers, allFront, allNotes, allFriendRequests, allFriendships, allBlocks, allMemberShares] = await Promise.all([
+  const [allMembers, allFront, allNotes, allFriendRequests, allFriendships, allBlocks, allMemberShares, allExternalLinks] = await Promise.all([
     db.select().from(members).where(eq(members.systemId, auth.systemId)),
     db.select().from(frontEntries).where(eq(frontEntries.systemId, auth.systemId)),
     db.select().from(systemNotes).where(eq(systemNotes.systemId, auth.systemId)),
@@ -58,10 +59,14 @@ export async function GET() {
         eq(systemFriendMemberShares.ownerSystemId, auth.systemId),
         eq(systemFriendMemberShares.friendSystemId, auth.systemId),
       )),
+    db
+      .select()
+      .from(memberExternalLinks)
+      .where(eq(memberExternalLinks.systemId, auth.systemId)),
   ]);
 
   const exportData = {
-    version: 3,
+    version: 4,
     exportedAt: new Date().toISOString(),
     system: {
       id: system.id,
@@ -71,13 +76,16 @@ export async function GET() {
     },
     members: allMembers.map((member) => ({
       ...member,
-      tags: member.tags ? JSON.parse(member.tags) : [],
+      tags: safeJsonArray(member.tags),
     })),
     frontHistory: allFront.map((entry) => ({
       ...entry,
-      memberIds: JSON.parse(entry.memberIds),
+      memberIds: safeJsonArray(entry.memberIds),
     })),
     notes: allNotes,
+    integrations: {
+      memberExternalLinks: allExternalLinks,
+    },
     social: {
       friendRequests: allFriendRequests,
       friendships: allFriendships,
@@ -92,4 +100,15 @@ export async function GET() {
       'Content-Disposition': `attachment; filename="solara-export-${Date.now()}.json"`,
     },
   });
+}
+
+function safeJsonArray(value: string | null): unknown[] {
+  if (!value) return [];
+
+  try {
+    const parsed: unknown = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
 }

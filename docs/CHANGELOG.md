@@ -21,6 +21,11 @@
 ## [Unreleased]
 
 ### Added
+- PluralKit member sync from Settings with preview/apply flow, cautious merge options, and no token persistence
+- Settings integrations cleanup: removed Simply Plural token integration from production sync surface
+- `POST /api/integrations/member-sync` for provider-specific safe member sync
+- `member_external_links` table and migration `0006_member_external_links.sql` for stable provider identity mapping
+- Tests for the sync planner covering external links, ambiguous duplicates, non-overwrite defaults, and duplicate remote names
 - System avatar persistence fields (`avatarMode`, `avatarEmoji`, `avatarUrl`) plus migration `0004_safe_hummingbird.sql`
 - New account profile API: `GET/PUT /api/account/profile`
 - Settings profile controls for system avatar mode (emoji preset or image URL), including catbox upload support via `POST /api/upload`
@@ -39,6 +44,9 @@
 - Initial project orchestration and planning
 
 ### Changed
+- Export JSON bumped to `version: 4` and now includes `integrations.memberExternalLinks`
+- `/api/export` now tolerates invalid stored JSON in member tags and front member IDs
+- `/api/front` now validates that every submitted member ID belongs to the authenticated system before creating a current front
 - Member profile `Edit profile` action now uses a clearer warm CTA style (higher contrast, larger touch target, stronger hover/focus affordance) on mobile and desktop without changing page structure
 - Front tracker mobile `Choose members` trigger now has clearer tap affordance with explicit open/close label, action cue icon, expansion indicator, and helper text while preserving the existing selector behavior and multi-selection flow
 - Settings appearance now uses preset themes only; removed the `Custom colors (local)` UI and its local override logic

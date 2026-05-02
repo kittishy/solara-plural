@@ -53,6 +53,35 @@ Represents a headmate/system member.
 
 ---
 
+### member_external_links
+
+Stores stable identity links between a local Solara member and external member records from PluralKit.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| id | text | PRIMARY KEY | CUID/UUID |
+| systemId | text | FK â†’ systems.id | Owner system |
+| memberId | text | FK â†’ members.id | Local Solara member |
+| provider | text | NOT NULL | `pluralkit` |
+| externalId | text | NOT NULL | Provider member id; PluralKit uses UUID when available |
+| externalSecondaryId | text | nullable | Secondary provider id, such as PluralKit short id |
+| externalName | text | nullable | Last remote name seen during sync |
+| metadata | text | nullable | JSON metadata snapshot without tokens |
+| lastSyncedAt | integer | NOT NULL | Last successful preview/apply contact time |
+| createdAt | integer | NOT NULL | Unix timestamp |
+| updatedAt | integer | NOT NULL | Unix timestamp |
+
+Indexes and constraints:
+- `ux_member_external_links_provider_external(systemId, provider, externalId)`
+- `ux_member_external_links_member_provider(systemId, memberId, provider)`
+- `idx_member_external_links_provider_secondary(systemId, provider, externalSecondaryId)`
+
+**Notes:**
+- Tokens are never stored in this table.
+- The table exists to make external member sync idempotent and avoid duplicate local members after users already imported from PluralKit.
+
+---
+
 ### front_entries
 
 Records a front session (who was fronting, when).
@@ -317,3 +346,16 @@ Indexes and constraints:
   - `blocks`
   - `memberSharing`
 - `social.memberSharing` rows include `visibility` plus optional `fieldVisibility` JSON for per-field sharing.
+
+## 2026-05-01 Data Model Update (External Member Sync)
+
+### Integration Identity Links
+- Added `member_external_links` for provider/member identity mapping.
+- Export JSON is now `version: 4`.
+- New `integrations` payload included:
+  - `integrations.memberExternalLinks`
+
+### Sync Safety Notes
+- PluralKit and Simply Plural sync links are separate from member profile data.
+- Re-running sync should update/link existing local members instead of creating duplicate members when a stable external id or safe single-name match exists.
+- Ambiguous same-name matches are skipped and shown in sync preview.

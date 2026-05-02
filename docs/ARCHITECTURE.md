@@ -299,3 +299,30 @@ Solara should borrow architecture habits, not external implementation code:
 - `npm run cleanup:validation` runs dry-run lookup for validation accounts (`alpha.*@example.com`, `beta.*@example.com`).
 - `npm run cleanup:validation:apply` deletes matched validation accounts.
 - Script behavior is covered by `scripts/cleanup-validation-data.test.cjs`.
+
+---
+
+## 2026-05-01 Architecture Update: External Member Sync
+
+### New integration surface
+- `POST /api/integrations/member-sync`
+  - Supports `provider: "pluralkit"`.
+  - Accepts a token for the current request only; tokens are not persisted.
+  - `apply: false` returns a dry-run preview.
+  - `apply: true` refetches remote data, replans, and applies the safe plan transactionally.
+
+### Provider behavior
+- PluralKit reads `GET /systems/@me` and `GET /systems/@me/members` from `https://api.pluralkit.me/v2`.
+- PluralKit requests include an identifying `User-Agent`.
+
+### Merge invariants
+- Identity links live in `member_external_links`.
+- PluralKit UUID is preferred as the primary external id; the short id is stored as secondary.
+- A single existing local same-name match is linked instead of duplicated.
+- Ambiguous local or remote duplicate names are skipped, not guessed.
+- Existing non-empty Solara fields are not overwritten unless the user enables per-field overwrite switches.
+- The integration only pulls member data into Solara; it does not push or delete remote provider data.
+
+### Adjacent hardening
+- `GET /api/export` now tolerates corrupted JSON in `members.tags` and `front_entries.memberIds` by exporting empty arrays for invalid values.
+- `POST /api/front` now verifies every `memberId` belongs to the authenticated system before creating a current front entry.

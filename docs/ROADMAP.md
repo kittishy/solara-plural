@@ -69,6 +69,7 @@
 - [x] Import members from JSON
 - [x] Import/export UI in Settings page
 - [x] Inline import/export loading and error states
+- [x] Preview-first PluralKit member sync with duplicate-safe identity links
 
 ### Phase 7: Settings
 - [ ] System name/description edit
@@ -170,3 +171,18 @@ See IDEAS.md for the full backlog of feature ideas.
 - [ ] Role presets mapped to sharing defaults
 - [ ] Apply field-level visibility when rendering partner read-only social surfaces
 - [ ] Read-only partner view honoring per-member visibility
+
+---
+
+## 2026-05-01 Integration Update
+
+### Completed integration foundation
+- [x] PluralKit member pull sync with required User-Agent
+- [x] Token inputs are request-only and are not stored
+- [x] `member_external_links` prevents repeated sync from creating duplicates
+- [x] Ambiguous local/remote duplicate names are skipped for user review
+
+### Next integration steps
+- [ ] Add optional manual conflict resolution for skipped ambiguous members
+- [ ] Decide whether front sync should be read-only preview, local import, or bidirectional sync
+- [ ] Add provider-specific docs for users to find tokens safely
