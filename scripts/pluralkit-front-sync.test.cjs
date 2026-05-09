@@ -98,3 +98,48 @@ test('sync reports provider failure when pluralKit rejects the switch update', a
   assert.equal(result.details.statusCode, 401);
   assert.equal(result.details.message, 'unauthorized token');
 });
+
+test('sync reports rate limiting with retry hint without retrying automatically', async () => {
+  let fetchCount = 0;
+  const sync = createPluralKitFrontSync({
+    readPersistedToken: async () => 'pk-token',
+    resolveExternalIds: async () => ({ externalMemberIds: ['pk-member-a'], resolvedLocalMemberIds: ['member-a'] }),
+    fetchImpl: async () => {
+      fetchCount += 1;
+      return {
+        ok: false,
+        status: 429,
+        text: async () => JSON.stringify({ message: '429: too many requests', retry_after: 1400 }),
+      };
+    },
+    logger: { info() {}, warn() {}, error() {} },
+  });
+
+  const result = await sync('system-1', ['member-a']);
+  assert.equal(result.status, 'failed');
+  assert.equal(result.reasonCode, 'rate_limited');
+  assert.equal(result.httpStatus, 429);
+  assert.equal(result.details.retryAfter, '2 seconds');
+  assert.equal(fetchCount, 1);
+});
+
+test('sync reports timeout when pluralKit does not answer quickly', async () => {
+  const sync = createPluralKitFrontSync({
+    readPersistedToken: async () => 'pk-token',
+    resolveExternalIds: async () => ({ externalMemberIds: ['pk-member-a'], resolvedLocalMemberIds: ['member-a'] }),
+    fetchImpl: async () => {
+      const error = new Error('aborted');
+      error.name = 'AbortError';
+      throw error;
+    },
+    logger: { info() {}, warn() {}, error() {} },
+    requestTimeoutMs: 1,
+  });
+
+  const result = await sync('system-1', ['member-a']);
+  assert.equal(result.status, 'failed');
+  assert.equal(result.reasonCode, 'provider_timeout');
+  assert.equal(result.providerStatus, 'error');
+  assert.equal(result.httpStatus, null);
+  assert.equal(result.details.timeoutMs, 1);
+});

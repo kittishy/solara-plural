@@ -1,0 +1,21 @@
+
+> solara-plural@0.1.0 dev
+> next dev
+
+  ▲ Next.js 14.2.35
+  - Local:        http://localhost:3000
+  - Environments: .env.local
+
+ ✓ Starting...
+ ✓ Ready in 2.6s
+ ○ Compiling /middleware ...
+ ✓ Compiled /middleware in 1368ms (200 modules)
+ ○ Compiling /login ...
+ ✓ Compiled /login in 5.4s (564 modules)
+ GET /en/login 200 in 5644ms
+ GET /en/login 200 in 5652ms
+ ✓ Compiled in 536ms (272 modules)
+ ○ Compiling / ...
+ GET /en/login 200 in 808ms
+ ✓ Compiled / in 3s (846 modules)
+ GET /en 200 in 3386ms

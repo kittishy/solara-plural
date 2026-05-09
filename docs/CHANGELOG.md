@@ -23,6 +23,7 @@
 ### Added
 - PluralKit member sync from Settings with preview/apply flow, cautious merge options, and no token persistence
 - Settings integrations cleanup: removed Simply Plural token integration from production sync surface
+- PluralKit API helper with tested fronters parsing, retry-after formatting, and switch timestamp extraction
 - `POST /api/integrations/member-sync` for provider-specific safe member sync
 - `member_external_links` table and migration `0006_member_external_links.sql` for stable provider identity mapping
 - Tests for the sync planner covering external links, ambiguous duplicates, non-overwrite defaults, and duplicate remote names
@@ -44,6 +45,10 @@
 - Initial project orchestration and planning
 
 ### Changed
+- PluralKit apply-mode sync now parses `/fronters` as a switch object, preserves ordered fronters, and uses the remote switch timestamp for local front history
+- PluralKit member/front apply now commits local member/link/front changes in one database transaction
+- Local front changes no longer create redundant PluralKit switches when the requested front already matches the active front in the same order
+- PluralKit `429` update responses now report rate-limit retry guidance without automatic retry loops
 - Export JSON bumped to `version: 4` and now includes `integrations.memberExternalLinks`
 - `/api/export` now tolerates invalid stored JSON in member tags and front member IDs
 - `/api/front` now validates that every submitted member ID belongs to the authenticated system before creating a current front

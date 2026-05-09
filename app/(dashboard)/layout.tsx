@@ -1,6 +1,5 @@
 import { Sidebar } from '@/components/layout/Sidebar';
 import { MobileNav } from '@/components/layout/MobileNav';
-import { DashboardPrefetch } from '@/components/layout/DashboardPrefetch';
 import { DashboardClientProviders } from './DashboardClientProviders';
 import { getCachedSession } from '@/lib/auth/session';
 import { Trans } from '@/components/language/Trans';
@@ -31,7 +30,6 @@ export default async function DashboardLayout({
         {/* Ultra-subtle aurora presence — static, no animation, pointer-events none */}
         <div className="aurora-bg-subtle pointer-events-none fixed inset-0 z-0" aria-hidden="true" />
         <DashboardClientProviders>
-          <DashboardPrefetch />
           <div className="relative z-10 max-w-4xl mx-auto px-4 py-5 md:px-8 md:py-8">
             {children}
           </div>

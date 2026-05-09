@@ -1,8 +1,12 @@
 'use client';
 
 import Link from 'next/link';
+import { useState } from 'react';
 import useSWR from 'swr';
 import { apiFetcher, swrKeys } from '@/lib/swr';
+
+const INITIAL_VISIBLE_NOTES = 60;
+const VISIBLE_NOTES_INCREMENT = 60;
 
 type NoteListItem = {
   id: string;
@@ -22,11 +26,14 @@ function IconEdit() {
 }
 
 export default function NotesClient({ initialNotes }: { initialNotes: NoteListItem[] }) {
+  const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE_NOTES);
   const { data: notes = initialNotes } = useSWR<NoteListItem[]>(
     swrKeys.notes,
     apiFetcher,
-    { fallbackData: initialNotes }
+    { fallbackData: initialNotes, revalidateOnMount: false }
   );
+  const visibleNotes = notes.slice(0, visibleCount);
+  const hasMoreNotes = visibleCount < notes.length;
 
   return (
     <div className="space-y-6">
@@ -58,29 +65,41 @@ export default function NotesClient({ initialNotes }: { initialNotes: NoteListIt
           </Link>
         </div>
       ) : (
-        <div className="grid gap-3 md:grid-cols-2">
-          {notes.map((note) => (
-            <Link
-              key={note.id}
-              href={`/notes/${note.id}`}
-              className="card card-interactive p-5 block group border-l-2 border-l-transparent
-                min-w-0 overflow-hidden
-                hover:shadow-glow hover:border-l-primary/50 hover:shadow-sm
-                transition-all duration-150"
+        <div className="space-y-4">
+          <div className="grid gap-3 md:grid-cols-2">
+            {visibleNotes.map((note) => (
+              <Link
+                key={note.id}
+                href={`/notes/${note.id}`}
+                className="card card-interactive p-5 block group border-l-2 border-l-transparent
+                  min-w-0 overflow-hidden
+                  hover:shadow-glow hover:border-l-primary/50 hover:shadow-sm
+                  transition-all duration-150"
+              >
+                <p className="font-semibold text-text line-clamp-1">
+                  {note.title ?? 'Untitled note'}
+                </p>
+                <p className="text-muted text-sm mt-1 line-clamp-3">{note.content}</p>
+                <p className="text-subtle text-xs mt-3">
+                  {new Date(note.updatedAt).toLocaleDateString('en-US', {
+                    month: 'short',
+                    day: 'numeric',
+                    year: 'numeric',
+                  })}
+                </p>
+              </Link>
+            ))}
+          </div>
+
+          {hasMoreNotes && (
+            <button
+              type="button"
+              onClick={() => setVisibleCount((count) => count + VISIBLE_NOTES_INCREMENT)}
+              className="btn-ghost min-h-[48px] w-full justify-center border border-border/60"
             >
-              <p className="font-semibold text-text line-clamp-1">
-                {note.title ?? 'Untitled note'}
-              </p>
-              <p className="text-muted text-sm mt-1 line-clamp-3">{note.content}</p>
-              <p className="text-subtle text-xs mt-3">
-                {new Date(note.updatedAt).toLocaleDateString('en-US', {
-                  month: 'short',
-                  day: 'numeric',
-                  year: 'numeric',
-                })}
-              </p>
-            </Link>
-          ))}
+              Show more notes ({notes.length - visibleNotes.length} remaining)
+            </button>
+          )}
         </div>
       )}
     </div>

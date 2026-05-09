@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useTransition } from 'react';
+import { useDeferredValue, useMemo, useState, useTransition } from 'react';
 import DynamicAvatarImage from '@/components/ui/DynamicAvatarImage';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -19,6 +19,8 @@ interface Props {
   members: FrontMember[];
   activeFront: (Omit<FrontEntry, 'memberIds'> & { memberIds: string[] }) | null;
 }
+
+const MAX_VISIBLE_PICKER_MEMBERS = 80;
 
 function MemberAvatar({ member, size }: { member: FrontMember; size: 'xs' | 'sm' | 'md' }) {
   const cls = size === 'xs'
@@ -53,9 +55,11 @@ export default function FrontTracker({ members, activeFront }: Props) {
   const [selected, setSelected] = useState<string[]>(activeFront?.memberIds ?? []);
   const [note, setNote] = useState('');
   const [query, setQuery] = useState('');
+  const deferredQuery = useDeferredValue(query);
   const [isMobilePickerOpen, setIsMobilePickerOpen] = useState(false);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [justStarted, setJustStarted] = useState(false);
+  const selectedSet = useMemo(() => new Set(selected), [selected]);
 
   function toggleMember(id: string) {
     setSelected((prev) => (
@@ -108,24 +112,23 @@ export default function FrontTracker({ members, activeFront }: Props) {
     : [];
 
   const selectedMembers = useMemo(
-    () => members.filter((member) => selected.includes(member.id)),
-    [members, selected]
+    () => members.filter((member) => selectedSet.has(member.id)),
+    [members, selectedSet]
   );
 
   const filteredMembers = useMemo(() => {
-    const normalized = query.trim().toLowerCase();
+    const normalized = deferredQuery.trim().toLowerCase();
     const matched = normalized
       ? members.filter((member) => member.name.toLowerCase().includes(normalized))
       : members;
 
-    const selectedSet = new Set(selected);
     return [...matched].sort((a, b) => {
       const aSelected = selectedSet.has(a.id);
       const bSelected = selectedSet.has(b.id);
       if (aSelected === bSelected) return a.name.localeCompare(b.name);
       return aSelected ? -1 : 1;
-    });
-  }, [members, query, selected]);
+    }).slice(0, MAX_VISIBLE_PICKER_MEMBERS);
+  }, [deferredQuery, members, selectedSet]);
 
   return (
     <div className="space-y-4">
@@ -250,7 +253,7 @@ export default function FrontTracker({ members, activeFront }: Props) {
                   ) : (
                     <div className="max-h-[42dvh] space-y-2 overflow-y-auto pr-1">
                       {filteredMembers.map((member) => {
-                        const isSelected = selected.includes(member.id);
+                        const isSelected = selectedSet.has(member.id);
 
                         return (
                           <button
@@ -310,7 +313,7 @@ export default function FrontTracker({ members, activeFront }: Props) {
                   <div className="max-h-[46dvh] overflow-y-auto pr-1 sm:max-h-[52dvh]">
                     <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2">
                       {filteredMembers.map((member) => {
-                        const isSelected = selected.includes(member.id);
+                        const isSelected = selectedSet.has(member.id);
 
                         return (
                           <button

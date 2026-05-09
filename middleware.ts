@@ -60,8 +60,9 @@ export default auth((req) => {
   const isApiRoute = pathnameWithoutLanguage.startsWith('/api');
   const isPublicApiRoute = pathnameWithoutLanguage.startsWith('/api/register');
 
-  // Always allow auth routes and public API routes
-  if (isApiAuthRoute || isPublicApiRoute) return responseWithLocale;
+  // API route handlers own their auth checks so fetch() callers get JSON errors
+  // without paying for a second session decode in middleware.
+  if (isApiRoute || isApiAuthRoute || isPublicApiRoute) return responseWithLocale;
 
   // Redirect logged-in users away from login page
   if (isAuthRoute) {
@@ -73,9 +74,6 @@ export default auth((req) => {
 
   // Protect everything else
   if (!isLoggedIn) {
-    if (isApiRoute) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-    }
     return Response.redirect(new URL(localizePathname('/login', pathLanguage ?? DEFAULT_LANGUAGE), nextUrl));
   }
 

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useLanguage } from '@/components/providers/LanguageProvider';
+import { localizePathname, stripLanguageFromPathname } from '@/lib/i18n';
 
 type IconProps = { size?: number };
 
@@ -113,11 +114,12 @@ function isActive(pathname: string, href: string) {
 
 export function MobileNav() {
   const pathname = usePathname();
-  const { t } = useLanguage();
+  const activePathname = stripLanguageFromPathname(pathname);
+  const { language, t } = useLanguage();
   const [menuOpen, setMenuOpen] = useState(false);
   const [isMenuClosing, setIsMenuClosing] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
-  const menuIsActive = menuItems.some((item) => isActive(pathname, item.href));
+  const menuIsActive = menuItems.some((item) => isActive(activePathname, item.href));
 
   function closeMenu() {
     setIsMenuClosing(true);
@@ -167,12 +169,12 @@ export function MobileNav() {
             aria-label={t('nav.moreMenu')}
           >
             {menuItems.map((item) => {
-              const current = isActive(pathname, item.href);
+              const current = isActive(activePathname, item.href);
 
               return (
                 <Link
                   key={item.href}
-                  href={item.href}
+                  href={localizePathname(item.href, language)}
                   prefetch={true}
                   role="menuitem"
                   aria-current={current ? 'page' : undefined}
@@ -194,12 +196,12 @@ export function MobileNav() {
         <div className="min-w-0 flex-1 rounded-2xl border border-white/10 bg-surface/85 backdrop-blur-xl shadow-[0_10px_28px_rgba(0,0,0,0.28)]">
           <div className="grid grid-cols-4 gap-1 px-1 py-1.5">
           {navItems.map((item) => {
-            const current = isActive(pathname, item.href);
+            const current = isActive(activePathname, item.href);
 
             return (
               <Link
                 key={item.href}
-                href={item.href}
+                href={localizePathname(item.href, language)}
                 prefetch={true}
                 aria-label={t(item.labelKey)}
                 aria-current={current ? 'page' : undefined}

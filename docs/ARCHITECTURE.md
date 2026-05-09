@@ -314,6 +314,9 @@ Solara should borrow architecture habits, not external implementation code:
 ### Provider behavior
 - PluralKit reads `GET /systems/@me` and `GET /systems/@me/members` from `https://api.pluralkit.me/v2`.
 - PluralKit requests include an identifying `User-Agent`.
+- Apply-mode front pull reads `GET /systems/@me/fronters` as a switch object (`members` + timestamp), preserving ordered fronters locally.
+- Outbound front changes use `POST /systems/@me/switches` only when local front actually changes; duplicate same-order front submissions do not create redundant remote switches.
+- Rate-limit responses (`429`) are surfaced with retry timing and are not retried automatically.
 
 ### Integration credential storage
 - Integration credentials are stored in `system_integrations` as encrypted payloads (`encrypted_token`).
@@ -327,7 +330,8 @@ Solara should borrow architecture habits, not external implementation code:
 - A single existing local same-name match is linked instead of duplicated.
 - Ambiguous local or remote duplicate names are skipped, not guessed.
 - Existing non-empty Solara fields are not overwritten unless the user enables per-field overwrite switches.
-- The integration only pulls member data into Solara; it does not push or delete remote provider data.
+- Member sync pulls member data into Solara; normal local front changes can push PluralKit switches when a saved token and member links exist.
+- Apply-mode member/front pull is applied in a single local transaction so the API does not report rollback after partial local writes.
 
 ### Adjacent hardening
 - `GET /api/export` now tolerates corrupted JSON in `members.tags` and `front_entries.memberIds` by exporting empty arrays for invalid values.

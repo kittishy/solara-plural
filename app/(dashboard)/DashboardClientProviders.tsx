@@ -12,6 +12,7 @@ export function DashboardClientProviders({ children }: { children: React.ReactNo
   return (
     <SWRConfig
       value={{
+        revalidateIfStale: false,
         revalidateOnFocus: false,
         revalidateOnReconnect: true,
         dedupingInterval: 10_000,

@@ -149,6 +149,8 @@ For PluralKit member sync:
 - Confirm skipped ambiguous members are not created automatically.
 - Confirm repeated apply does not create duplicate members.
 - Confirm tokens are not written to export JSON or plaintext DB columns (`system_integrations.encrypted_token` should be ciphertext only).
+- Confirm repeated same-front actions do not create duplicate PluralKit switches.
+- Confirm `429` provider responses show retry guidance instead of automatic retry loops.
 
 ---
 

@@ -11,6 +11,12 @@ export async function GET() {
   if (auth.error) return auth.error;
 
   const notes = await db.query.systemNotes.findMany({
+    columns: {
+      id: true,
+      title: true,
+      content: true,
+      updatedAt: true,
+    },
     where: eq(systemNotes.systemId, auth.systemId),
     orderBy: (n, { desc }) => [desc(n.updatedAt)],
   });

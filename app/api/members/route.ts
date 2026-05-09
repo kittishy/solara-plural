@@ -11,6 +11,15 @@ export async function GET() {
   if (auth.error) return auth.error;
 
   const result = await db.query.members.findMany({
+    columns: {
+      id: true,
+      name: true,
+      pronouns: true,
+      role: true,
+      tags: true,
+      color: true,
+      avatarUrl: true,
+    },
     where: and(
       eq(members.systemId, auth.systemId),
       eq(members.isArchived, 0)

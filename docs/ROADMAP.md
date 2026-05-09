@@ -55,7 +55,7 @@
 - [x] Edit front history entries after the fact
 - [x] Add retroactive front entries
 - [x] Searchable member picker for front selection
-- [ ] Preserve ordered fronters where relevant
+- [x] Preserve ordered fronters where relevant
 
 ### Phase 5: Notes
 - [ ] Notes list page
@@ -178,9 +178,10 @@ See IDEAS.md for the full backlog of feature ideas.
 
 ### Completed integration foundation
 - [x] PluralKit member pull sync with required User-Agent
-- [x] Token inputs are request-only and are not stored
+- [x] PluralKit tokens are stored only as encrypted credentials
 - [x] `member_external_links` prevents repeated sync from creating duplicates
 - [x] Ambiguous local/remote duplicate names are skipped for user review
+- [x] PluralKit front sync respects switch object shape, ordered fronters, and provider rate-limit responses
 
 ### Next integration steps
 - [ ] Add optional manual conflict resolution for skipped ambiguous members

@@ -513,3 +513,21 @@
 - Updated `scripts/pluralkit-front-sync.test.cjs` to cover partial-mapping success and new diagnostic shape.
 
 ---
+
+## [2026-05-08] D030 - Harden PluralKit Sync Against API Shape and Rate Limits
+
+**Decision:** Treat PluralKit as the integration contract source: parse `/fronters` as a switch object, preserve ordered fronters, surface rate-limit retry guidance, and avoid redundant switch writes.
+
+**Justification:**
+- PluralKit's `/systems/@me/fronters` returns a switch object with `members` and timestamp, not a bare member array.
+- PluralKit update endpoints are limited more tightly than reads, so duplicate local front submissions should not create duplicate remote switches.
+- Apply-mode member/front sync must not partially persist local data and then report a total failure.
+
+**Implementation:**
+- Added `lib/integrations/pluralkit-api.js` for tested PluralKit response parsing and retry-after formatting.
+- `POST /api/integrations/member-sync` now parses current fronters from the switch object, stores the remote switch timestamp locally, and commits member/link/front changes in one transaction.
+- Front ordering is preserved when applying remote PluralKit front state.
+- `POST /api/front` skips outbound PluralKit switch creation when the requested front already matches the active front in the same order.
+- Outbound PluralKit switch sync returns `rate_limited` diagnostics for HTTP 429 without automatic retrying.
+
+---

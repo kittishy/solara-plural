@@ -78,7 +78,7 @@ const syncFrontToPluralKit = createPluralKitFrontSync({
 
 type PluralKitSyncMeta = {
   requestId: string;
-  status: 'synced' | 'skipped' | 'failed';
+  status: 'synced' | 'skipped' | 'failed' | 'deferred';
   providerStatus: 'ok' | 'error' | 'skipped' | 'unknown';
   reasonCode: string;
   httpStatus: number | null;
@@ -124,6 +124,57 @@ function getRequestId(request: Request): string {
   return `front_${createId()}`;
 }
 
+function sameMemberList(a: string[], b: string[]) {
+  if (a.length !== b.length) return false;
+  return a.every((value, index) => value === b[index]);
+}
+
+function deferPluralKitFrontSync(systemId: string, memberIds: string[], requestId: string, reasonCode: string): PluralKitSyncMeta {
+  void syncFrontToPluralKit(systemId, memberIds, { requestId })
+    .then((providerSync) => {
+      const result = toPluralKitSyncMeta(providerSync, requestId);
+      if (result.status === 'failed') {
+        console.error('[front-sync] deferred pluralKit sync failed', {
+          event: 'pluralkit_front_sync_deferred_failed',
+          requestId,
+          systemId,
+          reasonCode: result.reasonCode,
+          httpStatus: result.httpStatus,
+        });
+        return;
+      }
+
+      console.info('[front-sync] deferred pluralKit sync completed', {
+        event: 'pluralkit_front_sync_deferred_completed',
+        requestId,
+        systemId,
+        status: result.status,
+        reasonCode: result.reasonCode,
+      });
+    })
+    .catch((error) => {
+      console.error('[front-sync] deferred pluralKit sync crashed unexpectedly', {
+        event: 'pluralkit_front_sync_deferred_unexpected_error',
+        requestId,
+        systemId,
+        error: error instanceof Error ? error.message : 'unknown_error',
+      });
+    });
+
+  return {
+    requestId,
+    status: 'deferred',
+    providerStatus: 'unknown',
+    reasonCode,
+    httpStatus: null,
+    mappedCount: 0,
+    unmappedIds: [],
+    details: {
+      queuedAt: new Date().toISOString(),
+    },
+  };
+}
+
 // GET /api/front — get current active front entry
 export async function GET() {
   const auth = await requireAuth();
@@ -167,6 +218,9 @@ export async function POST(request: Request) {
 
   const uniqueMemberIds = Array.from(new Set(memberIds.map((memberId) => memberId.trim())));
   const availableMembers = await db.query.members.findMany({
+    columns: {
+      id: true,
+    },
     where: and(eq(members.systemId, auth.systemId), inArray(members.id, uniqueMemberIds)),
   });
 
@@ -175,6 +229,36 @@ export async function POST(request: Request) {
   }
 
   const now = new Date();
+  const activeFront = await db.query.frontEntries.findFirst({
+    where: and(
+      eq(frontEntries.systemId, auth.systemId),
+      isNull(frontEntries.endedAt)
+    ),
+  });
+
+  if (activeFront) {
+    try {
+      const activeMemberIds = parseMemberIds(activeFront.memberIds);
+      if (sameMemberList(activeMemberIds, uniqueMemberIds)) {
+        return ok({
+          ...activeFront,
+          memberIds: activeMemberIds,
+          pluralKitSync: {
+            requestId,
+            status: 'skipped',
+            providerStatus: 'skipped',
+            reasonCode: 'already_in_sync',
+            httpStatus: null,
+            mappedCount: 0,
+            unmappedIds: [],
+            details: null,
+          },
+        });
+      }
+    } catch {
+      // Continue with replacement when existing front data is malformed.
+    }
+  }
 
   // End any currently active front entry
   await db.update(frontEntries)
@@ -200,29 +284,12 @@ export async function POST(request: Request) {
   revalidatePath('/members');
   revalidatePath('/front/history');
 
-  let pluralKitSync: PluralKitSyncMeta | null = null;
-
-  try {
-    const providerSync = await syncFrontToPluralKit(auth.systemId, uniqueMemberIds, { requestId });
-    pluralKitSync = toPluralKitSyncMeta(providerSync, requestId);
-  } catch (error) {
-    console.error('[front-sync] pluralKit sync crashed unexpectedly', {
-      event: 'pluralkit_front_sync_unexpected_error',
-      requestId,
-      systemId: auth.systemId,
-      error: error instanceof Error ? error.message : 'unknown_error',
-    });
-    pluralKitSync = {
-      requestId,
-      status: 'failed',
-      providerStatus: 'error',
-      reasonCode: 'unexpected_error',
-      httpStatus: null,
-      mappedCount: 0,
-      unmappedIds: [],
-      details: null,
-    };
-  }
+  const pluralKitSync = deferPluralKitFrontSync(
+    auth.systemId,
+    uniqueMemberIds,
+    requestId,
+    'scheduled_after_local_front_update',
+  );
 
   return ok({ ...newEntry[0], memberIds: uniqueMemberIds, pluralKitSync }, 201);
 }
@@ -247,29 +314,12 @@ export async function DELETE() {
   revalidatePath('/members');
   revalidatePath('/front/history');
 
-  let pluralKitSync: PluralKitSyncMeta | null = null;
-
-  try {
-    const providerSync = await syncFrontToPluralKit(auth.systemId, [], { requestId });
-    pluralKitSync = toPluralKitSyncMeta(providerSync, requestId);
-  } catch (error) {
-    console.error('[front-sync] pluralKit switch-out crashed unexpectedly', {
-      event: 'pluralkit_front_sync_unexpected_error',
-      requestId,
-      systemId: auth.systemId,
-      error: error instanceof Error ? error.message : 'unknown_error',
-    });
-    pluralKitSync = {
-      requestId,
-      status: 'failed',
-      providerStatus: 'error',
-      reasonCode: 'unexpected_error',
-      httpStatus: null,
-      mappedCount: 0,
-      unmappedIds: [],
-      details: null,
-    };
-  }
+  const pluralKitSync = deferPluralKitFrontSync(
+    auth.systemId,
+    [],
+    requestId,
+    'scheduled_after_local_front_end',
+  );
 
   return ok({ ended: true, entry: updated[0], pluralKitSync });
 }

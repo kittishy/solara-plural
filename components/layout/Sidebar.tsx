@@ -13,6 +13,7 @@ import {
   SOLARA_THEMES,
   type SolaraThemeId,
 } from '@/lib/theme';
+import { localizePathname, stripLanguageFromPathname } from '@/lib/i18n';
 
 type IconProps = { size?: number };
 
@@ -119,7 +120,8 @@ interface SidebarProps {
 
 export function Sidebar({ systemName }: SidebarProps) {
   const pathname = usePathname();
-  const { t } = useLanguage();
+  const activePathname = stripLanguageFromPathname(pathname);
+  const { language, t } = useLanguage();
   const [menuOpen, setMenuOpen] = useState(false);
   const [sidebarSymbol, setSidebarSymbol] = useState<string>('☀️');
   const [selectedTheme, setSelectedTheme] = useState<SolaraThemeId>(DEFAULT_SOLARA_THEME);
@@ -251,7 +253,7 @@ export function Sidebar({ systemName }: SidebarProps) {
                 ))}
               </div>
               <Link
-                href="/settings#appearance"
+                href={`${localizePathname('/settings', language)}#appearance`}
                 className="mt-2 block rounded-lg px-2 py-1.5 text-xs text-muted transition-colors hover:bg-surface hover:text-text"
                 onClick={() => setMenuOpen(false)}
               >
@@ -266,15 +268,15 @@ export function Sidebar({ systemName }: SidebarProps) {
         {navItems.map((item) => {
           const isActive =
             item.href === '/'
-              ? pathname === '/'
-              : pathname === item.href ||
-                (item.href !== '/front' && pathname.startsWith(item.href)) ||
-                (item.href === '/front' && pathname === '/front');
+              ? activePathname === '/'
+              : activePathname === item.href ||
+                (item.href !== '/front' && activePathname.startsWith(item.href)) ||
+                (item.href === '/front' && activePathname === '/front');
 
           return (
             <Link
               key={item.href}
-              href={item.href}
+              href={localizePathname(item.href, language)}
               prefetch={true}
               aria-current={isActive ? 'page' : undefined}
               className={`relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200 ${
@@ -294,7 +296,7 @@ export function Sidebar({ systemName }: SidebarProps) {
       <div className="border-t border-border/40 px-3 py-4">
         <button
           type="button"
-          onClick={() => signOut({ callbackUrl: '/login' })}
+          onClick={() => signOut({ callbackUrl: localizePathname('/login', language) })}
           className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-error/60 transition-all duration-150 hover:bg-error/10 hover:text-error"
         >
           <span className="flex-shrink-0"><IconLogout /></span>

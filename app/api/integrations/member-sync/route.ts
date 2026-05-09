@@ -7,6 +7,12 @@ import { revalidatePath } from 'next/cache';
 import { parseMemberIds, serializeMemberIds } from '@/lib/front';
 import { decryptIntegrationToken, encryptIntegrationToken } from '@/lib/integrations/token-crypto';
 import {
+  asArray,
+  parsePluralKitFronters,
+  readRemoteMessage,
+  readRetryAfter,
+} from '@/lib/integrations/pluralkit-api.js';
+import {
   PROVIDERS,
   mapPluralKitMember,
   planMemberSync,
@@ -54,6 +60,7 @@ type FetchMembersResult = {
   remoteSystemId: string | null;
   externalMembers: ExternalMember[];
   currentFrontExternalIds: string[];
+  currentFrontStartedAt: Date | null;
 };
 
 type FrontSyncResult = {
@@ -67,6 +74,7 @@ type SyncTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 const MAX_PREVIEW_OPERATIONS = 60;
 const PLURALKIT_BASE_URL = 'https://api.pluralkit.me/v2';
+const PLURALKIT_REQUEST_TIMEOUT_MS = 8000;
 
 const SOLARA_USER_AGENT = 'SolaraPlural/0.1 (https://solara-plural.vercel.app; member-sync)';
 
@@ -89,17 +97,17 @@ export async function POST(request: Request) {
   const provider = parseProvider(body.provider);
   if (!provider) return err('Choose PluralKit before syncing.');
 
-  const providedToken = typeof body.token === 'string' ? body.token.trim() : '';
-  const persistedToken = providedToken
-    ? null
-    : await readPersistedToken(auth.systemId, provider);
-  const token = providedToken || persistedToken || '';
-  if (!token) return err('Integration token is required. Add one in Settings or include it in the sync request.');
-
-  const apply = body.apply === true;
-  const options = sanitizeSyncOptions(body.options);
-
   try {
+    const providedToken = typeof body.token === 'string' ? body.token.trim() : '';
+    const persistedToken = providedToken
+      ? null
+      : await readPersistedToken(auth.systemId, provider);
+    const token = providedToken || persistedToken || '';
+    if (!token) return err('Integration token is required. Add one in Settings or include it in the sync request.');
+
+    const apply = body.apply === true;
+    const options = sanitizeSyncOptions(body.options);
+
     const [existingMembers, existingLinks, remote] = await Promise.all([
       db.select().from(members).where(eq(members.systemId, auth.systemId)),
       db.select().from(memberExternalLinks).where(eq(memberExternalLinks.systemId, auth.systemId)),
@@ -124,8 +132,15 @@ export async function POST(request: Request) {
     let frontSync: FrontSyncResult | null = null;
 
     if (apply) {
-      await applySyncPlan(auth.systemId, plan.operations as SyncOperation[]);
-      frontSync = await syncFrontFromPluralKit(auth.systemId, remote.currentFrontExternalIds);
+      await db.transaction(async (tx) => {
+        await applySyncPlan(tx, auth.systemId, plan.operations as SyncOperation[]);
+        frontSync = await syncFrontFromPluralKit(
+          tx,
+          auth.systemId,
+          remote.currentFrontExternalIds,
+          remote.currentFrontStartedAt,
+        );
+      });
       revalidatePath('/');
       revalidatePath('/members');
       revalidatePath('/front');
@@ -146,8 +161,18 @@ export async function POST(request: Request) {
       return err(error.message, error.status);
     }
 
+    if (isMissingIntegrationSchemaError(error)) {
+      return err('PluralKit sync is not ready in this environment. Run database migrations before using integrations.', 503);
+    }
+
     return err('Sync failed before anything was changed. Please try again.', 500);
   }
+}
+
+function isMissingIntegrationSchemaError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return message.includes('no such table: member_external_links')
+    || message.includes('no such table: system_integrations');
 }
 
 async function readPersistedToken(systemId: string, provider: SyncProvider): Promise<string | null> {
@@ -220,19 +245,37 @@ async function fetchPluralKitMembers(token: string, includeFrontState: boolean):
   ]);
 
   const membersList = asArray(rawMembers).map((raw) => mapPluralKitMember(toRecord(raw))).filter(isExternalMember);
-  const currentFrontExternalIds = asArray(rawFront)
-    .map((raw) => mapPluralKitMember(toRecord(raw)).externalId)
-    .filter((value): value is string => typeof value === 'string' && value.trim().length > 0);
+  const parsedFront = parsePluralKitFronters(rawFront);
   const remoteSystemId = readId(system, ['uuid', 'id']);
 
-  return { remoteSystemId, externalMembers: membersList, currentFrontExternalIds };
+  return {
+    remoteSystemId,
+    externalMembers: membersList,
+    currentFrontExternalIds: parsedFront.externalIds,
+    currentFrontStartedAt: parsedFront.startedAt,
+  };
 }
 
 async function remoteJson(url: string, init: RequestInit): Promise<unknown> {
-  const response = await fetch(url, {
-    ...init,
-    cache: 'no-store',
-  });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), PLURALKIT_REQUEST_TIMEOUT_MS);
+
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      ...init,
+      cache: 'no-store',
+      signal: controller.signal,
+    });
+  } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw new RemoteSyncError('PluralKit took too long to respond. Please try again in a moment.', 504);
+    }
+
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
 
   const text = await response.text();
   const body = parseRemoteBody(text);
@@ -271,13 +314,6 @@ function parseRemoteBody(text: string): unknown {
   }
 }
 
-function asArray(value: unknown): unknown[] {
-  if (Array.isArray(value)) return value;
-  if (isRecord(value) && Array.isArray(value.data)) return value.data;
-  if (isRecord(value) && Array.isArray(value.results)) return value.results;
-  return [];
-}
-
 function isExternalMember(value: unknown): value is ExternalMember {
   return isRecord(value)
     && value.provider === PROVIDERS.PLURALKIT
@@ -296,75 +332,62 @@ function readId(value: unknown, keys: string[]): string | null {
   return null;
 }
 
-function readRemoteMessage(value: unknown): string | null {
-  if (typeof value === 'string' && value.trim()) return value.trim().slice(0, 240);
-  if (!isRecord(value)) return null;
-
-  const message = value.message ?? value.error ?? value.msg;
-  return typeof message === 'string' && message.trim() ? message.trim().slice(0, 240) : null;
-}
-
-function readRetryAfter(value: unknown): string | null {
-  if (!isRecord(value)) return null;
-  const retry = value.retry_after;
-  if (typeof retry !== 'number' || !Number.isFinite(retry)) return null;
-  if (retry >= 1000) return `${Math.ceil(retry / 1000)} seconds`;
-  return `${retry} ms`;
-}
-
-async function applySyncPlan(systemId: string, operations: SyncOperation[]) {
+async function applySyncPlan(tx: SyncTransaction, systemId: string, operations: SyncOperation[]) {
   const now = new Date();
 
-  await db.transaction(async (tx) => {
-    for (const operation of operations) {
-      if (operation.action === 'skip') continue;
+  for (const operation of operations) {
+    if (operation.action === 'skip') continue;
 
-      if (operation.action === 'create') {
-        if (!operation.member || !operation.link) continue;
+    if (operation.action === 'create') {
+      if (!operation.member || !operation.link) continue;
 
-        const memberId = createId();
-        await tx.insert(members).values({
-          id: memberId,
-          systemId,
-          name: String(operation.member.name),
-          pronouns: toNullableString(operation.member.pronouns),
-          avatarUrl: toNullableString(operation.member.avatarUrl),
-          description: toNullableString(operation.member.description),
-          color: toNullableString(operation.member.color),
-          role: toNullableString(operation.member.role),
-          tags: toNullableString(operation.member.tags),
-          notes: toNullableString(operation.member.notes),
-          isArchived: operation.member.isArchived === 1 ? 1 : 0,
-          createdAt: now,
-          updatedAt: now,
-        });
+      const memberId = createId();
+      await tx.insert(members).values({
+        id: memberId,
+        systemId,
+        name: String(operation.member.name),
+        pronouns: toNullableString(operation.member.pronouns),
+        avatarUrl: toNullableString(operation.member.avatarUrl),
+        description: toNullableString(operation.member.description),
+        color: toNullableString(operation.member.color),
+        role: toNullableString(operation.member.role),
+        tags: toNullableString(operation.member.tags),
+        notes: toNullableString(operation.member.notes),
+        isArchived: operation.member.isArchived === 1 ? 1 : 0,
+        createdAt: now,
+        updatedAt: now,
+      });
 
-        await upsertExternalLink(tx, systemId, memberId, operation.link, now);
-        continue;
-      }
-
-      if (!operation.memberId || !operation.link) continue;
-
-      if (operation.action === 'update' && operation.patch && Object.keys(operation.patch).length > 0) {
-        await tx
-          .update(members)
-          .set({
-            ...operation.patch,
-            updatedAt: now,
-          })
-          .where(and(eq(members.id, operation.memberId), eq(members.systemId, systemId)));
-      }
-
-      await upsertExternalLink(tx, systemId, operation.memberId, operation.link, now);
+      await upsertExternalLink(tx, systemId, memberId, operation.link, now);
+      continue;
     }
-  });
+
+    if (!operation.memberId || !operation.link) continue;
+
+    if (operation.action === 'update' && operation.patch && Object.keys(operation.patch).length > 0) {
+      await tx
+        .update(members)
+        .set({
+          ...operation.patch,
+          updatedAt: now,
+        })
+        .where(and(eq(members.id, operation.memberId), eq(members.systemId, systemId)));
+    }
+
+    await upsertExternalLink(tx, systemId, operation.memberId, operation.link, now);
+  }
 }
 
-async function syncFrontFromPluralKit(systemId: string, currentFrontExternalIds: string[]): Promise<FrontSyncResult> {
+async function syncFrontFromPluralKit(
+  tx: SyncTransaction,
+  systemId: string,
+  currentFrontExternalIds: string[],
+  currentFrontStartedAt: Date | null,
+): Promise<FrontSyncResult> {
   const remoteIds = Array.from(new Set(currentFrontExternalIds.map((id) => id.trim()).filter(Boolean)));
 
   if (remoteIds.length === 0) {
-    const ended = await db
+    const ended = await tx
       .update(frontEntries)
       .set({ endedAt: new Date() })
       .where(and(eq(frontEntries.systemId, systemId), isNull(frontEntries.endedAt)))
@@ -378,7 +401,7 @@ async function syncFrontFromPluralKit(systemId: string, currentFrontExternalIds:
     };
   }
 
-  const linkedRows = await db
+  const linkedRows = await tx
     .select({
       memberId: memberExternalLinks.memberId,
       externalId: memberExternalLinks.externalId,
@@ -394,13 +417,23 @@ async function syncFrontFromPluralKit(systemId: string, currentFrontExternalIds:
       ),
     ));
 
-  const memberIds = new Set<string>();
+  const linkByExternalId = new Map<string, string>();
+  const linkBySecondaryId = new Map<string, string>();
   for (const row of linkedRows) {
-    if (row.externalId && remoteIds.includes(row.externalId)) memberIds.add(row.memberId);
-    if (row.externalSecondaryId && remoteIds.includes(row.externalSecondaryId)) memberIds.add(row.memberId);
+    if (row.externalId) linkByExternalId.set(row.externalId, row.memberId);
+    if (row.externalSecondaryId) linkBySecondaryId.set(row.externalSecondaryId, row.memberId);
   }
 
-  if (memberIds.size === 0) {
+  const memberIdsInRemoteOrder: string[] = [];
+  const seenMemberIds = new Set<string>();
+  for (const remoteId of remoteIds) {
+    const memberId = linkByExternalId.get(remoteId) ?? linkBySecondaryId.get(remoteId);
+    if (!memberId || seenMemberIds.has(memberId)) continue;
+    seenMemberIds.add(memberId);
+    memberIdsInRemoteOrder.push(memberId);
+  }
+
+  if (memberIdsInRemoteOrder.length === 0) {
     return {
       status: 'skipped',
       remoteFrontCount: remoteIds.length,
@@ -409,16 +442,17 @@ async function syncFrontFromPluralKit(systemId: string, currentFrontExternalIds:
     };
   }
 
-  const localMembers = await db
+  const localMembers = await tx
     .select({ id: members.id })
     .from(members)
     .where(and(
       eq(members.systemId, systemId),
       eq(members.isArchived, 0),
-      inArray(members.id, Array.from(memberIds)),
+      inArray(members.id, memberIdsInRemoteOrder),
     ));
 
-  const resolvedMemberIds = Array.from(new Set(localMembers.map((member) => member.id)));
+  const availableMemberIds = new Set(localMembers.map((member) => member.id));
+  const resolvedMemberIds = memberIdsInRemoteOrder.filter((memberId) => availableMemberIds.has(memberId));
   if (resolvedMemberIds.length === 0) {
     return {
       status: 'skipped',
@@ -428,14 +462,16 @@ async function syncFrontFromPluralKit(systemId: string, currentFrontExternalIds:
     };
   }
 
-  const activeFront = await db.query.frontEntries.findFirst({
-    where: and(eq(frontEntries.systemId, systemId), isNull(frontEntries.endedAt)),
-  });
+  const [activeFront] = await tx
+    .select()
+    .from(frontEntries)
+    .where(and(eq(frontEntries.systemId, systemId), isNull(frontEntries.endedAt)))
+    .limit(1);
 
   if (activeFront) {
     try {
       const activeMemberIds = parseMemberIds(activeFront.memberIds);
-      if (sameMemberSet(activeMemberIds, resolvedMemberIds)) {
+      if (sameMemberList(activeMemberIds, resolvedMemberIds)) {
         return {
           status: 'unchanged',
           remoteFrontCount: remoteIds.length,
@@ -449,21 +485,19 @@ async function syncFrontFromPluralKit(systemId: string, currentFrontExternalIds:
   }
 
   const now = new Date();
-  await db.transaction(async (tx) => {
-    await tx
-      .update(frontEntries)
-      .set({ endedAt: now })
-      .where(and(eq(frontEntries.systemId, systemId), isNull(frontEntries.endedAt)));
+  await tx
+    .update(frontEntries)
+    .set({ endedAt: now })
+    .where(and(eq(frontEntries.systemId, systemId), isNull(frontEntries.endedAt)));
 
-    await tx.insert(frontEntries).values({
-      id: createId(),
-      systemId,
-      memberIds: serializeMemberIds(resolvedMemberIds),
-      startedAt: now,
-      endedAt: null,
-      note: 'Synced from PluralKit',
-      createdAt: now,
-    });
+  await tx.insert(frontEntries).values({
+    id: createId(),
+    systemId,
+    memberIds: serializeMemberIds(resolvedMemberIds),
+    startedAt: currentFrontStartedAt ?? now,
+    endedAt: null,
+    note: 'Synced from PluralKit',
+    createdAt: now,
   });
 
   return {
@@ -474,10 +508,9 @@ async function syncFrontFromPluralKit(systemId: string, currentFrontExternalIds:
   };
 }
 
-function sameMemberSet(a: string[], b: string[]) {
+function sameMemberList(a: string[], b: string[]) {
   if (a.length !== b.length) return false;
-  const setB = new Set(b);
-  return a.every((value) => setB.has(value));
+  return a.every((value, index) => value === b[index]);
 }
 
 async function upsertExternalLink(

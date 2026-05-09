@@ -75,21 +75,20 @@ Production PWA install should use real PNG icons, at least 192x192 and 512x512, 
 **Expected Behavior:**
 Plan and test a framework upgrade separately, or choose a patched compatible version if one becomes available.
 
+## Resolved Issues
+
 ### [ISSUE-010] External provider front sync is not implemented yet
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** Medium
 **Area:** Backend | Integrations | Data
 
 **Description:**
-PluralKit models front as switches with a member list. The current integration slice intentionally syncs members only.
+PluralKit models front as switches with a member list. The original integration slice intentionally synced members only.
 
-**Expected Behavior:**
-Future front integration should have a separate preview/conflict model before importing or pushing front history.
+**Resolved in:** 2026-05-08 PluralKit sync hardening. Front pull now parses PluralKit switch objects and outbound local front changes create PluralKit switches only when the local front actually changes.
 
 ---
-
-## Resolved Issues
 
 ### [ISSUE-004] ESLint script is still interactive
 

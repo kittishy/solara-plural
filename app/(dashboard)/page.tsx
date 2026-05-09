@@ -21,7 +21,12 @@ export default async function DashboardPage() {
   const systemId = await requireSystemId();
 
   const [system, activeFront, recentNotes, memberCount, noteCount] = await Promise.all([
-    db.query.systems.findFirst({ where: eq(systems.id, systemId) }),
+    db.query.systems.findFirst({
+      columns: {
+        name: true,
+      },
+      where: eq(systems.id, systemId),
+    }),
     db.query.frontEntries.findFirst({
       where: and(eq(frontEntries.systemId, systemId), isNull(frontEntries.endedAt)),
     }),

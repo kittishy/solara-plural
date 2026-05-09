@@ -2,9 +2,12 @@
 
 import Link from 'next/link';
 import DynamicAvatarImage from '@/components/ui/DynamicAvatarImage';
-import { useState, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import useSWR from 'swr';
 import { apiFetcher, swrKeys } from '@/lib/swr';
+
+const INITIAL_VISIBLE_MEMBERS = 60;
+const VISIBLE_MEMBERS_INCREMENT = 60;
 
 type MemberItem = {
   id: string;
@@ -40,17 +43,18 @@ export default function MembersClient({
   initialFront: FrontEntryShape | null;
 }) {
   const [query, setQuery] = useState('');
+  const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE_MEMBERS);
 
   const { data: membersData = initialMembers } = useSWR<Omit<MemberItem, 'isFronting'>[]>(
     swrKeys.members,
     apiFetcher,
-    { fallbackData: initialMembers }
+    { fallbackData: initialMembers, revalidateOnMount: false }
   );
 
   const { data: frontData = initialFront } = useSWR<FrontEntryShape | null>(
     swrKeys.front,
     apiFetcher,
-    { fallbackData: initialFront }
+    { fallbackData: initialFront, revalidateOnMount: false }
   );
 
   const isLoading = !membersData && !initialMembers;
@@ -69,6 +73,12 @@ export default function MembersClient({
   }, [parsed, query]);
 
   const isFiltering = query.trim().length > 0;
+  useEffect(() => {
+    setVisibleCount(INITIAL_VISIBLE_MEMBERS);
+  }, [query]);
+
+  const visibleMembers = filtered.slice(0, visibleCount);
+  const hasMoreMembers = visibleCount < filtered.length;
 
   const subtitle = isFiltering
     ? `${filtered.length} of ${parsed.length} member${parsed.length !== 1 ? 's' : ''}`
@@ -167,69 +177,81 @@ export default function MembersClient({
           </p>
         </div>
       ) : (
-        <div key={query.trim() || 'all'} className="stagger-children grid gap-3 md:grid-cols-2 min-w-0">
-          {filtered.map((member) => (
-            <Link
-              key={member.id}
-              href={`/members/${member.id}`}
-              className={`card card-interactive p-4 flex items-start gap-4 transition-all duration-150 group
-                ${member.isFronting
-                  ? 'border-front/50 shadow-front-glow hover:shadow-front-glow'
-                  : 'hover:shadow-glow hover:-translate-y-0.5'
-                }`}
-            >
-              <div
-                className="w-12 h-12 rounded-full flex items-center justify-center text-lg font-bold text-bg flex-shrink-0 overflow-hidden"
-                style={!member.avatarUrl ? {
-                  backgroundColor: member.color ?? '#a78bfa',
-                  boxShadow: `0 0 0 2px ${member.color ?? '#a78bfa'}40`
-                } : undefined}
-                aria-hidden="true"
+        <div className="space-y-4">
+          <div key={query.trim() || 'all'} className="stagger-children grid gap-3 md:grid-cols-2 min-w-0">
+            {visibleMembers.map((member) => (
+              <Link
+                key={member.id}
+                href={`/members/${member.id}`}
+                className={`card card-interactive p-4 flex items-start gap-4 transition-all duration-150 group
+                  ${member.isFronting
+                    ? 'border-front/50 shadow-front-glow hover:shadow-front-glow'
+                    : 'hover:shadow-glow hover:-translate-y-0.5'
+                  }`}
               >
-                {member.avatarUrl ? (
-                  <DynamicAvatarImage src={member.avatarUrl}
-                    alt=""
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  member.name[0].toUpperCase()
-                )}
-              </div>
+                <div
+                  className="w-12 h-12 rounded-full flex items-center justify-center text-lg font-bold text-bg flex-shrink-0 overflow-hidden"
+                  style={!member.avatarUrl ? {
+                    backgroundColor: member.color ?? '#a78bfa',
+                    boxShadow: `0 0 0 2px ${member.color ?? '#a78bfa'}40`
+                  } : undefined}
+                  aria-hidden="true"
+                >
+                  {member.avatarUrl ? (
+                    <DynamicAvatarImage src={member.avatarUrl}
+                      alt=""
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    member.name[0].toUpperCase()
+                  )}
+                </div>
 
-              <div className="flex-1 min-w-0">
-                <p className="font-semibold text-text">{member.name}</p>
-                {member.pronouns && (
-                  <p className="text-muted text-sm">{member.pronouns}</p>
-                )}
-                {member.role && (
-                  <p className="text-subtle text-xs mt-0.5">{member.role}</p>
-                )}
-                {member.tags.length > 0 && (
-                  <div className="flex flex-wrap gap-1 mt-2">
-                    {member.tags.slice(0, 3).map((tag) => (
-                      <span key={tag} className="tag">
-                        {tag}
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-text">{member.name}</p>
+                  {member.pronouns && (
+                    <p className="text-muted text-sm">{member.pronouns}</p>
+                  )}
+                  {member.role && (
+                    <p className="text-subtle text-xs mt-0.5">{member.role}</p>
+                  )}
+                  {member.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-2">
+                      {member.tags.slice(0, 3).map((tag) => (
+                        <span key={tag} className="tag">
+                          {tag}
+                        </span>
+                      ))}
+                      {member.tags.length > 3 && (
+                        <span className="text-xs text-subtle">+{member.tags.length - 3}</span>
+                      )}
+                    </div>
+                  )}
+
+                  {member.isFronting && (
+                    <div className="badge-front mt-2" aria-label="Currently fronting">
+                      <span className="relative inline-flex h-2 w-2" aria-hidden="true">
+                        <span className="absolute inline-flex h-full w-full rounded-full bg-front opacity-60 animate-pulse-ring" />
+                        <span className="absolute inline-flex h-full w-full rounded-full bg-front animate-pulse-ring-outer" />
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-front shadow-[0_0_6px_rgba(249,168,212,0.7)]" />
                       </span>
-                    ))}
-                    {member.tags.length > 3 && (
-                      <span className="text-xs text-subtle">+{member.tags.length - 3}</span>
-                    )}
-                  </div>
-                )}
+                      IN FRONT
+                    </div>
+                  )}
+                </div>
+              </Link>
+            ))}
+          </div>
 
-                {member.isFronting && (
-                  <div className="badge-front mt-2" aria-label="Currently fronting">
-                    <span className="relative inline-flex h-2 w-2" aria-hidden="true">
-                      <span className="absolute inline-flex h-full w-full rounded-full bg-front opacity-60 animate-pulse-ring" />
-                      <span className="absolute inline-flex h-full w-full rounded-full bg-front animate-pulse-ring-outer" />
-                      <span className="relative inline-flex rounded-full h-2 w-2 bg-front shadow-[0_0_6px_rgba(249,168,212,0.7)]" />
-                    </span>
-                    IN FRONT
-                  </div>
-                )}
-              </div>
-            </Link>
-          ))}
+          {hasMoreMembers && (
+            <button
+              type="button"
+              onClick={() => setVisibleCount((count) => count + VISIBLE_MEMBERS_INCREMENT)}
+              className="btn-ghost min-h-[48px] w-full justify-center border border-border/60"
+            >
+              Show more members ({filtered.length - visibleMembers.length} remaining)
+            </button>
+          )}
         </div>
       )}
     </div>
