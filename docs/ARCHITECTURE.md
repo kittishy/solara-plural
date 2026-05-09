@@ -324,6 +324,29 @@ Solara should borrow architecture habits, not external implementation code:
 - Decrypted tokens are used only in server runtime when sending provider requests.
 - `system_integrations` is not included in export payloads.
 
+---
+
+## 2026-05-09 Architecture Update: PWA + Notifications
+
+### PWA surface
+- `public/manifest.json` declares the installable Solara app metadata and production PNG icons.
+- `public/service-worker.js` caches same-origin page/static requests for a basic app-shell experience.
+- `/firebase-messaging-sw.js` is a dynamic service-worker route that injects Firebase public config from environment variables.
+
+### Notification surfaces
+- `/notifications` is the durable in-app notification center.
+- `POST /api/notifications/tokens` saves the current browser's Firebase Cloud Messaging registration token for the authenticated system.
+- `DELETE /api/notifications/tokens` revokes the current browser token.
+- `GET /api/notifications` returns the authenticated system's notification list and unread count.
+- `PATCH /api/notifications/[id]` marks one notification read/unread.
+- `POST /api/notifications/read-all` marks all current notifications read.
+
+### Delivery behavior
+- `POST /api/front` and `DELETE /api/front` persist local front changes first, then enqueue best-effort friend notifications.
+- Notification recipients are derived from existing `system_friendships`.
+- Member names are included in the in-app notification body only when the recipient already has non-hidden sharing access to those fronting members.
+- FCM push payloads are minimal and point users back to `/notifications`; failed FCM sends do not block front changes.
+
 ### Merge invariants
 - Identity links live in `member_external_links`.
 - PluralKit UUID is preferred as the primary external id; the short id is stored as secondary.

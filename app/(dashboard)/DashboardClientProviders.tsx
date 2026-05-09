@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { SWRConfig } from 'swr';
 import { applySolaraTheme, readStoredSolaraTheme } from '@/lib/theme';
+import { NotificationRuntime } from '@/components/notifications/NotificationRuntime';
 
 export function DashboardClientProviders({ children }: { children: React.ReactNode }) {
   useEffect(() => {
@@ -19,6 +20,7 @@ export function DashboardClientProviders({ children }: { children: React.ReactNo
         keepPreviousData: true,
       }}
     >
+      <NotificationRuntime />
       {children}
     </SWRConfig>
   );

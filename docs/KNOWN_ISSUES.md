@@ -53,7 +53,7 @@ Roadmap status should be reconciled after a build/test pass confirms behavior.
 
 ### [ISSUE-008] PWA manifest uses favicon instead of production PNG icons
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** Low
 **Area:** Frontend | PWA | Deploy
 
@@ -62,6 +62,8 @@ Roadmap status should be reconciled after a build/test pass confirms behavior.
 
 **Expected Behavior:**
 Production PWA install should use real PNG icons, at least 192x192 and 512x512, plus a dedicated maskable icon.
+
+**Resolved in:** 2026-05-09 PWA/FCM notification foundation. Added PNG icons, maskable icon, and service worker.
 
 ### [ISSUE-009] npm audit reports Next.js 14 production vulnerabilities
 

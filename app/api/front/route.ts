@@ -7,6 +7,7 @@ import { parseMemberIds, serializeMemberIds } from '@/lib/front';
 import { revalidatePath } from 'next/cache';
 import { decryptIntegrationToken } from '@/lib/integrations/token-crypto';
 import { createPluralKitFrontSync } from '@/lib/integrations/pluralkit-front-sync.js';
+import { notifyFriendsAboutFrontChange } from '@/lib/notifications/front-change';
 
 async function readPersistedPluralKitToken(systemId: string): Promise<string | null> {
   const [integration] = await db
@@ -291,6 +292,19 @@ export async function POST(request: Request) {
     'scheduled_after_local_front_update',
   );
 
+  void notifyFriendsAboutFrontChange({
+    systemId: auth.systemId,
+    memberIds: uniqueMemberIds,
+    event: 'started',
+  }).catch((error) => {
+    console.error('[notifications] front change notification failed', {
+      event: 'friend_front_notification_failed',
+      requestId,
+      systemId: auth.systemId,
+      error: error instanceof Error ? error.message : 'unknown_error',
+    });
+  });
+
   return ok({ ...newEntry[0], memberIds: uniqueMemberIds, pluralKitSync }, 201);
 }
 
@@ -320,6 +334,19 @@ export async function DELETE() {
     requestId,
     'scheduled_after_local_front_end',
   );
+
+  void notifyFriendsAboutFrontChange({
+    systemId: auth.systemId,
+    memberIds: [],
+    event: 'ended',
+  }).catch((error) => {
+    console.error('[notifications] front end notification failed', {
+      event: 'friend_front_notification_failed',
+      requestId,
+      systemId: auth.systemId,
+      error: error instanceof Error ? error.message : 'unknown_error',
+    });
+  });
 
   return ok({ ended: true, entry: updated[0], pluralKitSync });
 }

@@ -106,6 +106,60 @@ Indexes and constraints:
 
 ---
 
+### notification_push_tokens
+
+Stores web push registration tokens for Firebase Cloud Messaging.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| id | text | PRIMARY KEY | CUID |
+| systemId | text | FK -> systems.id | Owner account |
+| tokenHash | text | NOT NULL | SHA-256 hash used for idempotent upsert |
+| encryptedToken | text | NOT NULL | Encrypted FCM registration token |
+| platform | text | NOT NULL DEFAULT `web` | Token platform |
+| userAgent | text | nullable | Browser/device hint |
+| lastSeenAt | integer | NOT NULL | Last successful registration refresh |
+| revokedAt | integer | nullable | Token disabled locally or by delivery failure |
+| createdAt | integer | NOT NULL | Unix timestamp |
+| updatedAt | integer | NOT NULL | Unix timestamp |
+
+Constraints:
+- `ux_notification_push_tokens_system_hash(systemId, tokenHash)`
+
+### notifications
+
+Durable in-app notification center entries.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| id | text | PRIMARY KEY | CUID |
+| recipientSystemId | text | FK -> systems.id | Account receiving the notification |
+| actorSystemId | text | nullable FK -> systems.id | Account that caused the notification |
+| type | text | NOT NULL | Notification type, e.g. `friend_front_changed` |
+| title | text | NOT NULL | User-facing title |
+| body | text | NOT NULL | User-facing body |
+| data | text | nullable | JSON metadata |
+| readAt | integer | nullable | When the recipient marked it read |
+| createdAt | integer | NOT NULL | Unix timestamp |
+
+### notification_deliveries
+
+Per-token push delivery attempts for observability and invalid-token cleanup.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| id | text | PRIMARY KEY | CUID |
+| notificationId | text | FK -> notifications.id | Notification being pushed |
+| pushTokenId | text | FK -> notification_push_tokens.id | Target device token row |
+| status | text | NOT NULL | `sent` or `failed` |
+| errorCode | text | nullable | Firebase Admin SDK error code |
+| attempts | integer | NOT NULL DEFAULT 1 | Attempt count |
+| sentAt | integer | nullable | Successful send time |
+| createdAt | integer | NOT NULL | Unix timestamp |
+| updatedAt | integer | NOT NULL | Unix timestamp |
+
+---
+
 ### front_entries
 
 Records a front session (who was fronting, when).

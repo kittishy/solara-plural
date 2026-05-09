@@ -82,7 +82,7 @@
 - [ ] Loading states (skeletons)
 - [ ] Empty states (warm, friendly)
 - [ ] Error states (kind messages)
-- [x] PWA manifest or remove manifest reference until ready
+- [x] PWA manifest, production PNG icons, and basic service worker
 - [x] Non-interactive lint/CI setup
 - [x] Restrict remote image hosts for production
 - [ ] Vercel deployment
@@ -103,7 +103,7 @@
 - [ ] Custom fields for member profiles
 - [ ] Accessibility settings: text size, reduced motion, contrast notes
 - [ ] Basic statistics (total front time per member)
-- [ ] PWA manifest + service worker
+- [x] PWA manifest + service worker
 
 ---
 
@@ -114,7 +114,8 @@
 - [ ] Selective visibility (which members to share)
 - [ ] Per-member and per-field privacy labels
 - [ ] View partner system's public front
-- [ ] Trusted front-change notifications
+- [x] Trusted front-change notifications
+- [x] In-app notification center as durable fallback for push
 - [ ] Partner system member list (read-only)
 - [ ] Privacy controls per member
 - [ ] Account deletion and data retention controls before public growth

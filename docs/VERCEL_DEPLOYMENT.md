@@ -30,6 +30,16 @@ DATABASE_AUTH_TOKEN=your-turso-auth-token
 NEXTAUTH_SECRET=your-random-secret
 INTEGRATIONS_TOKEN_SECRET=your-separate-random-secret
 NEXTAUTH_URL=https://solara-plural.vercel.app
+NEXT_PUBLIC_FIREBASE_API_KEY=your-firebase-web-api-key
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=your-project-id
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your-project.appspot.com
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your-sender-id
+NEXT_PUBLIC_FIREBASE_APP_ID=your-web-app-id
+NEXT_PUBLIC_FIREBASE_VAPID_KEY=your-web-push-vapid-key
+FIREBASE_PROJECT_ID=your-project-id
+FIREBASE_CLIENT_EMAIL=firebase-adminsdk@example.iam.gserviceaccount.com
+FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
 ```
 
 Local development can keep these in `.env.local`. Never commit `.env.local`.
@@ -41,6 +51,8 @@ vercel env add DATABASE_URL --sensitive
 vercel env add DATABASE_AUTH_TOKEN --sensitive
 vercel env add NEXTAUTH_SECRET --sensitive
 vercel env add INTEGRATIONS_TOKEN_SECRET --sensitive
+vercel env add FIREBASE_CLIENT_EMAIL --sensitive
+vercel env add FIREBASE_PRIVATE_KEY --sensitive
 ```
 
 `NEXTAUTH_URL` should match the deployed site URL for production. For this project, use `https://solara-plural.vercel.app`. The `solara.vercel.app` alias is not owned by this project, so do not point auth there.
@@ -57,6 +69,8 @@ vercel env add INTEGRATIONS_TOKEN_SECRET --sensitive
 - [ ] `npm run lint` passes non-interactively.
 - [ ] `npm test` passes.
 - [ ] `public/manifest.json` exists if `app/layout.tsx` references `/manifest.json`.
+- [ ] `public/service-worker.js`, `/firebase-messaging-sw.js`, and PWA icons exist before enabling FCM.
+- [ ] Firebase Cloud Messaging web app config, VAPID key, and Admin SDK service-account env vars are set before expecting push delivery.
 - [ ] Remote image hostnames are restricted before public production use.
 - [ ] Import/export actions have visible success and error states.
 - [ ] Run `npm run db:migrate` before deploying member sync changes that depend on `member_external_links`.
@@ -105,6 +119,8 @@ Plural system data is sensitive. Treat logs, URLs, analytics, imports, and expor
 - Do not enable analytics until URL hygiene and a privacy note are in place.
 - Do not claim end-to-end encryption with the current architecture.
 - Make export easy to reach before onboarding more than the first trusted users.
+- Treat push notifications as convenience only. The in-app notification center is the durable source of notification history.
+- Keep web push payloads minimal; avoid placing notes, private member details, or unshared front data in FCM payloads.
 
 ---
 

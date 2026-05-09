@@ -109,6 +109,57 @@ export const systemIntegrations = sqliteTable('system_integrations', {
   providerIdx: index('idx_system_integrations_provider').on(t.provider),
 }));
 
+// Browser push tokens for Firebase Cloud Messaging.
+export const notificationPushTokens = sqliteTable('notification_push_tokens', {
+  id:           text('id').primaryKey(),
+  systemId:     text('system_id').notNull().references(() => systems.id, { onDelete: 'cascade' }),
+  tokenHash:    text('token_hash').notNull(),
+  encryptedToken: text('encrypted_token').notNull(),
+  platform:     text('platform').notNull().default('web'),
+  userAgent:    text('user_agent'),
+  lastSeenAt:   integer('last_seen_at', { mode: 'timestamp' }).notNull(),
+  revokedAt:    integer('revoked_at', { mode: 'timestamp' }),
+  createdAt:    integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(strftime('%s', 'now'))`),
+  updatedAt:    integer('updated_at', { mode: 'timestamp' }).notNull().default(sql`(strftime('%s', 'now'))`),
+}, (t) => ({
+  systemIdx: index('idx_notification_push_tokens_system_id').on(t.systemId),
+  tokenHashUnique: uniqueIndex('ux_notification_push_tokens_system_hash').on(t.systemId, t.tokenHash),
+  activeIdx: index('idx_notification_push_tokens_revoked_at').on(t.revokedAt),
+}));
+
+// In-app notification center entries. Push is optional; this is the source of truth.
+export const notifications = sqliteTable('notifications', {
+  id:                text('id').primaryKey(),
+  recipientSystemId: text('recipient_system_id').notNull().references(() => systems.id, { onDelete: 'cascade' }),
+  actorSystemId:     text('actor_system_id').references(() => systems.id, { onDelete: 'set null' }),
+  type:              text('type').notNull(),
+  title:             text('title').notNull(),
+  body:              text('body').notNull(),
+  data:              text('data'),
+  readAt:            integer('read_at', { mode: 'timestamp' }),
+  createdAt:         integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(strftime('%s', 'now'))`),
+}, (t) => ({
+  recipientCreatedIdx: index('idx_notifications_recipient_created').on(t.recipientSystemId, t.createdAt),
+  recipientReadIdx: index('idx_notifications_recipient_read').on(t.recipientSystemId, t.readAt),
+}));
+
+// Per-token delivery attempts for optional FCM push fanout.
+export const notificationDeliveries = sqliteTable('notification_deliveries', {
+  id:             text('id').primaryKey(),
+  notificationId: text('notification_id').notNull().references(() => notifications.id, { onDelete: 'cascade' }),
+  pushTokenId:    text('push_token_id').notNull().references(() => notificationPushTokens.id, { onDelete: 'cascade' }),
+  status:         text('status').notNull(),
+  errorCode:      text('error_code'),
+  attempts:       integer('attempts').notNull().default(1),
+  sentAt:         integer('sent_at', { mode: 'timestamp' }),
+  createdAt:      integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(strftime('%s', 'now'))`),
+  updatedAt:      integer('updated_at', { mode: 'timestamp' }).notNull().default(sql`(strftime('%s', 'now'))`),
+}, (t) => ({
+  notificationIdx: index('idx_notification_deliveries_notification_id').on(t.notificationId),
+  pushTokenIdx: index('idx_notification_deliveries_push_token_id').on(t.pushTokenId),
+  statusIdx: index('idx_notification_deliveries_status').on(t.status),
+}));
+
 // Friend Member Sharing
 export const systemFriendMemberShares = sqliteTable('system_friend_member_shares', {
   id:             text('id').primaryKey(),
@@ -168,6 +219,12 @@ export type MemberExternalLink = typeof memberExternalLinks.$inferSelect;
 export type NewMemberExternalLink = typeof memberExternalLinks.$inferInsert;
 export type SystemIntegration = typeof systemIntegrations.$inferSelect;
 export type NewSystemIntegration = typeof systemIntegrations.$inferInsert;
+export type NotificationPushToken = typeof notificationPushTokens.$inferSelect;
+export type NewNotificationPushToken = typeof notificationPushTokens.$inferInsert;
+export type Notification = typeof notifications.$inferSelect;
+export type NewNotification = typeof notifications.$inferInsert;
+export type NotificationDelivery = typeof notificationDeliveries.$inferSelect;
+export type NewNotificationDelivery = typeof notificationDeliveries.$inferInsert;
 export type SystemFriendMemberShare = typeof systemFriendMemberShares.$inferSelect;
 export type NewSystemFriendMemberShare = typeof systemFriendMemberShares.$inferInsert;
 export type FrontEntry = typeof frontEntries.$inferSelect;

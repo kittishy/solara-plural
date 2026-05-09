@@ -531,3 +531,22 @@
 - Outbound PluralKit switch sync returns `rate_limited` diagnostics for HTTP 429 without automatic retrying.
 
 ---
+
+## [2026-05-09] D031 - PWA and Friend Front Notifications Use In-app History First
+
+**Decision:** Add PWA support, Firebase Cloud Messaging, saved web push tokens, and an in-app notification center. Front-change notifications for friends are persisted in Solara first, with FCM push as a best-effort delivery layer.
+
+**Justification:**
+- Push notifications are not guaranteed on every browser, device, permission state, or network condition.
+- Friend front changes are useful social context, but notification payloads must respect sharing visibility and avoid leaking private member data.
+- Persisting notifications in the database gives users a reliable place to review updates even when push is unavailable or blocked.
+
+**Implementation:**
+- Added PWA assets: `public/manifest.json`, PNG icons, `public/service-worker.js`, and `/firebase-messaging-sw.js`.
+- Added Firebase client/Admin dependencies and env configuration for Web FCM.
+- Added `notification_push_tokens`, `notifications`, and `notification_deliveries` tables.
+- Added APIs for registering push tokens, listing notifications, marking one notification read, and marking all read.
+- Added `/notifications` dashboard page and navigation links.
+- `POST/DELETE /api/front` now creates friend front-change notifications after local front persistence, scoped through existing per-member sharing visibility.
+
+---

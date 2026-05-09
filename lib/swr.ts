@@ -8,6 +8,7 @@ export const swrKeys = {
   front: '/api/front',
   notes: '/api/notes',
   frontHistory: '/api/front/history?limit=50&offset=0',
+  notifications: '/api/notifications',
 } as const;
 
 export async function apiFetcher<T>(url: string): Promise<T> {
