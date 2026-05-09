@@ -32,7 +32,7 @@
 ### Phase 2: Authentication
 - [ ] Login page (warm, on-brand)
 - [ ] NextAuth Credentials provider
-- [ ] Middleware protecting dashboard routes
+- [x] Server layout protecting dashboard routes
 - [ ] Session display in sidebar
 - [ ] Logout functionality
 

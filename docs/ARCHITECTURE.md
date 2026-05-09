@@ -139,7 +139,7 @@ solara-plural/
 │   ├── IDEAS.md
 │   ├── KNOWN_ISSUES.md
 │   └── UX_NOTES.md
-├── middleware.ts                  # Auth protection middleware
+├── middleware.ts                  # Locale negotiation + route rewrite middleware
 ├── next.config.ts                 # Next.js config
 ├── tailwind.config.ts             # Tailwind + design tokens
 ├── drizzle.config.ts              # Drizzle migration config
@@ -168,7 +168,7 @@ Browser → Next.js Page (RSC or Client) → SWR hook → API Route Handler
 2. Submits email + password
 3. NextAuth Credentials provider → bcrypt verify
 4. JWT created with { systemId, email, name }
-5. middleware.ts protects all /(dashboard) routes
+5. Dashboard layout verifies the session before rendering protected app routes
 6. API routes verify session via getServerSession()
 7. All DB queries scoped to session.systemId
 ```
@@ -177,10 +177,10 @@ Browser → Next.js Page (RSC or Client) → SWR hook → API Route Handler
 
 Auth.js has two configuration layers:
 
-- `lib/auth/edge-config.ts` contains middleware-safe session, page, and callback settings.
+- `lib/auth/edge-config.ts` contains shared session, page, and callback settings.
 - `lib/auth/config.ts` adds the Credentials provider, database lookup, and bcrypt password verification for Node/server route usage.
 
-Middleware imports only the edge-safe config. This keeps Node-only credential dependencies out of the Edge runtime and keeps navigation protection fast.
+Middleware does not import Auth.js. It only handles locale negotiation and rewrites localized URLs back to internal app routes. This keeps JWT/Jose and credential dependencies out of the Edge middleware bundle, while protected dashboard layouts and API route handlers own session checks.
 
 Protected pages redirect unauthenticated users to `/login`. Protected API routes return `401` JSON so client-side fetch handlers can show inline errors instead of trying to parse redirected HTML.
 

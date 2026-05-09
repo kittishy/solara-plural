@@ -51,6 +51,7 @@
 - Initial project orchestration and planning
 
 ### Changed
+- Middleware now handles only locale redirects/rewrites; dashboard layouts and API routes own auth checks, removing Auth.js/Jose Edge runtime build warnings
 - PluralKit apply-mode sync now parses `/fronters` as a switch object, preserves ordered fronters, and uses the remote switch timestamp for local front history
 - PluralKit member/front apply now commits local member/link/front changes in one database transaction
 - Local front changes no longer create redundant PluralKit switches when the requested front already matches the active front in the same order

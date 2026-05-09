@@ -77,7 +77,7 @@
 **Security notes:**
 - Passwords hashed with bcrypt
 - JWT signed with `NEXTAUTH_SECRET`
-- All sensitive routes protected via middleware
+- All sensitive dashboard routes protected by server layout/session checks
 
 ---
 
@@ -161,6 +161,22 @@
 - Honest privacy language is safer than promising protections the architecture does not provide.
 
 **Implementation:** Keep privacy notes in `README.md`, `docs/REFERENCE_RESEARCH.md`, and `docs/VERCEL_DEPLOYMENT.md`. Avoid logging sensitive data or placing it in URLs.
+
+---
+
+## [2026-05-09] D032 - Keep Auth.js Out of Edge Middleware
+
+**Decision:** Middleware no longer imports `NextAuth`. It handles locale redirects/rewrites only; dashboard layouts and API route handlers enforce authentication.
+
+**Justification:**
+- Importing `NextAuth` in middleware pulled `jose` into the Edge bundle and produced unsupported `CompressionStream` / `DecompressionStream` warnings during `next build`.
+- API routes already return JSON auth failures through `requireAuth()`.
+- Dashboard pages already run through the server layout, which calls the session helper before rendering protected content.
+
+**Implementation:**
+- Removed `NextAuth(authConfig)` from `middleware.ts`.
+- Kept i18n cookie handling and localized-path rewrites in middleware.
+- Verified `npm run build` completes without the previous Edge runtime warnings.
 
 ---
 

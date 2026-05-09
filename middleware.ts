@@ -1,6 +1,4 @@
-import NextAuth from 'next-auth';
 import { NextResponse } from 'next/server';
-import { authConfig } from '@/lib/auth/edge-config';
 import {
   DEFAULT_LANGUAGE,
   LANGUAGE_COOKIE_KEY,
@@ -10,21 +8,24 @@ import {
   localizePathname,
 } from '@/lib/i18n';
 
-const { auth } = NextAuth(authConfig);
-
-export default auth((req) => {
-  const { nextUrl } = req;
-  const isLoggedIn = !!req.auth;
+export function middleware(req: Request) {
+  const request = req as Request & {
+    nextUrl: URL;
+    cookies: {
+      get: (name: string) => { value: string } | undefined;
+    };
+  };
+  const { nextUrl } = request;
 
   const pathname = nextUrl.pathname;
   const { language: pathLanguage, pathnameWithoutLanguage } = getLanguageFromPathname(pathname);
   const isApiPath = pathname.startsWith('/api') || pathnameWithoutLanguage.startsWith('/api');
-  const cookieLanguage = req.cookies.get(LANGUAGE_COOKIE_KEY)?.value;
+  const cookieLanguage = request.cookies.get(LANGUAGE_COOKIE_KEY)?.value;
 
   if (!pathLanguage && !isApiPath) {
     const preferredLanguage =
       (isLanguage(cookieLanguage) ? cookieLanguage : null) ??
-      detectLanguageFromAcceptLanguage(req.headers.get('accept-language'));
+      detectLanguageFromAcceptLanguage(request.headers.get('accept-language'));
 
     const redirectLanguage = preferredLanguage || DEFAULT_LANGUAGE;
     const redirectUrl = new URL(localizePathname(pathname, redirectLanguage), nextUrl);
@@ -55,30 +56,16 @@ export default auth((req) => {
     });
   }
 
-  const isAuthRoute = pathnameWithoutLanguage.startsWith('/login') || pathnameWithoutLanguage.startsWith('/register');
   const isApiAuthRoute = pathnameWithoutLanguage.startsWith('/api/auth');
   const isApiRoute = pathnameWithoutLanguage.startsWith('/api');
   const isPublicApiRoute = pathnameWithoutLanguage.startsWith('/api/register');
 
-  // API route handlers own their auth checks so fetch() callers get JSON errors
-  // without paying for a second session decode in middleware.
+  // API route handlers and dashboard layouts own auth checks so fetch() callers
+  // get JSON errors and middleware stays Edge-light.
   if (isApiRoute || isApiAuthRoute || isPublicApiRoute) return responseWithLocale;
 
-  // Redirect logged-in users away from login page
-  if (isAuthRoute) {
-    if (isLoggedIn) {
-      return Response.redirect(new URL(localizePathname('/', pathLanguage ?? DEFAULT_LANGUAGE), nextUrl));
-    }
-    return responseWithLocale;
-  }
-
-  // Protect everything else
-  if (!isLoggedIn) {
-    return Response.redirect(new URL(localizePathname('/login', pathLanguage ?? DEFAULT_LANGUAGE), nextUrl));
-  }
-
   return responseWithLocale;
-});
+}
 
 export const config = {
   matcher: [
