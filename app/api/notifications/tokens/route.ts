@@ -3,11 +3,31 @@ import { createId } from '@paralleldrive/cuid2';
 import { db } from '@/lib/db';
 import { notificationPushTokens } from '@/lib/db/schema';
 import { err, ok, requireAuth } from '@/lib/api/helpers';
-import { encryptPushToken, hashPushToken } from '@/lib/notifications/tokens';
+import { encryptPushSubscription, hashPushEndpoint } from '@/lib/notifications/tokens';
 
-function readToken(value: unknown): string {
-  if (typeof value !== 'string') return '';
-  return value.trim();
+type PushSubscriptionPayload = {
+  endpoint?: unknown;
+  keys?: {
+    p256dh?: unknown;
+    auth?: unknown;
+  };
+};
+
+function readSubscription(value: unknown): { endpoint: string; json: string } | null {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return null;
+  const payload = value as PushSubscriptionPayload;
+  const endpoint = typeof payload.endpoint === 'string' ? payload.endpoint.trim() : '';
+  const p256dh = typeof payload.keys?.p256dh === 'string' ? payload.keys.p256dh.trim() : '';
+  const auth = typeof payload.keys?.auth === 'string' ? payload.keys.auth.trim() : '';
+  if (!endpoint || !p256dh || !auth) return null;
+
+  return {
+    endpoint,
+    json: JSON.stringify({
+      endpoint,
+      keys: { p256dh, auth },
+    }),
+  };
 }
 
 export async function POST(request: Request) {
@@ -15,11 +35,11 @@ export async function POST(request: Request) {
   if (auth.error) return auth.error;
 
   const body = await request.json().catch(() => null);
-  const token = readToken((body as { token?: unknown } | null)?.token);
-  if (!token) return err('Missing push token.');
+  const subscription = readSubscription((body as { subscription?: unknown } | null)?.subscription);
+  if (!subscription) return err('Missing push subscription.');
 
   const now = new Date();
-  const tokenHash = hashPushToken(token);
+  const tokenHash = hashPushEndpoint(subscription.endpoint);
   const userAgent = request.headers.get('user-agent')?.slice(0, 500) ?? null;
 
   const existing = await db.query.notificationPushTokens.findFirst({
@@ -32,7 +52,7 @@ export async function POST(request: Request) {
   if (existing) {
     const [updated] = await db.update(notificationPushTokens)
       .set({
-        encryptedToken: encryptPushToken(token),
+        encryptedToken: encryptPushSubscription(subscription.json),
         platform: 'web',
         userAgent,
         lastSeenAt: now,
@@ -49,7 +69,7 @@ export async function POST(request: Request) {
     id: createId(),
     systemId: auth.systemId,
     tokenHash,
-    encryptedToken: encryptPushToken(token),
+    encryptedToken: encryptPushSubscription(subscription.json),
     platform: 'web',
     userAgent,
     lastSeenAt: now,
@@ -66,11 +86,13 @@ export async function DELETE(request: Request) {
   if (auth.error) return auth.error;
 
   const body = await request.json().catch(() => null);
-  const token = readToken((body as { token?: unknown } | null)?.token);
-  if (!token) return err('Missing push token.');
+  const endpoint = typeof (body as { endpoint?: unknown } | null)?.endpoint === 'string'
+    ? ((body as { endpoint: string }).endpoint).trim()
+    : '';
+  if (!endpoint) return err('Missing push endpoint.');
 
   const now = new Date();
-  const tokenHash = hashPushToken(token);
+  const tokenHash = hashPushEndpoint(endpoint);
   await db.update(notificationPushTokens)
     .set({ revokedAt: now, updatedAt: now })
     .where(and(
@@ -80,4 +102,3 @@ export async function DELETE(request: Request) {
 
   return ok({ revoked: true });
 }
-

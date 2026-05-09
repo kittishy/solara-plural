@@ -108,14 +108,14 @@ Indexes and constraints:
 
 ### notification_push_tokens
 
-Stores web push registration tokens for Firebase Cloud Messaging.
+Stores native browser Push API subscriptions for Web Push delivery.
 
 | Column | Type | Constraints | Description |
 |--------|------|-------------|-------------|
 | id | text | PRIMARY KEY | CUID |
 | systemId | text | FK -> systems.id | Owner account |
 | tokenHash | text | NOT NULL | SHA-256 hash used for idempotent upsert |
-| encryptedToken | text | NOT NULL | Encrypted FCM registration token |
+| encryptedToken | text | NOT NULL | Encrypted JSON PushSubscription payload |
 | platform | text | NOT NULL DEFAULT `web` | Token platform |
 | userAgent | text | nullable | Browser/device hint |
 | lastSeenAt | integer | NOT NULL | Last successful registration refresh |
@@ -152,7 +152,7 @@ Per-token push delivery attempts for observability and invalid-token cleanup.
 | notificationId | text | FK -> notifications.id | Notification being pushed |
 | pushTokenId | text | FK -> notification_push_tokens.id | Target device token row |
 | status | text | NOT NULL | `sent` or `failed` |
-| errorCode | text | nullable | Firebase Admin SDK error code |
+| errorCode | text | nullable | Web Push error code or HTTP status |
 | attempts | integer | NOT NULL DEFAULT 1 | Attempt count |
 | sentAt | integer | nullable | Successful send time |
 | createdAt | integer | NOT NULL | Unix timestamp |

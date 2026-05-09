@@ -30,16 +30,9 @@ DATABASE_AUTH_TOKEN=your-turso-auth-token
 NEXTAUTH_SECRET=your-random-secret
 INTEGRATIONS_TOKEN_SECRET=your-separate-random-secret
 NEXTAUTH_URL=https://solara-plural.vercel.app
-NEXT_PUBLIC_FIREBASE_API_KEY=your-firebase-web-api-key
-NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
-NEXT_PUBLIC_FIREBASE_PROJECT_ID=your-project-id
-NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your-project.appspot.com
-NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your-sender-id
-NEXT_PUBLIC_FIREBASE_APP_ID=your-web-app-id
-NEXT_PUBLIC_FIREBASE_VAPID_KEY=your-web-push-vapid-key
-FIREBASE_PROJECT_ID=your-project-id
-FIREBASE_CLIENT_EMAIL=firebase-adminsdk@example.iam.gserviceaccount.com
-FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
+NEXT_PUBLIC_WEB_PUSH_VAPID_PUBLIC_KEY=your-public-vapid-key
+WEB_PUSH_VAPID_PRIVATE_KEY=your-private-vapid-key
+WEB_PUSH_VAPID_SUBJECT=mailto:you@example.com
 ```
 
 Local development can keep these in `.env.local`. Never commit `.env.local`.
@@ -51,8 +44,7 @@ vercel env add DATABASE_URL --sensitive
 vercel env add DATABASE_AUTH_TOKEN --sensitive
 vercel env add NEXTAUTH_SECRET --sensitive
 vercel env add INTEGRATIONS_TOKEN_SECRET --sensitive
-vercel env add FIREBASE_CLIENT_EMAIL --sensitive
-vercel env add FIREBASE_PRIVATE_KEY --sensitive
+vercel env add WEB_PUSH_VAPID_PRIVATE_KEY --sensitive
 ```
 
 `NEXTAUTH_URL` should match the deployed site URL for production. For this project, use `https://solara-plural.vercel.app`. The `solara.vercel.app` alias is not owned by this project, so do not point auth there.
@@ -69,8 +61,8 @@ vercel env add FIREBASE_PRIVATE_KEY --sensitive
 - [ ] `npm run lint` passes non-interactively.
 - [ ] `npm test` passes.
 - [ ] `public/manifest.json` exists if `app/layout.tsx` references `/manifest.json`.
-- [ ] `public/service-worker.js`, `/firebase-messaging-sw.js`, and PWA icons exist before enabling FCM.
-- [ ] Firebase Cloud Messaging web app config, VAPID key, and Admin SDK service-account env vars are set before expecting push delivery.
+- [ ] `public/service-worker.js` and PWA icons exist before enabling browser push.
+- [ ] Native Web Push VAPID env vars are set before expecting push delivery.
 - [ ] Remote image hostnames are restricted before public production use.
 - [ ] Import/export actions have visible success and error states.
 - [ ] Run `npm run db:migrate` before deploying member sync changes that depend on `member_external_links`.

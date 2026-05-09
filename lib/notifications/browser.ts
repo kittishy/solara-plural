@@ -1,20 +1,16 @@
 'use client';
 
-import { initializeApp, getApps } from 'firebase/app';
-import { getMessaging, getToken, isSupported, onMessage } from 'firebase/messaging';
-import { mutate } from 'swr';
-import { swrKeys } from '@/lib/swr';
-import type { FirebasePublicConfig } from '@/lib/notifications/firebase-public-config';
+function urlBase64ToUint8Array(value: string) {
+  const padding = '='.repeat((4 - value.length % 4) % 4);
+  const base64 = (value + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
 
-type FirebaseConfigResponse = {
-  success: boolean;
-  data: FirebasePublicConfig | null;
-};
+  for (let i = 0; i < rawData.length; i += 1) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
 
-async function fetchFirebaseConfig(): Promise<FirebasePublicConfig | null> {
-  const res = await fetch('/api/notifications/firebase-config', { credentials: 'same-origin' });
-  const json = await res.json().catch(() => null) as FirebaseConfigResponse | null;
-  return json?.success ? json.data : null;
+  return outputArray;
 }
 
 export async function registerSolaraServiceWorker() {
@@ -27,68 +23,36 @@ export async function registerSolaraServiceWorker() {
 }
 
 export async function requestAndSavePushToken(): Promise<
-  { success: true; token: string } | { success: false; reason: string }
+  { success: true; endpoint: string } | { success: false; reason: string }
 > {
   if (typeof window === 'undefined') return { success: false, reason: 'not_in_browser' };
   if (!('Notification' in window)) return { success: false, reason: 'notifications_unsupported' };
-
-  const supported = await isSupported().catch(() => false);
-  if (!supported) return { success: false, reason: 'fcm_unsupported' };
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+    return { success: false, reason: 'push_unsupported' };
+  }
 
   const permission = await Notification.requestPermission();
   if (permission !== 'granted') return { success: false, reason: 'permission_not_granted' };
 
-  const config = await fetchFirebaseConfig();
-  if (!config) return { success: false, reason: 'firebase_not_configured' };
+  const publicKey = process.env.NEXT_PUBLIC_WEB_PUSH_VAPID_PUBLIC_KEY;
+  if (!publicKey) return { success: false, reason: 'web_push_not_configured' };
 
-  const app = getApps().length ? getApps()[0] : initializeApp({
-    apiKey: config.apiKey,
-    authDomain: config.authDomain,
-    projectId: config.projectId,
-    storageBucket: config.storageBucket,
-    messagingSenderId: config.messagingSenderId,
-    appId: config.appId,
+  const registration = await navigator.serviceWorker.register('/service-worker.js', { scope: '/' });
+  const existing = await registration.pushManager.getSubscription();
+  const subscription = existing ?? await registration.pushManager.subscribe({
+    userVisibleOnly: true,
+    applicationServerKey: urlBase64ToUint8Array(publicKey),
   });
 
-  const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js', { scope: '/' });
-  const messaging = getMessaging(app);
-  const token = await getToken(messaging, {
-    vapidKey: config.vapidKey,
-    serviceWorkerRegistration: registration,
-  });
-
-  if (!token) return { success: false, reason: 'token_unavailable' };
+  const subscriptionJson = subscription.toJSON();
 
   const res = await fetch('/api/notifications/tokens', {
     method: 'POST',
     credentials: 'same-origin',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ token }),
+    body: JSON.stringify({ subscription: subscriptionJson }),
   });
 
-  if (!res.ok) return { success: false, reason: 'token_save_failed' };
-  return { success: true, token };
+  if (!res.ok) return { success: false, reason: 'subscription_save_failed' };
+  return { success: true, endpoint: subscription.endpoint };
 }
-
-export async function listenForForegroundPush() {
-  const supported = await isSupported().catch(() => false);
-  if (!supported) return () => {};
-
-  const config = await fetchFirebaseConfig();
-  if (!config) return () => {};
-
-  const app = getApps().length ? getApps()[0] : initializeApp({
-    apiKey: config.apiKey,
-    authDomain: config.authDomain,
-    projectId: config.projectId,
-    storageBucket: config.storageBucket,
-    messagingSenderId: config.messagingSenderId,
-    appId: config.appId,
-  });
-
-  const messaging = getMessaging(app);
-  return onMessage(messaging, () => {
-    void mutate(swrKeys.notifications);
-  });
-}
-

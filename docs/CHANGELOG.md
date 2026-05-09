@@ -22,11 +22,11 @@
 
 ### Added
 - PWA service worker, production PNG app icons, and installable manifest updates
-- Firebase Cloud Messaging web push setup with dynamic `/firebase-messaging-sw.js`
+- Native Web Push setup through the browser Push API and VAPID keys
 - Notification persistence tables: `notification_push_tokens`, `notifications`, and `notification_deliveries`
 - Notification APIs for token registration, notification listing, marking one read, and marking all read
 - `/notifications` dashboard page and navigation entry
-- Friend front-change notifications from `POST/DELETE /api/front`, with in-app history as the durable source and FCM push as best-effort delivery
+- Friend front-change notifications from `POST/DELETE /api/front`, with in-app history as the durable source and browser push as best-effort delivery
 - PluralKit member sync from Settings with preview/apply flow, cautious merge options, and no token persistence
 - Settings integrations cleanup: removed Simply Plural token integration from production sync surface
 - PluralKit API helper with tested fronters parsing, retry-after formatting, and switch timestamp extraction

@@ -109,7 +109,7 @@ export const systemIntegrations = sqliteTable('system_integrations', {
   providerIdx: index('idx_system_integrations_provider').on(t.provider),
 }));
 
-// Browser push tokens for Firebase Cloud Messaging.
+// Browser Push API subscriptions for best-effort web notifications.
 export const notificationPushTokens = sqliteTable('notification_push_tokens', {
   id:           text('id').primaryKey(),
   systemId:     text('system_id').notNull().references(() => systems.id, { onDelete: 'cascade' }),

@@ -1,22 +1,23 @@
 'use client';
 
 import { useEffect } from 'react';
-import { listenForForegroundPush, registerSolaraServiceWorker } from '@/lib/notifications/browser';
+import { mutate } from 'swr';
+import { registerSolaraServiceWorker } from '@/lib/notifications/browser';
+import { swrKeys } from '@/lib/swr';
 
 export function NotificationRuntime() {
   useEffect(() => {
     void registerSolaraServiceWorker();
 
-    let unsubscribe: (() => void) | undefined;
-    void listenForForegroundPush().then((cleanup) => {
-      unsubscribe = cleanup;
-    });
+    function onMessage(event: MessageEvent) {
+      if (event.data?.type === 'solara-push') void mutate(swrKeys.notifications);
+    }
 
+    navigator.serviceWorker?.addEventListener('message', onMessage);
     return () => {
-      unsubscribe?.();
+      navigator.serviceWorker?.removeEventListener('message', onMessage);
     };
   }, []);
 
   return null;
 }
-

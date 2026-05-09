@@ -6,8 +6,8 @@ import {
   notificationPushTokens,
   notifications,
 } from '@/lib/db/schema';
-import { decryptPushToken } from '@/lib/notifications/tokens';
-import { sendPushMessages, shouldRevokePushToken } from '@/lib/notifications/fcm';
+import { decryptPushSubscription } from '@/lib/notifications/tokens';
+import { sendPushMessages, shouldRevokePushSubscription } from '@/lib/notifications/web-push';
 
 export type CreateNotificationInput = {
   recipientSystemId: string;
@@ -66,9 +66,10 @@ async function deliverPushForNotification(input: {
 
   const sendable = tokens.flatMap((tokenRow) => {
     try {
+      const parsed = JSON.parse(decryptPushSubscription(tokenRow.encryptedToken));
       return [{
         tokenRow,
-        token: decryptPushToken(tokenRow.encryptedToken),
+        subscription: parsed,
       }];
     } catch {
       return [];
@@ -76,7 +77,7 @@ async function deliverPushForNotification(input: {
   });
 
   const results = await sendPushMessages(sendable.map((item) => ({
-    token: item.token,
+    subscription: item.subscription,
     title: input.title,
     body: input.body,
     notificationId: input.notificationId,
@@ -100,11 +101,10 @@ async function deliverPushForNotification(input: {
       updatedAt: now,
     });
 
-    if (!result.success && shouldRevokePushToken(result.errorCode)) {
+    if (!result.success && shouldRevokePushSubscription(result.errorCode)) {
       await db.update(notificationPushTokens)
         .set({ revokedAt: now, updatedAt: now })
         .where(eq(notificationPushTokens.id, tokenRow.id));
     }
   }));
 }
-

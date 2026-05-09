@@ -1,15 +1,14 @@
 import { createHash } from 'crypto';
 import { decryptIntegrationToken, encryptIntegrationToken } from '@/lib/integrations/token-crypto';
 
-export function hashPushToken(token: string): string {
-  return createHash('sha256').update(token).digest('hex');
+export function hashPushEndpoint(endpoint: string): string {
+  return createHash('sha256').update(endpoint).digest('hex');
 }
 
-export function encryptPushToken(token: string): string {
-  return encryptIntegrationToken(token);
+export function encryptPushSubscription(subscriptionJson: string): string {
+  return encryptIntegrationToken(subscriptionJson);
 }
 
-export function decryptPushToken(payload: string): string {
+export function decryptPushSubscription(payload: string): string {
   return decryptIntegrationToken(payload);
 }
-

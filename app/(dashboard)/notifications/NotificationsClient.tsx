@@ -80,7 +80,7 @@ export default function NotificationsClient() {
           <div>
             <h2 className="text-base font-semibold text-text">Push notifications</h2>
             <p className="mt-1 text-sm text-muted">
-              Optional alerts for friend front changes. The notification center below stays available even without push.
+              Optional browser alerts for friend front changes. The notification center below stays available even without push.
             </p>
             <p className={`mt-2 text-sm font-medium ${statusTone}`}>Status: {permissionLabel(permission)}</p>
             {pushStatus && <p className="mt-2 text-sm text-muted">{pushStatus}</p>}
@@ -159,4 +159,3 @@ export default function NotificationsClient() {
     </div>
   );
 }
-
