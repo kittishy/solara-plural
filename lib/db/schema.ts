@@ -18,6 +18,21 @@ export const systems = sqliteTable('systems', {
   updatedAt:    integer('updated_at', { mode: 'timestamp' }).notNull().default(sql`(strftime('%s', 'now'))`),
 });
 
+// Password reset tokens are stored as hashes only. The raw token is shown once
+// through the delivery channel and can never be recovered from the database.
+export const passwordResetTokens = sqliteTable('password_reset_tokens', {
+  id:        text('id').primaryKey(),
+  systemId:  text('system_id').notNull().references(() => systems.id, { onDelete: 'cascade' }),
+  tokenHash: text('token_hash').notNull(),
+  expiresAt: integer('expires_at', { mode: 'timestamp' }).notNull(),
+  usedAt:    integer('used_at', { mode: 'timestamp' }),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(strftime('%s', 'now'))`),
+}, (t) => ({
+  tokenHashUnique: uniqueIndex('ux_password_reset_tokens_hash').on(t.tokenHash),
+  systemIdx: index('idx_password_reset_tokens_system_id').on(t.systemId),
+  expiresAtIdx: index('idx_password_reset_tokens_expires_at').on(t.expiresAt),
+}));
+
 // System Friend Requests
 export const systemFriendRequests = sqliteTable('system_friend_requests', {
   id:               text('id').primaryKey(),
@@ -236,6 +251,8 @@ export const systemNotes = sqliteTable('system_notes', {
 // Inferred Types
 export type System = typeof systems.$inferSelect;
 export type NewSystem = typeof systems.$inferInsert;
+export type PasswordResetToken = typeof passwordResetTokens.$inferSelect;
+export type NewPasswordResetToken = typeof passwordResetTokens.$inferInsert;
 export type SystemFriendRequest = typeof systemFriendRequests.$inferSelect;
 export type NewSystemFriendRequest = typeof systemFriendRequests.$inferInsert;
 export type SystemFriendship = typeof systemFriendships.$inferSelect;

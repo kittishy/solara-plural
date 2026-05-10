@@ -1,6 +1,5 @@
-import NextAuth from 'next-auth';
+import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
-import { authConfig } from '@/lib/auth/edge-config';
 import {
   DEFAULT_LANGUAGE,
   LANGUAGE_COOKIE_KEY,
@@ -10,11 +9,8 @@ import {
   localizePathname,
 } from '@/lib/i18n';
 
-const { auth } = NextAuth(authConfig);
-
-export default auth((req) => {
+export default function middleware(req: NextRequest) {
   const { nextUrl } = req;
-  const isLoggedIn = !!req.auth;
 
   const pathname = nextUrl.pathname;
   const { language: pathLanguage, pathnameWithoutLanguage } = getLanguageFromPathname(pathname);
@@ -55,7 +51,11 @@ export default auth((req) => {
     });
   }
 
-  const isAuthRoute = pathnameWithoutLanguage.startsWith('/login') || pathnameWithoutLanguage.startsWith('/register');
+  const isAuthRoute =
+    pathnameWithoutLanguage.startsWith('/login') ||
+    pathnameWithoutLanguage.startsWith('/register') ||
+    pathnameWithoutLanguage.startsWith('/forgot-password') ||
+    pathnameWithoutLanguage.startsWith('/reset-password');
   const isApiAuthRoute = pathnameWithoutLanguage.startsWith('/api/auth');
   const isApiRoute = pathnameWithoutLanguage.startsWith('/api');
   const isPublicApiRoute = pathnameWithoutLanguage.startsWith('/api/register');
@@ -64,21 +64,10 @@ export default auth((req) => {
   // without paying for a second session decode in middleware.
   if (isApiRoute || isApiAuthRoute || isPublicApiRoute) return responseWithLocale;
 
-  // Redirect logged-in users away from login/register pages
-  if (isAuthRoute) {
-    if (isLoggedIn) {
-      return Response.redirect(new URL(localizePathname('/', pathLanguage ?? DEFAULT_LANGUAGE), nextUrl));
-    }
-    return responseWithLocale;
-  }
-
-  // Protect all other routes
-  if (!isLoggedIn) {
-    return Response.redirect(new URL(localizePathname('/login', pathLanguage ?? DEFAULT_LANGUAGE), nextUrl));
-  }
+  if (isAuthRoute) return responseWithLocale;
 
   return responseWithLocale;
-});
+}
 
 export const config = {
   matcher: [
