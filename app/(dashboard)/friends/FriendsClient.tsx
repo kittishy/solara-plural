@@ -278,6 +278,29 @@ export default function FriendsClient() {
     }
   }
 
+  async function promoteToPartner(friendSystemId: string) {
+    setBusy(true);
+    try {
+      const res = await fetch('/api/partners', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ systemId: friendSystemId }),
+      });
+      const body = await readJson<unknown>(res);
+      if (!body.success) {
+        setAlert({ type: 'error', message: body.error ?? 'Could not send partner request.' });
+      } else if ((body as { data?: { autoAccepted?: boolean } }).data?.autoAccepted) {
+        setAlert({ type: 'success', message: 'You are now partners!' });
+      } else {
+        setAlert({ type: 'success', message: 'Partner request sent. Waiting for their response.' });
+      }
+    } catch {
+      setAlert({ type: 'error', message: 'Could not send partner request.' });
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function unfriend(friendSystemId: string) {
     setBusy(true);
 
@@ -724,6 +747,14 @@ export default function FriendsClient() {
                         onClick={() => void toggleSharing(friend.id)}
                       >
                         {sharing?.open ? 'Hide privacy' : 'Privacy'}
+                      </button>
+                      <button
+                        type="button"
+                        className="btn-ghost border border-border min-h-[38px] px-3 py-1.5 text-xs"
+                        disabled={busy}
+                        onClick={() => void promoteToPartner(friend.id)}
+                      >
+                        Make partner
                       </button>
                       <button
                         type="button"

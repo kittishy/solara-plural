@@ -45,6 +45,35 @@ export const systemFriendships = sqliteTable('system_friendships', {
   pairUnique: uniqueIndex('ux_friendships_pair').on(t.systemAId, t.systemBId),
 }));
 
+// System Partner Requests
+export const systemPartnerRequests = sqliteTable('system_partner_requests', {
+  id:               text('id').primaryKey(),
+  senderSystemId:   text('sender_system_id').notNull().references(() => systems.id, { onDelete: 'cascade' }),
+  receiverSystemId: text('receiver_system_id').notNull().references(() => systems.id, { onDelete: 'cascade' }),
+  status:           text('status').notNull().default('pending'),
+  message:          text('message'),
+  createdAt:        integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(strftime('%s', 'now'))`),
+  respondedAt:      integer('responded_at', { mode: 'timestamp' }),
+}, (t) => ({
+  senderIdx:   index('idx_partner_requests_sender').on(t.senderSystemId),
+  receiverIdx: index('idx_partner_requests_receiver').on(t.receiverSystemId),
+  statusIdx:   index('idx_partner_requests_status').on(t.status),
+}));
+
+// Partnerships
+export const systemPartnerships = sqliteTable('system_partnerships', {
+  id:                text('id').primaryKey(),
+  systemAId:         text('system_a_id').notNull().references(() => systems.id, { onDelete: 'cascade' }),
+  systemBId:         text('system_b_id').notNull().references(() => systems.id, { onDelete: 'cascade' }),
+  relationshipLabel: text('relationship_label'),
+  partneredSince:    integer('partnered_since', { mode: 'timestamp' }),
+  createdAt:         integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(strftime('%s', 'now'))`),
+}, (t) => ({
+  systemAIdx: index('idx_partnerships_system_a').on(t.systemAId),
+  systemBIdx: index('idx_partnerships_system_b').on(t.systemBId),
+  pairUnique: uniqueIndex('ux_partnerships_pair').on(t.systemAId, t.systemBId),
+}));
+
 // System Blocks
 export const systemBlocks = sqliteTable('system_blocks', {
   id:              text('id').primaryKey(),
@@ -231,3 +260,7 @@ export type FrontEntry = typeof frontEntries.$inferSelect;
 export type NewFrontEntry = typeof frontEntries.$inferInsert;
 export type SystemNote = typeof systemNotes.$inferSelect;
 export type NewSystemNote = typeof systemNotes.$inferInsert;
+export type SystemPartnerRequest = typeof systemPartnerRequests.$inferSelect;
+export type NewSystemPartnerRequest = typeof systemPartnerRequests.$inferInsert;
+export type SystemPartnership = typeof systemPartnerships.$inferSelect;
+export type NewSystemPartnership = typeof systemPartnerships.$inferInsert;

@@ -344,7 +344,6 @@ html[data-solara-theme='mist'] {
 
   .card-interactive {
     position: relative;
-    overflow: hidden;
   }
   .card-interactive::after {
     content: '';

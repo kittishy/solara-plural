@@ -25,6 +25,23 @@ function IconEdit() {
   );
 }
 
+function IconChevronRight() {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M9 18l6-6-6-6" />
+    </svg>
+  );
+}
+
+function formatDate(date: Date | string) {
+  return new Date(date).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+}
+
 export default function NotesClient({ initialNotes }: { initialNotes: NoteListItem[] }) {
   const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE_NOTES);
   const { data: notes = initialNotes } = useSWR<NoteListItem[]>(
@@ -36,12 +53,13 @@ export default function NotesClient({ initialNotes }: { initialNotes: NoteListIt
   const hasMoreNotes = visibleCount < notes.length;
 
   return (
-    <div className="space-y-6">
+    <div className="animate-fade-in space-y-5">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-text">Notes</h1>
           <p className="text-muted text-sm mt-0.5">
-            {notes.length} note{notes.length !== 1 ? 's' : ''}
+            {notes.length} note{notes.length !== 1 ? 's' : ''} in your system
           </p>
         </div>
         <Link href="/notes/new" className="btn-primary gap-1.5">
@@ -52,49 +70,65 @@ export default function NotesClient({ initialNotes }: { initialNotes: NoteListIt
 
       {notes.length === 0 ? (
         <div className="card p-12 text-center animate-fade-in">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 shadow-glow mb-4" aria-hidden="true">
-            <span className="text-3xl">📝</span>
+          <div className="stagger-children flex flex-col items-center">
+            <div
+              className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 shadow-glow mb-4"
+              aria-hidden="true"
+            >
+              <span className="text-3xl">📝</span>
+            </div>
+            <p className="text-text font-semibold">Your thoughts live here</p>
+            <p className="text-muted text-sm mt-2 mb-6">
+              Notes you write will appear here. Start with anything — no pressure.
+            </p>
+            <Link href="/notes/new" className="btn-primary gap-1.5">
+              <IconEdit />
+              Write your first note
+            </Link>
           </div>
-          <p className="text-text font-semibold">Your thoughts live here 💜</p>
-          <p className="text-muted text-sm mt-2 mb-6">
-            Notes you write will appear here. Start with anything — no pressure.
-          </p>
-          <Link href="/notes/new" className="btn-primary gap-1.5">
-            <IconEdit />
-            Write your first note
-          </Link>
         </div>
       ) : (
         <div className="space-y-4">
-          <div className="grid gap-3 md:grid-cols-2">
+          <ul role="list" className="rounded-xl overflow-hidden border border-border/40">
             {visibleNotes.map((note) => (
-              <Link
+              <li
                 key={note.id}
-                href={`/notes/${note.id}`}
-                className="card card-interactive p-5 block group border-l-2 border-l-transparent
-                  min-w-0 overflow-hidden
-                  hover:shadow-glow hover:border-l-primary/50 hover:shadow-sm
-                  transition-all duration-150"
+                role="listitem"
+                className="relative border-b border-border/40 last:border-b-0 bg-surface hover:bg-surface-alt/60 transition-colors duration-150"
+                style={{ borderLeft: '3px solid #a78bfa' }}
               >
-                <p className="font-semibold text-text line-clamp-1">
-                  {note.title ?? 'Untitled note'}
-                </p>
-                <p className="text-muted text-sm mt-1 line-clamp-3">{note.content}</p>
-                <p className="text-subtle text-xs mt-3">
-                  {new Date(note.updatedAt).toLocaleDateString('en-US', {
-                    month: 'short',
-                    day: 'numeric',
-                    year: 'numeric',
-                  })}
-                </p>
-              </Link>
+                <Link
+                  href={`/notes/${note.id}`}
+                  className="flex items-center gap-3.5 px-4 py-3.5 focus:outline-none
+                    focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-inset"
+                >
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-text text-sm leading-snug truncate">
+                      {note.title ?? 'Untitled note'}
+                    </p>
+                    {note.content && (
+                      <p className="text-muted text-xs mt-0.5 line-clamp-2 leading-snug">
+                        {note.content}
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <span className="text-subtle text-xs hidden sm:block">
+                      {formatDate(note.updatedAt)}
+                    </span>
+                    <span className="text-subtle">
+                      <IconChevronRight />
+                    </span>
+                  </div>
+                </Link>
+              </li>
             ))}
-          </div>
+          </ul>
 
           {hasMoreNotes && (
             <button
               type="button"
-              onClick={() => setVisibleCount((count) => count + VISIBLE_NOTES_INCREMENT)}
+              onClick={() => setVisibleCount((c) => c + VISIBLE_NOTES_INCREMENT)}
               className="btn-ghost min-h-[48px] w-full justify-center border border-border/60"
             >
               Show more notes ({notes.length - visibleNotes.length} remaining)

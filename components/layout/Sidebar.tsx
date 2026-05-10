@@ -37,11 +37,10 @@ function IconMembers({ size = 18 }: IconProps) {
   );
 }
 
-function IconFront({ size = 18 }: IconProps) {
+function IconPartners({ size = 18 }: IconProps) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M12 3v1m0 16v1M4.22 4.22l.71.71m14.14 14.14.71.71M3 12H4m16 0h1M4.22 19.78l.71-.71M18.36 5.64l.71-.71" />
-      <circle cx="12" cy="12" r="4" />
+      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
     </svg>
   );
 }
@@ -114,7 +113,7 @@ function IconLogout({ size = 18 }: IconProps) {
 const navItems = [
   { href: '/', labelKey: 'nav.home', Icon: IconHome },
   { href: '/members', labelKey: 'nav.members', Icon: IconMembers },
-  { href: '/front', labelKey: 'nav.front', Icon: IconFront },
+  { href: '/partners', labelKey: 'nav.partners', Icon: IconPartners },
   { href: '/front/history', labelKey: 'nav.frontHistory', Icon: IconCalendar },
   { href: '/notes', labelKey: 'nav.notes', Icon: IconNotes },
   { href: '/friends', labelKey: 'nav.friends', Icon: IconFriends },
@@ -279,9 +278,7 @@ export function Sidebar({ systemName }: SidebarProps) {
           const isActive =
             item.href === '/'
               ? activePathname === '/'
-              : activePathname === item.href ||
-                (item.href !== '/front' && activePathname.startsWith(item.href)) ||
-                (item.href === '/front' && activePathname === '/front');
+              : activePathname.startsWith(item.href);
 
           return (
             <Link

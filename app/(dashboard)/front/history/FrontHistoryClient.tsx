@@ -2,7 +2,6 @@
 
 import { useMemo, useState, useTransition } from 'react';
 import DynamicAvatarImage from '@/components/ui/DynamicAvatarImage';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { formatDuration, formatFrontEntryRange, toDatetimeLocalValue } from '@/lib/front';
 import { revalidateFrontHistory, revalidateMembersAndFront } from '@/lib/swr';
@@ -155,47 +154,19 @@ export default function FrontHistoryClient({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="animate-fade-in space-y-6">
       {/* Page header */}
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <Link
-            href="/front"
-            aria-label="Back to current front"
-            className="inline-flex min-h-[44px] items-center gap-2 rounded-full border border-border/60 bg-surface/70 px-4 py-2 text-sm font-medium text-muted transition-colors hover:border-primary/40 hover:bg-surface-alt hover:text-text"
-          >
-            <svg
-              aria-hidden="true"
-              xmlns="http://www.w3.org/2000/svg"
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="flex-shrink-0"
-            >
-              <path d="M15 18l-6-6 6-6" />
-            </svg>
-            Current front
-          </Link>
-          <div>
-            <h1 className="text-2xl font-bold text-text tracking-tight">
-              🕐 Front History
-            </h1>
-            <div className="mt-1">
-              <span className="bg-surface-alt text-muted text-xs px-2.5 py-1 rounded-full font-medium">
-                {history.length} {history.length === 1 ? 'entry' : 'entries'}
-              </span>
-            </div>
-          </div>
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-text">Front History</h1>
+          <p className="text-muted text-sm mt-0.5">
+            {history.length} {history.length === 1 ? 'entry' : 'entries'}
+          </p>
         </div>
         <button
           type="button"
           onClick={openCreate}
-          className="btn-primary min-h-[44px] px-5 text-sm font-medium shadow-sm transition-transform active:scale-[0.98]"
+          className="btn-primary min-h-[44px] px-5 text-sm font-medium"
         >
           Add retroactive entry
         </button>

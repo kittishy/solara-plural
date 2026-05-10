@@ -6,12 +6,9 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { revalidateMembersAndFront } from '@/lib/swr';
 import AvatarUpload from '@/components/members/AvatarUpload';
+import MemberColorPicker from '@/components/members/MemberColorPicker';
 
-const MEMBER_COLORS = [
-  '#a78bfa', '#f9a8d4', '#93c5fd', '#86efac', '#fcd34d',
-  '#fb923c', '#f87171', '#67e8f9', '#d8b4fe', '#a5b4fc',
-  '#fdba74', '#6ee7b7',
-];
+const DEFAULT_MEMBER_COLOR = '#a78bfa';
 
 export default function NewMemberPage() {
   const router = useRouter();
@@ -19,7 +16,7 @@ export default function NewMemberPage() {
   const [error, setError] = useState('');
   const [form, setForm] = useState({
     name: '', pronouns: '', description: '', role: '',
-    color: MEMBER_COLORS[0], tags: '', avatarUrl: '',
+    color: DEFAULT_MEMBER_COLOR, tags: '', avatarUrl: '',
   });
 
   function set(field: string, value: string) {
@@ -110,23 +107,7 @@ export default function NewMemberPage() {
               value={form.tags} onChange={(e) => set('tags', e.target.value)} />
           </div>
 
-          {/* Color picker */}
-          <div>
-            <label className="label">Color</label>
-            <div className="flex flex-wrap gap-2">
-              {MEMBER_COLORS.map((color) => (
-                <button
-                  key={color}
-                  type="button"
-                  onClick={() => set('color', color)}
-                  className={`w-8 h-8 rounded-full transition-all duration-150 focus-visible:ring-2 focus-visible:ring-primary/60
-                    ${form.color === color ? 'ring-2 ring-white ring-offset-2 ring-offset-bg scale-110' : 'hover:scale-105'}`}
-                  style={{ backgroundColor: color }}
-                  aria-label={`Select color ${color}`}
-                />
-              ))}
-            </div>
-          </div>
+          <MemberColorPicker value={form.color} onChange={(color) => set('color', color)} />
 
           {/* Preview */}
           <div className="flex items-center gap-3 p-4 bg-surface-alt rounded-xl">

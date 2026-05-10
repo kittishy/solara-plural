@@ -9,6 +9,7 @@ export const swrKeys = {
   notes: '/api/notes',
   frontHistory: '/api/front/history?limit=50&offset=0',
   notifications: '/api/notifications',
+  partners: '/api/partners',
 } as const;
 
 export async function apiFetcher<T>(url: string): Promise<T> {
@@ -36,4 +37,8 @@ export function revalidateNotes() {
 
 export function revalidateFrontHistory() {
   void mutate(swrKeys.frontHistory);
+}
+
+export function revalidatePartners() {
+  void mutate(swrKeys.partners);
 }
