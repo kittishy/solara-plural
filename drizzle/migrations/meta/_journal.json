@@ -57,6 +57,20 @@
       "when": 1778353196499,
       "tag": "0007_silly_cyclops",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1778409600000,
+      "tag": "0008_partners",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1778445600000,
+      "tag": "0009_password_reset_tokens",
+      "breakpoints": true
     }
   ]
 }
