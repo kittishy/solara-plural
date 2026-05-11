@@ -1,10 +1,11 @@
 import { db } from '@/lib/db';
-import { members, frontEntries } from '@/lib/db/schema';
-import { eq, and, desc, like } from 'drizzle-orm';
+import { customFields, frontEntries, memberFieldValues, members } from '@/lib/db/schema';
+import { eq, and, asc, desc, like } from 'drizzle-orm';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import DynamicAvatarImage from '@/components/ui/DynamicAvatarImage';
 import { requireSystemId } from '@/lib/auth/session';
+import { parseCustomFieldType, parseStoredCustomFieldOptions } from '@/lib/custom-fields';
 
 function formatDuration(start: Date, end: Date): string {
   const ms = end.getTime() - start.getTime();
@@ -39,7 +40,7 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
   const systemId = await requireSystemId();
   const { id } = await params;
 
-  const [member, frontHistory] = await Promise.all([
+  const [member, frontHistory, profileFields, customValueRows] = await Promise.all([
     db.query.members.findFirst({
       columns: {
         id: true,
@@ -71,12 +72,40 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
       orderBy: [desc(frontEntries.startedAt)],
       limit: 10,
     }),
+    db.query.customFields.findMany({
+      where: eq(customFields.systemId, systemId),
+      orderBy: [asc(customFields.sortOrder), asc(customFields.createdAt)],
+    }),
+    db.query.memberFieldValues.findMany({
+      columns: {
+        fieldId: true,
+        value: true,
+      },
+      where: and(
+        eq(memberFieldValues.systemId, systemId),
+        eq(memberFieldValues.memberId, id),
+      ),
+    }),
   ]);
 
   if (!member) notFound();
 
   const tags = member.tags ? JSON.parse(member.tags) as string[] : [];
   const accentColor = member.color ?? '#a78bfa';
+  const valuesByFieldId = new Map(customValueRows.map((row) => [row.fieldId, row.value]));
+  const customDetails = profileFields
+    .map((field) => {
+      const value = valuesByFieldId.get(field.id);
+      if (!value) return null;
+      return {
+        id: field.id,
+        name: field.name,
+        type: parseCustomFieldType(field.type) ?? 'text',
+        options: parseStoredCustomFieldOptions(field.options),
+        value,
+      };
+    })
+    .filter((field): field is NonNullable<typeof field> => Boolean(field));
 
   return (
     <div className="animate-fade-in space-y-5">
@@ -169,6 +198,24 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
         </div>
       )}
 
+      {customDetails.length > 0 && (
+        <section className="rounded-xl border border-border/40 bg-surface px-5 py-4" aria-labelledby="member-details-heading">
+          <h2 id="member-details-heading" className="text-xs font-semibold text-muted uppercase tracking-wider mb-3">
+            Details
+          </h2>
+          <dl className="grid gap-3 sm:grid-cols-2">
+            {customDetails.map((field) => (
+              <div key={field.id} className="rounded-lg border border-border-soft bg-surface-alt/40 px-3 py-2">
+                <dt className="text-xs font-medium text-muted">{field.name}</dt>
+                <dd className="mt-1 text-sm text-text whitespace-pre-wrap">
+                  {formatCustomFieldValue(field)}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        </section>
+      )}
+
       {/* Front history */}
       <div>
         <div className="flex items-center justify-between mb-3">
@@ -247,4 +294,26 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
       </div>
     </div>
   );
+}
+
+function formatCustomFieldValue(field: {
+  type: ReturnType<typeof parseCustomFieldType> | 'text';
+  options: Array<{ label: string; value: string }>;
+  value: string;
+}): string {
+  if (field.type === 'checkbox') return field.value === 'true' ? 'Yes' : 'No';
+  if (field.type === 'select') {
+    return field.options.find((option) => option.value === field.value)?.label ?? field.value;
+  }
+  if (field.type === 'date') {
+    const [year, month, day] = field.value.split('-').map(Number);
+    if (year && month && day) {
+      return new Date(year, month - 1, day).toLocaleDateString('en-US', {
+        month: 'long',
+        day: 'numeric',
+        year: 'numeric',
+      });
+    }
+  }
+  return field.value;
 }

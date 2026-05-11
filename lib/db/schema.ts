@@ -120,6 +120,36 @@ export const members = sqliteTable('members', {
   systemIdx: index('idx_members_system_id').on(t.systemId),
 }));
 
+export const customFields = sqliteTable('custom_fields', {
+  id:          text('id').primaryKey(),
+  systemId:    text('system_id').notNull().references(() => systems.id, { onDelete: 'cascade' }),
+  name:        text('name').notNull(),
+  description: text('description'),
+  type:        text('type').notNull().default('text'),
+  options:     text('options'),
+  sortOrder:   integer('sort_order').notNull().default(0),
+  createdAt:   integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(strftime('%s', 'now'))`),
+  updatedAt:   integer('updated_at', { mode: 'timestamp' }).notNull().default(sql`(strftime('%s', 'now'))`),
+}, (t) => ({
+  systemIdx: index('idx_custom_fields_system_id').on(t.systemId),
+  systemSortIdx: index('idx_custom_fields_system_sort').on(t.systemId, t.sortOrder),
+}));
+
+export const memberFieldValues = sqliteTable('member_field_values', {
+  id:        text('id').primaryKey(),
+  systemId:  text('system_id').notNull().references(() => systems.id, { onDelete: 'cascade' }),
+  memberId:  text('member_id').notNull().references(() => members.id, { onDelete: 'cascade' }),
+  fieldId:   text('field_id').notNull().references(() => customFields.id, { onDelete: 'cascade' }),
+  value:     text('value'),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(strftime('%s', 'now'))`),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull().default(sql`(strftime('%s', 'now'))`),
+}, (t) => ({
+  systemIdx: index('idx_member_field_values_system_id').on(t.systemId),
+  memberIdx: index('idx_member_field_values_member_id').on(t.memberId),
+  fieldIdx: index('idx_member_field_values_field_id').on(t.fieldId),
+  memberFieldUnique: uniqueIndex('ux_member_field_values_member_field').on(t.memberId, t.fieldId),
+}));
+
 // External member identity links
 export const memberExternalLinks = sqliteTable('member_external_links', {
   id:                  text('id').primaryKey(),
@@ -261,6 +291,10 @@ export type SystemBlock = typeof systemBlocks.$inferSelect;
 export type NewSystemBlock = typeof systemBlocks.$inferInsert;
 export type Member = typeof members.$inferSelect;
 export type NewMember = typeof members.$inferInsert;
+export type CustomField = typeof customFields.$inferSelect;
+export type NewCustomField = typeof customFields.$inferInsert;
+export type MemberFieldValue = typeof memberFieldValues.$inferSelect;
+export type NewMemberFieldValue = typeof memberFieldValues.$inferInsert;
 export type MemberExternalLink = typeof memberExternalLinks.$inferSelect;
 export type NewMemberExternalLink = typeof memberExternalLinks.$inferInsert;
 export type SystemIntegration = typeof systemIntegrations.$inferSelect;

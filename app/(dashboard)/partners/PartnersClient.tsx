@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
 import useSWR from 'swr';
 import DynamicAvatarImage from '@/components/ui/DynamicAvatarImage';
 import { apiFetcher, revalidatePartners, swrKeys } from '@/lib/swr';
@@ -20,6 +21,13 @@ type CurrentFront = {
   members: FrontingMember[];
 };
 
+type SharedPartnerMember = FrontingMember & {
+  description?: string | null;
+  role?: string | null;
+  tags?: string[];
+  visibility?: string;
+};
+
 type PartnerItem = {
   partnershipId: string;
   id: string;
@@ -33,6 +41,7 @@ type PartnerItem = {
   partneredSince: Date | string | null;
   connectedAt: Date | string;
   currentFront: CurrentFront | null;
+  sharedMembers: SharedPartnerMember[];
 };
 
 type RequestItem = {
@@ -206,7 +215,7 @@ function PartnerSheet({
                 <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
                 <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
               </svg>
-              <span className="text-sm font-medium">Edit relationship</span>
+              <span className="text-sm font-medium">Edit relationship details</span>
             </button>
 
             {/* Downgrade to friend only */}
@@ -223,7 +232,7 @@ function PartnerSheet({
                 <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
                 <path d="M16 3.13a4 4 0 0 1 0 7.75" />
               </svg>
-              <span className="text-sm font-medium">Keep as friend only</span>
+              <span className="text-sm font-medium">Keep friendship, remove partner status</span>
             </button>
 
             {/* Dismiss */}
@@ -389,10 +398,13 @@ function InviteSheet({
       >
         <div className="w-10 h-1 rounded-full bg-border mx-auto mt-3 mb-1" aria-hidden="true" />
         <p className="text-sm font-semibold text-text text-center px-4 py-3 border-b border-border/40">
-          Invite partner
+          Relationship partner request
         </p>
 
         <div className="px-6 py-4 space-y-4">
+          <p className="text-sm text-muted">
+            Partners are for closer relationships, like a girlfriend, wife, datemate, or committed partner system. Add them as a friend first, then make the relationship explicit here.
+          </p>
           <div className="space-y-2">
             <label htmlFor="partner-email" className="block text-xs font-semibold text-muted uppercase tracking-wider">
               Their email
@@ -471,7 +483,11 @@ function PartnerRow({
       className="relative flex items-center border-b border-border/40 last:border-b-0 bg-surface hover:bg-surface-alt/60 transition-colors duration-150"
       style={{ borderLeft: `3px solid ${PARTNER_COLOR}` }}
     >
-      <div className="flex flex-1 items-center gap-3.5 px-4 py-3.5 pr-14 min-w-0">
+      <Link
+        href={`/systems/${partner.id}`}
+        className="flex flex-1 items-center gap-3.5 px-4 py-3.5 pr-14 min-w-0 rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-offset-2 focus-visible:ring-offset-bg"
+        aria-label={`Open ${partner.name} profile`}
+      >
         <SystemAvatar partner={partner} size="md" />
 
         <div className="flex-1 min-w-0">
@@ -511,10 +527,13 @@ function PartnerRow({
               </span>
             </div>
           ) : (
-            <p className="text-xs text-subtle mt-0.5">Not currently fronting</p>
+            <p className="text-xs text-subtle mt-0.5">No shared front visible right now</p>
           )}
+          <p className="text-xs text-subtle mt-1">
+            {partner.sharedMembers.length} shared member{partner.sharedMembers.length === 1 ? '' : 's'}
+          </p>
         </div>
-      </div>
+      </Link>
 
       {/* Action button */}
       <div className="absolute right-3 top-1/2 -translate-y-1/2">
@@ -609,8 +628,8 @@ export default function PartnersClient() {
             <h1 className="text-2xl font-bold text-text">Partners</h1>
             <p className="text-muted text-sm mt-0.5">
               {partners.length === 0
-                ? 'No partners yet'
-                : `${partners.length} partner${partners.length !== 1 ? 's' : ''}`}
+                ? 'No relationship partners yet'
+                : `${partners.length} relationship partner${partners.length !== 1 ? 's' : ''}`}
             </p>
           </div>
           <button
@@ -717,9 +736,9 @@ export default function PartnersClient() {
               >
                 <span className="text-3xl">🌸</span>
               </div>
-              <p className="text-text font-semibold">No partners yet</p>
+              <p className="text-text font-semibold">No relationship partners yet</p>
               <p className="text-muted text-sm mt-2 mb-6">
-                Partners are different from friends — closer, more intimate. Invite your partner system to get started.
+                Partners are different from friends: closer, more intimate, and meant for relationships like girlfriend, wife, datemate, or committed partner system.
               </p>
               <button
                 type="button"

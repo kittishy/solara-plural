@@ -193,6 +193,25 @@ html[data-solara-theme='mist'] {
     background-size: 200px 200px;
   }
 
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    background-image: var(--solara-wallpaper-image, none);
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    filter: blur(var(--solara-wallpaper-blur, 0px));
+    transform: scale(1.03);
+    opacity: calc(1 - var(--solara-wallpaper-dim, 0.72));
+  }
+
+  html[data-solara-reduce-texture] body::before {
+    display: none;
+  }
+
   * {
     @apply border-border;
   }

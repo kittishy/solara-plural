@@ -1,7 +1,7 @@
 import { Sidebar } from '@/components/layout/Sidebar';
 import { MobileNav } from '@/components/layout/MobileNav';
 import { DashboardClientProviders } from './DashboardClientProviders';
-import { getCachedSession } from '@/lib/auth/session';
+import { getCachedSession, requireSystemId } from '@/lib/auth/session';
 import { Trans } from '@/components/language/Trans';
 
 export default async function DashboardLayout({
@@ -9,6 +9,7 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
+  await requireSystemId();
   const session = await getCachedSession();
   const systemName = session?.user?.name ?? undefined;
 

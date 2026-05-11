@@ -1,7 +1,12 @@
 import { and, eq, or } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { db } from '@/lib/db';
-import { systemFriendMemberShares, systemFriendships } from '@/lib/db/schema';
+import {
+  systemFriendMemberShares,
+  systemFriendships,
+  systemPartnerRequests,
+  systemPartnerships,
+} from '@/lib/db/schema';
 import { err, ok, requireAuth } from '@/lib/api/helpers';
 import { canonicalFriendPair } from '@/lib/friends';
 
@@ -45,6 +50,29 @@ export async function DELETE(_request: Request, { params }: Params) {
         ),
       ));
 
+    await tx
+      .delete(systemPartnerships)
+      .where(and(
+        eq(systemPartnerships.systemAId, pair.systemAId),
+        eq(systemPartnerships.systemBId, pair.systemBId),
+      ));
+
+    await tx
+      .delete(systemPartnerRequests)
+      .where(and(
+        eq(systemPartnerRequests.status, 'pending'),
+        or(
+          and(
+            eq(systemPartnerRequests.senderSystemId, auth.systemId),
+            eq(systemPartnerRequests.receiverSystemId, friendSystemId),
+          ),
+          and(
+            eq(systemPartnerRequests.senderSystemId, friendSystemId),
+            eq(systemPartnerRequests.receiverSystemId, auth.systemId),
+          ),
+        ),
+      ));
+
     return true;
   });
 
@@ -53,6 +81,7 @@ export async function DELETE(_request: Request, { params }: Params) {
   }
 
   revalidatePath('/friends');
+  revalidatePath('/partners');
   revalidatePath('/');
 
   return ok({

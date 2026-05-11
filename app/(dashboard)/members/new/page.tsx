@@ -1,12 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import DynamicAvatarImage from '@/components/ui/DynamicAvatarImage';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { revalidateMembersAndFront } from '@/lib/swr';
 import AvatarUpload from '@/components/members/AvatarUpload';
 import MemberColorPicker from '@/components/members/MemberColorPicker';
+import { CustomFieldInputs, type MemberCustomField } from '@/components/members/CustomFieldInputs';
 
 const DEFAULT_MEMBER_COLOR = '#a78bfa';
 
@@ -14,10 +15,23 @@ export default function NewMemberPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [customFields, setCustomFields] = useState<MemberCustomField[]>([]);
+  const [customFieldValues, setCustomFieldValues] = useState<Record<string, string>>({});
   const [form, setForm] = useState({
     name: '', pronouns: '', description: '', role: '',
     color: DEFAULT_MEMBER_COLOR, tags: '', avatarUrl: '',
   });
+
+  useEffect(() => {
+    async function loadCustomFields() {
+      const res = await fetch('/api/custom-fields');
+      const json = await res.json().catch(() => null);
+      if (res.ok && json?.success && Array.isArray(json.data?.fields)) {
+        setCustomFields(json.data.fields);
+      }
+    }
+    void loadCustomFields();
+  }, []);
 
   function set(field: string, value: string) {
     setForm((f) => ({ ...f, [field]: value }));
@@ -37,6 +51,7 @@ export default function NewMemberPage() {
         ...form,
         tags,
         avatarUrl: form.avatarUrl || null,
+        customFieldValues,
       }),
     });
 
@@ -108,6 +123,13 @@ export default function NewMemberPage() {
           </div>
 
           <MemberColorPicker value={form.color} onChange={(color) => set('color', color)} />
+
+          <CustomFieldInputs
+            fields={customFields}
+            values={customFieldValues}
+            disabled={loading}
+            onChange={(fieldId, value) => setCustomFieldValues((prev) => ({ ...prev, [fieldId]: value }))}
+          />
 
           {/* Preview */}
           <div className="flex items-center gap-3 p-4 bg-surface-alt rounded-xl">

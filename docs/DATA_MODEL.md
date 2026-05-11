@@ -27,6 +27,31 @@ Represents a plural system (user account).
 
 ---
 
+### password_reset_tokens
+
+Stores short-lived account recovery tokens for password reset.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| id | text | PRIMARY KEY | CUID |
+| systemId | text | FK -> systems.id | Account that requested the reset |
+| tokenHash | text | UNIQUE NOT NULL | SHA-256 hash of the raw reset token |
+| expiresAt | integer | NOT NULL | When the token stops being accepted |
+| usedAt | integer | nullable | Set when the token is consumed or invalidated |
+| createdAt | integer | NOT NULL | Unix timestamp |
+
+Indexes and constraints:
+- `ux_password_reset_tokens_hash(tokenHash)`
+- `idx_password_reset_tokens_system_id(systemId)`
+- `idx_password_reset_tokens_expires_at(expiresAt)`
+
+**Notes:**
+- Raw reset tokens are never stored in the database.
+- Requesting a new reset invalidates any previous unused reset token for the account.
+- Successful password reset invalidates all unused reset tokens for the account.
+
+---
+
 ### members
 
 Represents a headmate/system member.
@@ -294,28 +319,38 @@ Likely fields:
 
 Purpose: define reusable per-member fields.
 
-Likely fields:
+Implemented fields:
 - `id`
 - `systemId`
 - `name`
-- `type` (`text`, `number`, `date`, `boolean`, `select`, `markdown`)
-- `options` (JSON for select fields)
-- `visibility` (future privacy label)
+- `description`
+- `type` (`text`, `long_text`, `number`, `date`, `checkbox`, `select`)
+- `options` (JSON array for select fields)
 - `sortOrder`
 - `createdAt`
 - `updatedAt`
+
+Notes:
+- Definitions are system-scoped and managed from Settings.
+- Select fields store their allowed options in `options`.
+- Visibility rules for custom field sharing remain a future privacy layer.
 
 ### member_field_values
 
 Purpose: store values for custom fields per member.
 
-Likely fields:
+Implemented fields:
 - `id`
 - `systemId`
 - `memberId`
 - `fieldId`
-- `value` (JSON or text)
+- `value` (normalized text)
+- `createdAt`
 - `updatedAt`
+
+Constraints:
+- Unique pair: `ux_member_field_values_member_field(memberId, fieldId)`.
+- Values are deleted when their field definition is removed.
 
 ### front_tiers
 
@@ -437,3 +472,17 @@ Indexes and constraints:
 - PluralKit and Simply Plural sync links are separate from member profile data.
 - Re-running sync should update/link existing local members instead of creating duplicate members when a stable external id or safe single-name match exists.
 - Ambiguous same-name matches are skipped and shown in sync preview.
+
+## 2026-05-10 Data Model Update (Custom Fields)
+
+### Member Profile Fields
+- Added `custom_fields` for reusable system-defined member profile fields.
+- Added `member_field_values` for per-member answers.
+- Export JSON is now `version: 5`.
+- New `customFields` payload included:
+  - `customFields.definitions`
+  - `customFields.memberValues`
+
+### Notes
+- Custom fields are intentionally system-local.
+- Friend and partner views do not expose custom field values yet; sharing those values should be added only after field-level privacy controls exist.
