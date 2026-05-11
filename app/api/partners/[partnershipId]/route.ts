@@ -1,62 +1,52 @@
-import { and, eq } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { db } from '@/lib/db';
 import { systemPartnerships } from '@/lib/db/schema';
 import { err, ok, requireAuth } from '@/lib/api/helpers';
-import { canonicalFriendPair } from '@/lib/friends';
+import { getPartnershipForSystem } from '@/lib/partnerships';
 
-type Params = { params: Promise<{ partnerSystemId: string }> };
+type Params = { params: Promise<{ partnershipId: string }> };
 
-// DELETE /api/partners/[partnerSystemId]
+// DELETE /api/partners/[partnershipId]
 // Ends a partnership. The underlying friendship is preserved.
 export async function DELETE(_request: Request, { params }: Params) {
   const auth = await requireAuth();
   if (auth.error) return auth.error;
 
-  const { partnerSystemId } = await params;
-  if (!partnerSystemId) return err('Partner system ID is required.', 400);
-  if (partnerSystemId === auth.systemId) return err('Invalid request.', 400);
+  const { partnershipId } = await params;
+  if (!partnershipId) return err('Partnership ID is required.', 400);
 
-  const pair = canonicalFriendPair(auth.systemId, partnerSystemId);
+  const access = await getPartnershipForSystem(partnershipId, auth.systemId);
+  if (!access) return err('Partnership not found.', 404);
 
   const deleted = await db
     .delete(systemPartnerships)
-    .where(and(
-      eq(systemPartnerships.systemAId, pair.systemAId),
-      eq(systemPartnerships.systemBId, pair.systemBId),
-    ))
+    .where(eq(systemPartnerships.id, partnershipId))
     .returning({ id: systemPartnerships.id });
 
   if (!deleted.length) return err('Partnership not found.', 404);
 
   revalidatePath('/partners');
 
-  return ok({ ended: true, partnerSystemId });
+  return ok({ ended: true, partnerSystemId: access.partnerSystemId });
 }
 
-// PATCH /api/partners/[partnerSystemId]
+// PATCH /api/partners/[partnershipId]
 // Body: { relationshipLabel?: string | null, partneredSince?: string | null }
 export async function PATCH(request: Request, { params }: Params) {
   const auth = await requireAuth();
   if (auth.error) return auth.error;
 
-  const { partnerSystemId } = await params;
+  const { partnershipId } = await params;
+  if (!partnershipId) return err('Partnership ID is required.', 400);
 
   let body: unknown;
   try { body = await request.json(); } catch { return err('Invalid request payload.', 400); }
 
   const payload = body as { relationshipLabel?: unknown; partneredSince?: unknown };
 
-  const pair = canonicalFriendPair(auth.systemId, partnerSystemId);
-
-  const partnership = await db.query.systemPartnerships.findFirst({
-    where: and(
-      eq(systemPartnerships.systemAId, pair.systemAId),
-      eq(systemPartnerships.systemBId, pair.systemBId),
-    ),
-  });
-
-  if (!partnership) return err('Partnership not found.', 404);
+  const access = await getPartnershipForSystem(partnershipId, auth.systemId);
+  if (!access) return err('Partnership not found.', 404);
 
   const updates: Partial<{ relationshipLabel: string | null; partneredSince: Date | null }> = {};
 
@@ -79,10 +69,7 @@ export async function PATCH(request: Request, { params }: Params) {
 
   await db.update(systemPartnerships)
     .set(updates)
-    .where(and(
-      eq(systemPartnerships.systemAId, pair.systemAId),
-      eq(systemPartnerships.systemBId, pair.systemBId),
-    ));
+    .where(eq(systemPartnerships.id, partnershipId));
 
   revalidatePath('/partners');
 
