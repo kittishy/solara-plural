@@ -101,18 +101,18 @@ function IconCalendar({ size = 18 }: IconProps) {
   );
 }
 
-const navItems = [
-  { href: '/', labelKey: 'nav.home', Icon: IconHome },
-  { href: '/members', labelKey: 'nav.members', Icon: IconMembers },
-  { href: '/partners', labelKey: 'nav.partners', Icon: IconPartners },
-  { href: '/notes', labelKey: 'nav.notes', Icon: IconNotes },
+const navItemsBase = [
+  { href: '/', labelKey: 'nav.home', Icon: IconHome, systemOnly: false },
+  { href: '/members', labelKey: 'nav.members', Icon: IconMembers, systemOnly: true },
+  { href: '/partners', labelKey: 'nav.partners', Icon: IconPartners, systemOnly: false },
+  { href: '/notes', labelKey: 'nav.notes', Icon: IconNotes, systemOnly: false },
 ] as const;
 
-const menuItems = [
-  { href: '/friends', labelKey: 'nav.friends', Icon: IconFriends },
-  { href: '/front/history', labelKey: 'nav.frontHistory', Icon: IconCalendar },
-  { href: '/notifications', labelKey: 'nav.notifications', Icon: IconBell },
-  { href: '/settings', labelKey: 'nav.settings', Icon: IconSettings },
+const menuItemsBase = [
+  { href: '/friends', labelKey: 'nav.friends', Icon: IconFriends, systemOnly: false },
+  { href: '/front/history', labelKey: 'nav.frontHistory', Icon: IconCalendar, systemOnly: true },
+  { href: '/notifications', labelKey: 'nav.notifications', Icon: IconBell, systemOnly: false },
+  { href: '/settings', labelKey: 'nav.settings', Icon: IconSettings, systemOnly: false },
 ] as const;
 
 function isActive(pathname: string, href: string) {
@@ -120,13 +120,15 @@ function isActive(pathname: string, href: string) {
   return pathname.startsWith(href);
 }
 
-export function MobileNav() {
+export function MobileNav({ accountType = 'system' }: { accountType?: 'system' | 'singlet' }) {
   const pathname = usePathname();
   const activePathname = stripLanguageFromPathname(pathname);
   const { language, t } = useLanguage();
   const [menuOpen, setMenuOpen] = useState(false);
   const [isMenuClosing, setIsMenuClosing] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
+  const navItems = navItemsBase.filter((item) => accountType === 'system' || !item.systemOnly);
+  const menuItems = menuItemsBase.filter((item) => accountType === 'system' || !item.systemOnly);
   const menuIsActive = menuItems.some((item) => isActive(activePathname, item.href));
 
   function closeMenu() {
@@ -202,7 +204,7 @@ export function MobileNav() {
         )}
 
         <div className="min-w-0 flex-1 rounded-2xl border border-white/10 bg-surface/85 backdrop-blur-xl shadow-[0_10px_28px_rgba(0,0,0,0.28)]">
-          <div className="grid grid-cols-4 gap-1 px-1 py-1.5">
+          <div className={`grid gap-1 px-1 py-1.5 ${navItems.length === 3 ? 'grid-cols-3' : 'grid-cols-4'}`}>
           {navItems.map((item) => {
             const current = isActive(activePathname, item.href);
 

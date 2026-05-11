@@ -22,11 +22,23 @@ export async function PUT(request: Request, { params }: Params) {
   const auth = await requireAuth();
   if (auth.error) return auth.error;
 
-  const { title, content, memberId } = await request.json();
+  let body: any;
+  try {
+    body = await request.json();
+  } catch {
+    return err('Invalid JSON payload', 400);
+  }
+  const { title, content, memberId, isPrivate } = body ?? {};
   if (!content?.trim()) return err('Content is required');
 
   const updated = await db.update(systemNotes)
-    .set({ title: title?.trim() ?? null, content: content.trim(), memberId: memberId ?? null, updatedAt: new Date() })
+    .set({
+      title: title?.trim() ?? null,
+      content: content.trim(),
+      memberId: memberId ?? null,
+      isPrivate: typeof isPrivate === 'boolean' ? (isPrivate ? 1 : 0) : undefined,
+      updatedAt: new Date(),
+    })
     .where(and(eq(systemNotes.id, params.id), eq(systemNotes.systemId, auth.systemId)))
     .returning();
 

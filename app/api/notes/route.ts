@@ -33,8 +33,13 @@ export async function POST(request: Request) {
   const auth = await requireAuth();
   if (auth.error) return auth.error;
 
-  const body = await request.json();
-  const { title, content, memberId } = body;
+  let body: any;
+  try {
+    body = await request.json();
+  } catch {
+    return err('Invalid JSON payload', 400);
+  }
+  const { title, content, memberId, isPrivate } = body ?? {};
 
   if (!content?.trim()) return err('Content is required');
 
@@ -45,6 +50,7 @@ export async function POST(request: Request) {
     memberId:  memberId ?? null,
     title:     title?.trim() ?? null,
     content:   content.trim(),
+    isPrivate: isPrivate ? 1 : 0,
     createdAt: now,
     updatedAt: now,
   }).returning();

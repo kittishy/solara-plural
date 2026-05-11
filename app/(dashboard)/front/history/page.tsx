@@ -3,10 +3,10 @@ import { frontEntries, members } from '@/lib/db/schema';
 import { eq, and, isNotNull } from 'drizzle-orm';
 import FrontHistoryClient from './FrontHistoryClient';
 import { safeParseMemberIds } from '@/lib/front';
-import { requireSystemId } from '@/lib/auth/session';
+import { requireSystemAccount } from '@/lib/auth/session';
 
 export default async function FrontHistoryPage() {
-  const systemId = await requireSystemId();
+  const systemId = await requireSystemAccount();
 
   const history = await db.query.frontEntries.findMany({
     columns: {

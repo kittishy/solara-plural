@@ -18,11 +18,12 @@ export default async function NotePage({ params }: { params: { id: string } }) {
       id: true,
       title: true,
       content: true,
+      isPrivate: true,
       updatedAt: true,
     },
     where: and(eq(systemNotes.id, params.id), eq(systemNotes.systemId, systemId)),
   });
 
   if (!note) notFound();
-  return <NoteEditor note={note} />;
+  return <NoteEditor note={{ ...note, isPrivate: note.isPrivate === 1 }} />;
 }

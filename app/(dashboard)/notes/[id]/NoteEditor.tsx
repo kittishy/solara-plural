@@ -9,6 +9,7 @@ type EditableNote = {
   id: string;
   title: string | null;
   content: string;
+  isPrivate?: boolean;
   updatedAt: Date;
 };
 
@@ -27,8 +28,12 @@ export default function NoteEditor({ note }: Props) {
   const draftKey = useMemo(() => `solara.notes.draft.${note?.id ?? 'new'}`, [note?.id]);
   const [title, setTitle] = useState(note?.title ?? '');
   const [content, setContent] = useState(note?.content ?? '');
+  const [isPrivate, setIsPrivate] = useState(note?.isPrivate ?? false);
   const [status, setStatus] = useState<SaveStatus>(null);
-  const hasUnsavedContent = title.trim() !== (note?.title ?? '').trim() || content !== (note?.content ?? '');
+  const hasUnsavedContent =
+    title.trim() !== (note?.title ?? '').trim() ||
+    content !== (note?.content ?? '') ||
+    isPrivate !== (note?.isPrivate ?? false);
 
   useEffect(() => {
     try {
@@ -73,7 +78,7 @@ export default function NoteEditor({ note }: Props) {
     const res = await fetch(url, {
       method,
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title: title.trim() || null, content }),
+      body: JSON.stringify({ title: title.trim() || null, content, isPrivate }),
     });
 
     if (!res.ok) {
@@ -158,6 +163,21 @@ export default function NoteEditor({ note }: Props) {
           />
         </div>
       </section>
+
+      <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-border/50 bg-surface/60 px-4 py-3 text-sm">
+        <input
+          type="checkbox"
+          checked={isPrivate}
+          onChange={(e) => setIsPrivate(e.target.checked)}
+          className="h-4 w-4 cursor-pointer accent-primary"
+        />
+        <span className="flex-1">
+          <span className="font-medium text-text">Mark as private</span>
+          <span className="block text-xs text-muted">
+            Private notes are never shared with friends or partners, even if sharing is enabled later.
+          </span>
+        </span>
+      </label>
 
       <section className="rounded-xl border border-border/50 bg-surface/60 px-4 py-3 text-sm text-muted">
         <p className="font-medium text-text">Gentle prompts</p>
