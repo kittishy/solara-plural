@@ -21,12 +21,16 @@
 ## [Unreleased]
 
 ### Added
+- Password reset flow with `/forgot-password`, `/reset-password`, hashed one-time reset tokens, and optional Resend email delivery
 - PWA service worker, production PNG app icons, and installable manifest updates
 - Native Web Push setup through the browser Push API and VAPID keys
 - Notification persistence tables: `notification_push_tokens`, `notifications`, and `notification_deliveries`
 - Notification APIs for token registration, notification listing, marking one read, and marking all read
 - `/notifications` dashboard page and navigation entry
 - Friend front-change notifications from `POST/DELETE /api/front`, with in-app history as the durable source and browser push as best-effort delivery
+- Custom field definitions in Settings and per-member custom field values on member create/edit/profile pages
+- Shared system profile pages for connected accounts, showing privacy-scoped front and visible members
+- Local appearance controls for accent color, wallpaper URL/upload, dim, blur, and reduced texture
 - PluralKit member sync from Settings with preview/apply flow, cautious merge options, and no token persistence
 - Settings integrations cleanup: removed Simply Plural token integration from production sync surface
 - PluralKit API helper with tested fronters parsing, retry-after formatting, and switch timestamp extraction
@@ -57,6 +61,9 @@
 - Local front changes no longer create redundant PluralKit switches when the requested front already matches the active front in the same order
 - PluralKit `429` update responses now report rate-limit retry guidance without automatic retry loops
 - Export JSON bumped to `version: 4` and now includes `integrations.memberExternalLinks`
+- Export JSON bumped to `version: 5` and now includes `customFields.definitions` plus `customFields.memberValues`
+- Partner requests now require an existing friendship, and partner views respect friend member-sharing privacy
+- Friends privacy controls now offer general visibility actions with member exceptions for detailed overrides
 - `/api/export` now tolerates invalid stored JSON in member tags and front member IDs
 - `/api/front` now validates that every submitted member ID belongs to the authenticated system before creating a current front
 - Member profile `Edit profile` action now uses a clearer warm CTA style (higher contrast, larger touch target, stronger hover/focus affordance) on mobile and desktop without changing page structure
@@ -83,6 +90,7 @@
 - Front empty state and front-history back navigation now use clearer accessible language and intentional visual affordances
 
 ### Security
+- Password reset requests now return generic success responses, store only token hashes, expire tokens, and invalidate prior unused reset links
 - Documented `npm audit --omit=dev` production vulnerabilities in Next.js 14 as a separate upgrade-planning issue instead of applying a breaking Next 16 force upgrade
 - docs/PLAN.md — orchestration plan with project type, routing and quality gates
 - MASTER_CONTEXT.md — source of truth document

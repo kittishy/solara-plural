@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { revalidateMembersAndFront } from '@/lib/swr';
 import AvatarUpload from '@/components/members/AvatarUpload';
 import MemberColorPicker from '@/components/members/MemberColorPicker';
+import { CustomFieldInputs, type MemberCustomField } from '@/components/members/CustomFieldInputs';
 
 const DEFAULT_MEMBER_COLOR = '#a78bfa';
 
@@ -20,6 +21,8 @@ export default function EditMemberPage() {
   const [fetchError, setFetchError] = useState('');
   const [error, setError] = useState('');
   const [deleteError, setDeleteError] = useState('');
+  const [customFields, setCustomFields] = useState<MemberCustomField[]>([]);
+  const [customFieldValues, setCustomFieldValues] = useState<Record<string, string>>({});
   const [form, setForm] = useState({
     name: '', pronouns: '', description: '', role: '',
     color: DEFAULT_MEMBER_COLOR, tags: '', avatarUrl: '',
@@ -28,7 +31,16 @@ export default function EditMemberPage() {
   useEffect(() => {
     async function load() {
       try {
-        const res = await fetch(`/api/members/${id}`);
+        const [memberRes, fieldsRes] = await Promise.all([
+          fetch(`/api/members/${id}`),
+          fetch('/api/custom-fields'),
+        ]);
+        const fieldsJson = await fieldsRes.json().catch(() => null);
+        if (fieldsRes.ok && fieldsJson?.success && Array.isArray(fieldsJson.data?.fields)) {
+          setCustomFields(fieldsJson.data.fields);
+        }
+
+        const res = memberRes;
         if (!res.ok) {
           setFetchError('Could not load member data. Please go back and try again.');
           setFetching(false);
@@ -46,6 +58,7 @@ export default function EditMemberPage() {
           tags: Array.isArray(m.tags) ? m.tags.join(', ') : '',
           avatarUrl: m.avatarUrl ?? '',
         });
+        setCustomFieldValues(isRecord(m.customFieldValues) ? stringRecord(m.customFieldValues) : {});
       } catch {
         setFetchError('Network error. Please check your connection and try again.');
       } finally {
@@ -73,6 +86,7 @@ export default function EditMemberPage() {
         ...form,
         tags,
         avatarUrl: form.avatarUrl || null,
+        customFieldValues,
       }),
     });
 
@@ -182,6 +196,13 @@ export default function EditMemberPage() {
 
           <MemberColorPicker value={form.color} onChange={(color) => set('color', color)} />
 
+          <CustomFieldInputs
+            fields={customFields}
+            values={customFieldValues}
+            disabled={loading}
+            onChange={(fieldId, value) => setCustomFieldValues((prev) => ({ ...prev, [fieldId]: value }))}
+          />
+
           {/* Preview */}
           <div className="flex items-center gap-3 p-4 bg-surface-alt rounded-xl">
             <div
@@ -225,5 +246,15 @@ export default function EditMemberPage() {
         </button>
       </div>
     </div>
+  );
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function stringRecord(value: Record<string, unknown>): Record<string, string> {
+  return Object.fromEntries(
+    Object.entries(value).filter((entry): entry is [string, string] => typeof entry[1] === 'string'),
   );
 }

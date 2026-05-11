@@ -184,6 +184,53 @@ Middleware does not import Auth.js. It only handles locale negotiation and rewri
 
 Protected pages redirect unauthenticated users to `/login`. Protected API routes return `401` JSON so client-side fetch handlers can show inline errors instead of trying to parse redirected HTML.
 
+### Social Visibility Flow
+
+Friend and partner surfaces use the same privacy source of truth:
+
+1. `system_friendships` confirms the accounts are connected.
+2. `system_blocks` prevents contact or profile access in either direction.
+3. `system_friend_member_shares` decides which members and fields are visible to that specific connected account.
+4. System profile and partner views project current front/member lists through those sharing rows before rendering.
+
+Partners are not a sharing role. They are a relationship layer on top of an active friendship, so unfriend and block actions also remove partnerships and pending partner requests.
+
+### Custom Fields Flow
+
+System-defined profile fields live in `custom_fields`, and member answers live in `member_field_values`.
+
+- Settings manages field definitions through `/api/custom-fields`.
+- Member create/edit pages submit `customFieldValues` with the normal member payload.
+- Member profile pages display only filled values.
+- Export `version: 5` includes both definitions and values.
+
+Custom field values are currently local to the owning system and are not exposed to friends or partners.
+
+### Local Appearance Flow
+
+Theme presets remain the shared baseline. Personal appearance details are applied locally through `lib/theme.ts` and browser storage:
+
+- accent color,
+- wallpaper URL or compressed local upload,
+- wallpaper dim and blur,
+- reduced texture.
+
+`DashboardClientProviders` applies the stored appearance when the dashboard mounts.
+
+### Password Reset Flow
+
+```
+1. User opens /forgot-password from the login page
+2. POST /api/password-reset/request receives the email and always returns a generic success response
+3. If the account exists, Solara creates a random reset token, stores only its SHA-256 hash, and invalidates prior unused reset tokens for that account
+4. Local development returns the temporary reset URL in the UI; production sends it by email when Resend env vars are configured
+5. User opens /reset-password?token=...
+6. POST /api/password-reset/confirm verifies hash, expiry, and unused status, then stores a new bcrypt password hash
+7. Successful reset marks all unused reset tokens for that account as used
+```
+
+The flow does not reveal whether an email exists, does not store raw reset tokens, and keeps reset routes public while dashboard/API data stays session-protected.
+
 ---
 
 ## Environment Variables
@@ -194,6 +241,8 @@ DATABASE_URL=libsql://your-database.turso.io
 DATABASE_AUTH_TOKEN=your-turso-auth-token
 NEXTAUTH_SECRET=your-secret-key
 NEXTAUTH_URL=http://localhost:3000
+RESEND_API_KEY=your-resend-api-key
+PASSWORD_RESET_FROM_EMAIL="Solara Plural <reset@example.com>"
 ```
 
 ---

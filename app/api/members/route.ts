@@ -4,6 +4,7 @@ import { eq, and } from 'drizzle-orm';
 import { requireAuth, ok, err } from '@/lib/api/helpers';
 import { createId } from '@paralleldrive/cuid2';
 import { revalidatePath } from 'next/cache';
+import { saveMemberCustomFieldValues } from '@/lib/member-custom-fields';
 
 // GET /api/members — list all members for current system
 export async function GET() {
@@ -46,13 +47,14 @@ export async function POST(request: Request) {
   if (auth.error) return auth.error;
 
   const body = await request.json();
-  const { name, pronouns, avatarUrl, description, color, role, tags, notes } = body;
+  const { name, pronouns, avatarUrl, description, color, role, tags, notes, customFieldValues } = body;
 
   if (!name?.trim()) return err('Name is required');
 
   const now = new Date();
+  const newMemberId = createId();
   const newMember = await db.insert(members).values({
-    id:          createId(),
+    id:          newMemberId,
     systemId:    auth.systemId,
     name:        name.trim(),
     pronouns:    pronouns ?? null,
@@ -67,9 +69,15 @@ export async function POST(request: Request) {
     updatedAt:   now,
   }).returning();
 
+  const savedCustomFieldValues = await saveMemberCustomFieldValues(
+    auth.systemId,
+    newMemberId,
+    customFieldValues,
+  );
+
   revalidatePath('/');
   revalidatePath('/members');
   revalidatePath('/front');
 
-  return ok({ ...newMember[0], tags: tags ?? [] }, 201);
+  return ok({ ...newMember[0], tags: tags ?? [], customFieldValues: savedCustomFieldValues }, 201);
 }

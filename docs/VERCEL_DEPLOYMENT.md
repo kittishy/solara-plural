@@ -30,6 +30,8 @@ DATABASE_AUTH_TOKEN=your-turso-auth-token
 NEXTAUTH_SECRET=your-random-secret
 INTEGRATIONS_TOKEN_SECRET=your-separate-random-secret
 NEXTAUTH_URL=https://solara-plural.vercel.app
+RESEND_API_KEY=your-resend-api-key
+PASSWORD_RESET_FROM_EMAIL="Solara Plural <reset@example.com>"
 NEXT_PUBLIC_WEB_PUSH_VAPID_PUBLIC_KEY=your-public-vapid-key
 WEB_PUSH_VAPID_PRIVATE_KEY=your-private-vapid-key
 WEB_PUSH_VAPID_SUBJECT=mailto:you@example.com
@@ -44,6 +46,7 @@ vercel env add DATABASE_URL --sensitive
 vercel env add DATABASE_AUTH_TOKEN --sensitive
 vercel env add NEXTAUTH_SECRET --sensitive
 vercel env add INTEGRATIONS_TOKEN_SECRET --sensitive
+vercel env add RESEND_API_KEY --sensitive
 vercel env add WEB_PUSH_VAPID_PRIVATE_KEY --sensitive
 ```
 
@@ -58,6 +61,8 @@ vercel env add WEB_PUSH_VAPID_PRIVATE_KEY --sensitive
 - [ ] `.gitignore` excludes `.env.local` and other secrets.
 - [ ] `npm run build` passes locally.
 - [ ] Drizzle migrations have been generated and applied to the Turso database.
+- [ ] Run the password reset token migration before enabling `/forgot-password` in production.
+- [ ] `RESEND_API_KEY` and `PASSWORD_RESET_FROM_EMAIL` are set before expecting production password reset emails.
 - [ ] `npm run lint` passes non-interactively.
 - [ ] `npm test` passes.
 - [ ] `public/manifest.json` exists if `app/layout.tsx` references `/manifest.json`.
@@ -66,6 +71,7 @@ vercel env add WEB_PUSH_VAPID_PRIVATE_KEY --sensitive
 - [ ] Remote image hostnames are restricted before public production use.
 - [ ] Import/export actions have visible success and error states.
 - [ ] Run `npm run db:migrate` before deploying member sync changes that depend on `member_external_links`.
+- [ ] Run `npm run db:migrate` before deploying custom fields, which depend on `custom_fields` and `member_field_values`.
 - [ ] Destructive scripts are documented before use against production.
 
 ---

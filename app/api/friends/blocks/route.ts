@@ -2,7 +2,15 @@ import { createId } from '@paralleldrive/cuid2';
 import { and, eq, or } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { db } from '@/lib/db';
-import { systemBlocks, systemFriendMemberShares, systemFriendRequests, systemFriendships, systems } from '@/lib/db/schema';
+import {
+  systemBlocks,
+  systemFriendMemberShares,
+  systemFriendRequests,
+  systemFriendships,
+  systemPartnerRequests,
+  systemPartnerships,
+  systems,
+} from '@/lib/db/schema';
 import { err, ok, requireAuth } from '@/lib/api/helpers';
 import { canonicalFriendPair } from '@/lib/friends';
 
@@ -90,12 +98,36 @@ export async function POST(request: Request) {
         ),
       ));
 
+    await tx
+      .delete(systemPartnerships)
+      .where(and(
+        eq(systemPartnerships.systemAId, pair.systemAId),
+        eq(systemPartnerships.systemBId, pair.systemBId),
+      ));
+
+    await tx
+      .delete(systemPartnerRequests)
+      .where(and(
+        eq(systemPartnerRequests.status, 'pending'),
+        or(
+          and(
+            eq(systemPartnerRequests.senderSystemId, auth.systemId),
+            eq(systemPartnerRequests.receiverSystemId, blockedSystemId),
+          ),
+          and(
+            eq(systemPartnerRequests.senderSystemId, blockedSystemId),
+            eq(systemPartnerRequests.receiverSystemId, auth.systemId),
+          ),
+        ),
+      ));
+
     return {
       created: created[0] ?? null,
     };
   });
 
   revalidatePath('/friends');
+  revalidatePath('/partners');
   revalidatePath('/');
 
   return ok({

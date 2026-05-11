@@ -180,6 +180,24 @@
 
 ---
 
+## [2026-05-10] D033 - Password Reset Uses Short-lived Hashed Tokens
+
+**Decision:** Add a self-service password reset flow using random one-time tokens stored only as SHA-256 hashes in `password_reset_tokens`.
+
+**Justification:**
+- Existing passwords are bcrypt hashes and cannot be recovered or shown safely.
+- Reset requests must not reveal whether an email exists.
+- Raw reset tokens should only exist in the delivery channel, never in database rows or exports.
+- Production delivery is optional through Resend env vars, while local development can show a temporary test link for validation.
+
+**Implementation:**
+- Added public `/forgot-password` and `/reset-password` auth pages.
+- Added `POST /api/password-reset/request` and `POST /api/password-reset/confirm`.
+- Requesting a reset invalidates previous unused reset tokens for that account.
+- Successful reset updates `systems.password_hash` and invalidates all unused reset tokens for that account.
+
+---
+
 ## [2026-04-25] D012 - Vercel-first Initial Deployment
 
 **Decision:** Keep the initial deployment path optimized for Vercel plus Turso/libSQL.
@@ -564,5 +582,55 @@
 - Added APIs for registering push tokens, listing notifications, marking one notification read, and marking all read.
 - Added `/notifications` dashboard page and navigation links.
 - `POST/DELETE /api/front` now creates friend front-change notifications after local front persistence, scoped through existing per-member sharing visibility.
+
+---
+
+## [2026-05-10] D032 - Custom Fields Make Member Profiles System-shaped
+
+**Decision:** Add system-scoped custom field definitions in Settings and member-scoped custom field values on member create/edit/profile pages.
+
+**Justification:**
+- Plural systems often need profile details that do not fit a fixed app schema.
+- A reusable field template lets the system define a fuller ficha once, then each member fills only the details that apply to them.
+- Keeping definitions system-local avoids exposing unfinished privacy expectations to friends and partners.
+
+**Implementation:**
+- Added `custom_fields` and `member_field_values` with Drizzle schema and migration.
+- Added `/api/custom-fields` and `/api/custom-fields/[id]` for definition management.
+- Member create/edit APIs now persist custom field values, and member profile pages display filled fields.
+- Export JSON moved to `version: 5` and includes custom field definitions plus member values.
+
+---
+
+## [2026-05-10] D033 - Partners Are Relationship Layer, Not Friend Roles
+
+**Decision:** Treat Partners as a consensual relationship layer on top of friendship, focused on partners such as girlfriend, wife, datemate, spouse, or committed partner system.
+
+**Justification:**
+- Partners should add emotional/relationship context without replacing the friend graph.
+- Requiring an active friendship first keeps consent and blocking behavior simple.
+- Partner views must respect the same member-sharing limits as friends, so relationship status does not bypass privacy.
+
+**Implementation:**
+- Partner requests require an active friendship and no block between accounts.
+- Partner lists now project shared members and current front through `system_friend_member_shares`.
+- Unfriend and block cleanup removes partnerships and pending partner requests.
+- Partner UI copy now describes relationship partners instead of generic close-friend status.
+
+---
+
+## [2026-05-10] D034 - Personal Appearance Uses Local Layered Customization
+
+**Decision:** Keep shared theme presets as the stable base while adding local personalization controls for accent color, wallpaper, dim, blur, and reduced texture.
+
+**Justification:**
+- Presets remain low-friction for users who want a safe default.
+- Wallpaper and accent controls let a system make the app feel personal without forcing account-wide schema changes or creating remote image storage risk.
+- Local-only personalization avoids leaking preferences through export/social data.
+
+**Implementation:**
+- Extended `lib/theme.ts` with `SOLARA_APPEARANCE_STORAGE_KEY` and document-level appearance application.
+- Settings Appearance now supports accent color, wallpaper URL, local wallpaper upload, dim, blur, reduced texture, and reset.
+- `DashboardClientProviders` applies the stored appearance on app load.
 
 ---

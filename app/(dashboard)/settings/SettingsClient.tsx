@@ -7,10 +7,16 @@ import { signOut } from 'next-auth/react';
 import { prepareAvatarDataUrl } from '@/lib/client/avatar-upload';
 import {
   applySolaraTheme,
+  applySolaraAppearance,
+  DEFAULT_SOLARA_APPEARANCE,
   DEFAULT_SOLARA_THEME,
+  persistSolaraAppearance,
   persistSolaraTheme,
+  readStoredSolaraAppearance,
   readStoredSolaraTheme,
+  resetSolaraAppearance,
   SOLARA_THEMES,
+  type SolaraAppearance,
   type SolaraThemeId,
 } from '@/lib/theme';
 
@@ -136,6 +142,16 @@ type PluralKitConnectionStatus = {
   lastSyncedAt: string | null;
 };
 
+type CustomFieldType = 'text' | 'long_text' | 'number' | 'date' | 'checkbox' | 'select';
+
+type CustomFieldDefinition = {
+  id: string;
+  name: string;
+  description: string | null;
+  type: CustomFieldType;
+  options: Array<{ label: string; value: string }>;
+};
+
 const IMPORT_OPTIONS_STORAGE_KEY = 'solara.settings.importOptions';
 const DEFAULT_AVATAR_EMOJI = '☀️';
 const AVATAR_PRESETS = ['☀️', '🌙', '⭐', '🌸', '💜', '✨', '🫷', '🌿', '🫧', '🧭'] as const;
@@ -198,6 +214,17 @@ export default function SettingsClient({
   const [deletionRequestedAt, setDeletionRequestedAt] = useState<Date | string | null>(system?.deletionRequestedAt ?? null);
   const [deletionScheduledFor, setDeletionScheduledFor] = useState<Date | string | null>(system?.deletionScheduledFor ?? null);
   const [themeId, setThemeId] = useState<SolaraThemeId>(DEFAULT_SOLARA_THEME);
+  const [appearance, setAppearance] = useState<SolaraAppearance>(DEFAULT_SOLARA_APPEARANCE);
+  const [uploadingWallpaper, setUploadingWallpaper] = useState(false);
+  const [customFields, setCustomFields] = useState<CustomFieldDefinition[]>([]);
+  const [customFieldLoading, setCustomFieldLoading] = useState(true);
+  const [customFieldSaving, setCustomFieldSaving] = useState(false);
+  const [newCustomField, setNewCustomField] = useState({
+    name: '',
+    description: '',
+    type: 'text' as CustomFieldType,
+    optionsText: '',
+  });
   const [avatarMode, setAvatarMode] = useState<AvatarMode>('emoji');
   const [avatarEmoji, setAvatarEmoji] = useState<string>(DEFAULT_AVATAR_EMOJI);
   const [avatarUrl, setAvatarUrl] = useState<string>('');
@@ -211,13 +238,32 @@ export default function SettingsClient({
   const [lastSyncResult, setLastSyncResult] = useState<SyncResult | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const avatarUploadRef = useRef<HTMLInputElement>(null);
+  const wallpaperUploadRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const saved = readStoredImportOptions();
     if (saved) setImportOptions(saved);
     const savedTheme = readStoredSolaraTheme();
+    const savedAppearance = readStoredSolaraAppearance();
     setThemeId(savedTheme);
+    setAppearance(savedAppearance);
     applySolaraTheme(savedTheme);
+    applySolaraAppearance(savedAppearance);
+  }, []);
+
+  useEffect(() => {
+    async function loadCustomFields() {
+      try {
+        const res = await fetch('/api/custom-fields');
+        const payload = await readJsonResponse<{ fields: CustomFieldDefinition[] }>(res);
+        if (payload.success) {
+          setCustomFields(payload.data.fields);
+        }
+      } finally {
+        setCustomFieldLoading(false);
+      }
+    }
+    void loadCustomFields();
   }, []);
 
   useEffect(() => {
@@ -492,6 +538,107 @@ export default function SettingsClient({
     setStatus({ type: 'success', message: `Theme changed to ${label}.` });
   }
 
+  function updateAppearance(nextAppearance: SolaraAppearance) {
+    setAppearance(nextAppearance);
+    applySolaraAppearance(nextAppearance);
+    persistSolaraAppearance(nextAppearance);
+  }
+
+  function clearAppearance() {
+    setAppearance(DEFAULT_SOLARA_APPEARANCE);
+    resetSolaraAppearance();
+    setStatus({ type: 'success', message: 'Appearance extras reset.' });
+  }
+
+  async function handleWallpaperFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file || uploadingWallpaper) return;
+
+    if (file.size > MAX_AVATAR_FILE_BYTES) {
+      setStatus({ type: 'error', message: 'Wallpaper file is too large - max 20 MB.' });
+      e.target.value = '';
+      return;
+    }
+
+    setUploadingWallpaper(true);
+    setStatus({ type: 'info', message: 'Preparing wallpaper image...' });
+
+    try {
+      const dataUrl = await prepareAvatarDataUrl(file);
+      updateAppearance({ ...appearance, wallpaperUrl: dataUrl });
+      setStatus({ type: 'success', message: 'Wallpaper applied on this device.' });
+    } catch (error) {
+      setStatus({
+        type: 'error',
+        message: error instanceof Error ? error.message : 'Could not prepare wallpaper.',
+      });
+    } finally {
+      setUploadingWallpaper(false);
+      e.target.value = '';
+    }
+  }
+
+  async function createCustomField() {
+    if (customFieldSaving) return;
+
+    const name = newCustomField.name.trim();
+    if (!name) {
+      setStatus({ type: 'error', message: 'Custom field name is required.' });
+      return;
+    }
+
+    setCustomFieldSaving(true);
+    setStatus({ type: 'info', message: 'Adding custom field...' });
+
+    try {
+      const res = await fetch('/api/custom-fields', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name,
+          description: newCustomField.description.trim() || null,
+          type: newCustomField.type,
+          options: newCustomField.optionsText,
+        }),
+      });
+      const payload = await readJsonResponse<{ field: CustomFieldDefinition }>(res);
+      if (!payload.success) throw new Error(payload.error ?? 'Could not add custom field.');
+
+      setCustomFields((prev) => [...prev, payload.data.field]);
+      setNewCustomField({ name: '', description: '', type: 'text', optionsText: '' });
+      setStatus({ type: 'success', message: 'Custom field added. Members can fill it from their profile edit page.' });
+    } catch (error) {
+      setStatus({
+        type: 'error',
+        message: error instanceof Error ? error.message : 'Could not add custom field.',
+      });
+    } finally {
+      setCustomFieldSaving(false);
+    }
+  }
+
+  async function deleteCustomField(fieldId: string) {
+    if (customFieldSaving) return;
+    setCustomFieldSaving(true);
+    setStatus({ type: 'info', message: 'Removing custom field...' });
+
+    try {
+      const res = await fetch(`/api/custom-fields/${fieldId}`, { method: 'DELETE' });
+      const payload = await readJsonResponse(res);
+      if (!payload.success) throw new Error(payload.error ?? 'Could not remove custom field.');
+
+      setCustomFields((prev) => prev.filter((field) => field.id !== fieldId));
+      setStatus({ type: 'success', message: 'Custom field removed.' });
+    } catch (error) {
+      setStatus({
+        type: 'error',
+        message: error instanceof Error ? error.message : 'Could not remove custom field.',
+      });
+    } finally {
+      setCustomFieldSaving(false);
+    }
+  }
+
   async function handleAvatarFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file || uploadingAvatar) return;
@@ -746,12 +893,124 @@ export default function SettingsClient({
         </button>
       </section>
 
+      <section className="card p-6" aria-labelledby="settings-custom-fields-heading">
+        <h2 id="settings-custom-fields-heading" className="text-lg font-semibold text-text mb-1">
+          Custom fields
+        </h2>
+        <p className="text-muted text-sm mb-4">
+          Create reusable profile fields for members, like Simply Plural-style details.
+        </p>
+
+        <div className="rounded-xl border border-border-soft bg-surface-alt/35 p-4">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div>
+              <label htmlFor="custom-field-name" className="label">Field name</label>
+              <input
+                id="custom-field-name"
+                className="input"
+                value={newCustomField.name}
+                onChange={(event) => setNewCustomField((prev) => ({ ...prev, name: event.target.value }))}
+                placeholder="Favorite comfort item"
+                maxLength={80}
+              />
+            </div>
+            <div>
+              <label htmlFor="custom-field-type" className="label">Field type</label>
+              <select
+                id="custom-field-type"
+                className="input min-h-[44px]"
+                value={newCustomField.type}
+                onChange={(event) => setNewCustomField((prev) => ({
+                  ...prev,
+                  type: event.target.value as CustomFieldType,
+                }))}
+              >
+                <option value="text">Short text</option>
+                <option value="long_text">Long text</option>
+                <option value="number">Number</option>
+                <option value="date">Date</option>
+                <option value="checkbox">Checkbox</option>
+                <option value="select">Select</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="mt-3">
+            <label htmlFor="custom-field-description" className="label">Helper text</label>
+            <input
+              id="custom-field-description"
+              className="input"
+              value={newCustomField.description}
+              onChange={(event) => setNewCustomField((prev) => ({ ...prev, description: event.target.value }))}
+              placeholder="Optional note shown when filling this field"
+              maxLength={180}
+            />
+          </div>
+
+          {newCustomField.type === 'select' && (
+            <div className="mt-3">
+              <label htmlFor="custom-field-options" className="label">Options</label>
+              <textarea
+                id="custom-field-options"
+                className="input min-h-[96px]"
+                value={newCustomField.optionsText}
+                onChange={(event) => setNewCustomField((prev) => ({ ...prev, optionsText: event.target.value }))}
+                placeholder={'One option per line\nLow energy\nSocial\nDo not disturb'}
+              />
+            </div>
+          )}
+
+          <button
+            type="button"
+            onClick={() => void createCustomField()}
+            disabled={customFieldSaving || !newCustomField.name.trim()}
+            className="btn-primary mt-4 min-h-[44px] w-full justify-center sm:w-auto"
+          >
+            {customFieldSaving ? 'Saving...' : 'Add custom field'}
+          </button>
+        </div>
+
+        <div className="mt-4">
+          {customFieldLoading ? (
+            <p className="text-sm text-muted">Loading fields...</p>
+          ) : customFields.length === 0 ? (
+            <p className="rounded-xl border border-border-soft bg-surface-alt/30 px-3 py-3 text-sm text-muted">
+              No custom fields yet. Add one above, then fill it from each member profile.
+            </p>
+          ) : (
+            <ul className="space-y-2">
+              {customFields.map((field) => (
+                <li key={field.id} className="rounded-xl border border-border-soft bg-surface-alt/40 px-3 py-3">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-text">{field.name}</p>
+                      <p className="mt-0.5 text-xs text-muted">
+                        {CUSTOM_FIELD_TYPE_LABEL[field.type] ?? field.type}
+                        {field.description ? ` - ${field.description}` : ''}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => void deleteCustomField(field.id)}
+                      disabled={customFieldSaving}
+                      className="btn-ghost min-h-[38px] border border-border px-3 text-xs text-error hover:bg-error/10"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </section>
+
       <section id="appearance" className="card p-6 scroll-mt-6" aria-labelledby="settings-appearance-heading">
         <h2 id="settings-appearance-heading" className="text-lg font-semibold text-text mb-1">
           Appearance
         </h2>
         <p className="text-muted text-sm mb-4">
-          Pick a theme that feels safe and comfortable for your system.
+          Pick a base theme, then personalize it with your own accent or wallpaper.
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {SOLARA_THEMES.map((theme) => (
@@ -770,6 +1029,112 @@ export default function SettingsClient({
               <p className="mt-1 text-xs text-muted">{theme.description}</p>
             </button>
           ))}
+        </div>
+
+        <div className="mt-5 rounded-xl border border-border-soft bg-surface-alt/35 p-4">
+          <h3 className="text-sm font-semibold text-text">Personal touches</h3>
+          <p className="mt-1 text-xs text-muted">
+            These stay on this device and keep a dark overlay so text remains readable.
+          </p>
+
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            <div>
+              <label htmlFor="appearance-accent" className="label">Accent color</label>
+              <div className="flex min-h-[44px] items-center gap-2">
+                <input
+                  id="appearance-accent"
+                  type="color"
+                  value={appearance.accentColor || '#a78bfa'}
+                  onChange={(event) => updateAppearance({ ...appearance, accentColor: event.target.value })}
+                  className="h-11 w-12 rounded-lg border border-border bg-surface"
+                  aria-label="Accent color"
+                />
+                <button
+                  type="button"
+                  className="btn-ghost min-h-[42px] border border-border px-3 text-sm"
+                  onClick={() => updateAppearance({ ...appearance, accentColor: '' })}
+                >
+                  Use theme color
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <label htmlFor="appearance-wallpaper-url" className="label">Wallpaper URL</label>
+              <input
+                id="appearance-wallpaper-url"
+                className="input"
+                value={appearance.wallpaperUrl.startsWith('data:') ? '' : appearance.wallpaperUrl}
+                onChange={(event) => updateAppearance({ ...appearance, wallpaperUrl: event.target.value.trim() })}
+                placeholder="https://..."
+              />
+            </div>
+          </div>
+
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => wallpaperUploadRef.current?.click()}
+              disabled={uploadingWallpaper}
+              className="btn-ghost min-h-[40px] border border-border px-3 text-sm"
+            >
+              {uploadingWallpaper ? 'Preparing...' : 'Upload wallpaper'}
+            </button>
+            <button
+              type="button"
+              onClick={clearAppearance}
+              className="btn-ghost min-h-[40px] border border-border px-3 text-sm"
+            >
+              Reset extras
+            </button>
+            <input
+              ref={wallpaperUploadRef}
+              type="file"
+              accept="image/*"
+              className="sr-only"
+              onChange={handleWallpaperFileChange}
+              aria-label="Upload wallpaper image"
+            />
+          </div>
+
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            <div>
+              <label htmlFor="wallpaper-dim" className="label">Wallpaper dim</label>
+              <input
+                id="wallpaper-dim"
+                type="range"
+                min="35"
+                max="92"
+                value={appearance.wallpaperDim}
+                onChange={(event) => updateAppearance({ ...appearance, wallpaperDim: Number(event.target.value) })}
+                className="w-full accent-primary"
+              />
+              <p className="mt-1 text-xs text-subtle">{appearance.wallpaperDim}% overlay</p>
+            </div>
+            <div>
+              <label htmlFor="wallpaper-blur" className="label">Wallpaper blur</label>
+              <input
+                id="wallpaper-blur"
+                type="range"
+                min="0"
+                max="12"
+                value={appearance.wallpaperBlur}
+                onChange={(event) => updateAppearance({ ...appearance, wallpaperBlur: Number(event.target.value) })}
+                className="w-full accent-primary"
+              />
+              <p className="mt-1 text-xs text-subtle">{appearance.wallpaperBlur}px blur</p>
+            </div>
+          </div>
+
+          <label className="mt-3 flex min-h-[44px] items-center gap-3 rounded-lg border border-border-soft bg-surface/40 px-3 py-2 text-sm text-text">
+            <input
+              type="checkbox"
+              className="h-4 w-4 accent-primary"
+              checked={appearance.reduceTexture}
+              onChange={(event) => updateAppearance({ ...appearance, reduceTexture: event.target.checked })}
+            />
+            Reduce background texture
+          </label>
         </div>
       </section>
 
@@ -1222,6 +1587,15 @@ const SYNC_FIELD_OVERRIDE_ROWS: Array<{ key: SyncFieldOverrideKey; label: string
   { key: 'tags', label: 'Tags' },
   { key: 'notes', label: 'Notes' },
 ];
+
+const CUSTOM_FIELD_TYPE_LABEL: Record<CustomFieldType, string> = {
+  text: 'Short text',
+  long_text: 'Long text',
+  number: 'Number',
+  date: 'Date',
+  checkbox: 'Checkbox',
+  select: 'Select',
+};
 
 function SummaryStat({ label, value }: { label: string; value: number }) {
   return (

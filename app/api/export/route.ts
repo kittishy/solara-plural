@@ -4,6 +4,8 @@ import { requireAuth } from '@/lib/api/helpers';
 import { db } from '@/lib/db';
 import {
   frontEntries,
+  customFields,
+  memberFieldValues,
   memberExternalLinks,
   members,
   systemBlocks,
@@ -27,7 +29,18 @@ export async function GET() {
     return NextResponse.json({ success: false, error: 'System profile not found.' }, { status: 404 });
   }
 
-  const [allMembers, allFront, allNotes, allFriendRequests, allFriendships, allBlocks, allMemberShares, allExternalLinks] = await Promise.all([
+  const [
+    allMembers,
+    allFront,
+    allNotes,
+    allFriendRequests,
+    allFriendships,
+    allBlocks,
+    allMemberShares,
+    allExternalLinks,
+    allCustomFields,
+    allMemberFieldValues,
+  ] = await Promise.all([
     db.select().from(members).where(eq(members.systemId, auth.systemId)),
     db.select().from(frontEntries).where(eq(frontEntries.systemId, auth.systemId)),
     db.select().from(systemNotes).where(eq(systemNotes.systemId, auth.systemId)),
@@ -63,10 +76,18 @@ export async function GET() {
       .select()
       .from(memberExternalLinks)
       .where(eq(memberExternalLinks.systemId, auth.systemId)),
+    db
+      .select()
+      .from(customFields)
+      .where(eq(customFields.systemId, auth.systemId)),
+    db
+      .select()
+      .from(memberFieldValues)
+      .where(eq(memberFieldValues.systemId, auth.systemId)),
   ]);
 
   const exportData = {
-    version: 4,
+    version: 5,
     exportedAt: new Date().toISOString(),
     system: {
       id: system.id,
@@ -83,6 +104,13 @@ export async function GET() {
       memberIds: safeJsonArray(entry.memberIds),
     })),
     notes: allNotes,
+    customFields: {
+      definitions: allCustomFields.map((field) => ({
+        ...field,
+        options: safeJsonArray(field.options),
+      })),
+      memberValues: allMemberFieldValues,
+    },
     integrations: {
       memberExternalLinks: allExternalLinks,
     },

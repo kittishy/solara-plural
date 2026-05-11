@@ -33,6 +33,7 @@
 - [ ] Login page (warm, on-brand)
 - [ ] NextAuth Credentials provider
 - [x] Server layout protecting dashboard routes
+- [x] Self-service password reset with hashed one-time tokens
 - [ ] Session display in sidebar
 - [ ] Logout functionality
 
@@ -100,7 +101,7 @@
 - [ ] Front tiers: primary, co-front, co-conscious
 - [ ] Member color picker (full palette)
 - [ ] Member avatar image upload
-- [ ] Custom fields for member profiles
+- [x] Custom fields for member profiles
 - [ ] Accessibility settings: text size, reduced motion, contrast notes
 - [ ] Basic statistics (total front time per member)
 - [x] PWA manifest + service worker
@@ -109,15 +110,15 @@
 
 ## v0.3 — Social (Friend Systems)
 
-- [ ] System-to-system invite/connection
+- [x] System-to-system invite/connection
 - [ ] Role presets for sharing: owner, partner, trusted friend, friend
-- [ ] Selective visibility (which members to share)
-- [ ] Per-member and per-field privacy labels
-- [ ] View partner system's public front
+- [x] Selective visibility (which members to share)
+- [x] Per-member sharing controls
+- [x] View connected system's shared front
 - [x] Trusted front-change notifications
 - [x] In-app notification center as durable fallback for push
-- [ ] Partner system member list (read-only)
-- [ ] Privacy controls per member
+- [x] Partner system member list (read-only, privacy-scoped)
+- [x] General friend privacy controls with member exceptions
 - [ ] Account deletion and data retention controls before public growth
 
 ---

@@ -3,6 +3,7 @@ import { members } from '@/lib/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { requireAuth, ok, err } from '@/lib/api/helpers';
 import { revalidatePath } from 'next/cache';
+import { readMemberCustomFieldValues, saveMemberCustomFieldValues } from '@/lib/member-custom-fields';
 
 // Next.js 14 App Router: params is now a Promise — must be awaited in route handlers
 type Params = { params: Promise<{ id: string }> };
@@ -19,7 +20,8 @@ export async function GET(_req: Request, { params }: Params) {
   });
 
   if (!member) return err('Member not found', 404);
-  return ok({ ...member, tags: member.tags ? JSON.parse(member.tags) : [] });
+  const customFieldValues = await readMemberCustomFieldValues(auth.systemId, id);
+  return ok({ ...member, tags: member.tags ? JSON.parse(member.tags) : [], customFieldValues });
 }
 
 // PUT /api/members/[id]
@@ -29,7 +31,7 @@ export async function PUT(request: Request, { params }: Params) {
 
   const { id } = await params;
   const body = await request.json();
-  const { name, pronouns, avatarUrl, description, color, role, tags, notes } = body;
+  const { name, pronouns, avatarUrl, description, color, role, tags, notes, customFieldValues } = body;
 
   if (!name?.trim()) return err('Name is required');
 
@@ -49,11 +51,12 @@ export async function PUT(request: Request, { params }: Params) {
     .returning();
 
   if (!updated.length) return err('Member not found', 404);
+  const savedCustomFieldValues = await saveMemberCustomFieldValues(auth.systemId, id, customFieldValues);
   revalidatePath('/');
   revalidatePath('/members');
   revalidatePath('/front');
   revalidatePath(`/members/${id}`);
-  return ok({ ...updated[0], tags: tags ?? [] });
+  return ok({ ...updated[0], tags: tags ?? [], customFieldValues: savedCustomFieldValues });
 }
 
 // DELETE /api/members/[id]
