@@ -159,7 +159,7 @@ function PartnerSheet({
     setSaving(true);
     setError(null);
     try {
-      const res = await fetch(`/api/partners/${partner.id}`, {
+      const res = await fetch(`/api/partners/${partner.partnershipId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -578,7 +578,7 @@ export default function PartnersClient() {
   const outgoing = data?.outgoingRequests ?? [];
 
   async function handleEndPartnership(partner: PartnerItem) {
-    const res = await fetch(`/api/partners/${partner.id}`, { method: 'DELETE' });
+    const res = await fetch(`/api/partners/${partner.partnershipId}`, { method: 'DELETE' });
     if (res.ok) revalidatePartners();
   }
 
