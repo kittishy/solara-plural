@@ -1,7 +1,7 @@
 import { Sidebar } from '@/components/layout/Sidebar';
 import { MobileNav } from '@/components/layout/MobileNav';
 import { DashboardClientProviders } from './DashboardClientProviders';
-import { getCachedSession, requireSystemId } from '@/lib/auth/session';
+import { getAccountType, getCachedSession, requireSystemId } from '@/lib/auth/session';
 import { Trans } from '@/components/language/Trans';
 
 export default async function DashboardLayout({
@@ -12,6 +12,7 @@ export default async function DashboardLayout({
   await requireSystemId();
   const session = await getCachedSession();
   const systemName = session?.user?.name ?? undefined;
+  const accountType = await getAccountType();
 
   return (
     <div className="min-h-dvh bg-bg flex">
@@ -25,7 +26,7 @@ export default async function DashboardLayout({
         <Trans k="nav.skip" />
       </a>
 
-      <Sidebar systemName={systemName} />
+      <Sidebar systemName={systemName} accountType={accountType} />
 
       <main id="main-content" className="relative flex-1 md:ml-60 pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-0 min-h-dvh">
         {/* Ultra-subtle aurora presence — static, no animation, pointer-events none */}
@@ -37,7 +38,7 @@ export default async function DashboardLayout({
         </DashboardClientProviders>
       </main>
 
-      <MobileNav />
+      <MobileNav accountType={accountType} />
     </div>
   );
 }

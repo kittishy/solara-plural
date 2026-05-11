@@ -1,11 +1,11 @@
 import { db } from '@/lib/db';
 import { members, frontEntries } from '@/lib/db/schema';
 import { eq, and, isNull } from 'drizzle-orm';
-import { requireSystemId } from '@/lib/auth/session';
+import { requireSystemAccount } from '@/lib/auth/session';
 import MembersClient from './MembersClient';
 
 export default async function MembersPage() {
-  const systemId = await requireSystemId();
+  const systemId = await requireSystemAccount();
 
   // Fetch members and active front in parallel — single round-trip
   const [allMembers, activeFront] = await Promise.all([

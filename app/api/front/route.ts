@@ -206,8 +206,13 @@ export async function POST(request: Request) {
   if (auth.error) return auth.error;
 
   const requestId = getRequestId(request);
-  const body = await request.json();
-  const { memberIds, note } = body;
+  let body: any;
+  try {
+    body = await request.json();
+  } catch {
+    return err('Invalid JSON payload', 400);
+  }
+  const { memberIds, note } = body ?? {};
 
   if (!Array.isArray(memberIds) || memberIds.length === 0) {
     return err('memberIds must be a non-empty array');

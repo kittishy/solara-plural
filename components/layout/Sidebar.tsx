@@ -111,23 +111,24 @@ function IconLogout({ size = 18 }: IconProps) {
 }
 
 const navItems = [
-  { href: '/', labelKey: 'nav.home', Icon: IconHome },
-  { href: '/members', labelKey: 'nav.members', Icon: IconMembers },
-  { href: '/partners', labelKey: 'nav.partners', Icon: IconPartners },
-  { href: '/front/history', labelKey: 'nav.frontHistory', Icon: IconCalendar },
-  { href: '/notes', labelKey: 'nav.notes', Icon: IconNotes },
-  { href: '/friends', labelKey: 'nav.friends', Icon: IconFriends },
-  { href: '/notifications', labelKey: 'nav.notifications', Icon: IconBell },
-  { href: '/settings', labelKey: 'nav.settings', Icon: IconSettings },
+  { href: '/', labelKey: 'nav.home', Icon: IconHome, systemOnly: false },
+  { href: '/members', labelKey: 'nav.members', Icon: IconMembers, systemOnly: true },
+  { href: '/partners', labelKey: 'nav.partners', Icon: IconPartners, systemOnly: false },
+  { href: '/front/history', labelKey: 'nav.frontHistory', Icon: IconCalendar, systemOnly: true },
+  { href: '/notes', labelKey: 'nav.notes', Icon: IconNotes, systemOnly: false },
+  { href: '/friends', labelKey: 'nav.friends', Icon: IconFriends, systemOnly: false },
+  { href: '/notifications', labelKey: 'nav.notifications', Icon: IconBell, systemOnly: false },
+  { href: '/settings', labelKey: 'nav.settings', Icon: IconSettings, systemOnly: false },
 ] as const;
 
 const SIDEBAR_SYMBOLS = ['☀️', '🌙', '⭐', '🌸', '💜', '✨', '🪷', '🌿', '🫧', '🧭'] as const;
 const SIDEBAR_SYMBOL_STORAGE = 'solara.sidebar.symbol';
 interface SidebarProps {
   systemName?: string;
+  accountType?: 'system' | 'singlet';
 }
 
-export function Sidebar({ systemName }: SidebarProps) {
+export function Sidebar({ systemName, accountType = 'system' }: SidebarProps) {
   const pathname = usePathname();
   const activePathname = stripLanguageFromPathname(pathname);
   const { language, t } = useLanguage();
@@ -274,7 +275,7 @@ export function Sidebar({ systemName }: SidebarProps) {
       </div>
 
       <nav className="flex-1 space-y-0.5 px-3 py-4" aria-label={t('nav.primary')}>
-        {navItems.map((item) => {
+        {navItems.filter((item) => accountType === 'system' || !item.systemOnly).map((item) => {
           const isActive =
             item.href === '/'
               ? activePathname === '/'

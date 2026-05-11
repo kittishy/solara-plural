@@ -6,7 +6,13 @@ import bcrypt from 'bcryptjs';
 import { NextResponse } from 'next/server';
 
 export async function POST(request: Request) {
-  const { name, email, password, description, accountType } = await request.json();
+  let body: any;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: 'Invalid JSON payload' }, { status: 400 });
+  }
+  const { name, email, password, description, accountType } = body ?? {};
 
   const normalizedAccountType = accountType === 'singlet' ? 'singlet' : 'system';
 

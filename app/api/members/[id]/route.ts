@@ -30,8 +30,13 @@ export async function PUT(request: Request, { params }: Params) {
   if (auth.error) return auth.error;
 
   const { id } = await params;
-  const body = await request.json();
-  const { name, pronouns, avatarUrl, description, color, role, tags, notes, customFieldValues } = body;
+  let body: any;
+  try {
+    body = await request.json();
+  } catch {
+    return err('Invalid JSON payload', 400);
+  }
+  const { name, pronouns, avatarUrl, description, color, role, tags, notes, customFieldValues } = body ?? {};
 
   if (!name?.trim()) return err('Name is required');
 

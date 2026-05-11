@@ -3,6 +3,7 @@
 import { useRef, useState } from 'react';
 import DynamicAvatarImage from '@/components/ui/DynamicAvatarImage';
 import { prepareAvatarDataUrl } from '@/lib/client/avatar-upload';
+import { useLanguage } from '@/components/providers/LanguageProvider';
 
 interface AvatarUploadProps {
   currentUrl?: string | null;
@@ -21,6 +22,7 @@ export default function AvatarUpload({
   memberName,
   onUpload,
 }: AvatarUploadProps) {
+  const { t } = useLanguage();
   const inputRef = useRef<HTMLInputElement>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(currentUrl ?? null);
   const [isUploading, setIsUploading] = useState(false);
@@ -39,7 +41,7 @@ export default function AvatarUpload({
     setError(null);
 
     if (file.size > MAX_FILE_BYTES) {
-      setError('File is too large - max 20 MB.');
+      setError(t('avatar.fileTooLarge' as any));
       e.target.value = '';
       return;
     }
@@ -54,7 +56,7 @@ export default function AvatarUpload({
       onUpload(dataUrl);
     } catch {
       setPreviewUrl(currentUrl ?? null);
-      setError('Upload failed — try again?');
+      setError(t('avatar.uploadFailed' as any));
     } finally {
       setIsUploading(false);
       e.target.value = '';
@@ -64,13 +66,13 @@ export default function AvatarUpload({
   function handleUrlApply() {
     const trimmed = urlInput.trim();
     if (!trimmed) {
-      setError('Please enter a URL.');
+      setError(t('avatar.enterUrl' as any));
       return;
     }
     try {
       new URL(trimmed);
     } catch {
-      setError('Invalid URL — paste a full URL starting with https://');
+      setError(t('avatar.invalidUrl' as any));
       return;
     }
     setError(null);

@@ -111,7 +111,7 @@ function BottomSheet({
       <div
         aria-hidden="true"
         onClick={onClose}
-        className={`fixed inset-0 z-40 bg-bg/80 backdrop-blur-sm transition-opacity duration-300
+        className={`fixed inset-0 z-40 bg-bg/80 backdrop-blur-sm transition-opacity duration-300 md:hidden
           ${isOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
       />
 
@@ -120,8 +120,9 @@ function BottomSheet({
         role="dialog"
         aria-label="Front actions"
         aria-modal="true"
-        className={`fixed bottom-0 inset-x-0 z-50 rounded-t-2xl bg-surface border-t border-border
-          pb-[env(safe-area-inset-bottom)] transition-transform duration-300
+        className={`fixed bottom-0 inset-x-0 z-50 rounded-t-2xl bg-surface border-t border-border shadow-2xl
+          pb-[max(1rem,env(safe-area-inset-bottom))] max-h-[85vh] overflow-y-auto
+          transition-transform duration-300 ease-out
           ${isOpen ? 'translate-y-0' : 'translate-y-full'}`}
       >
         {/* Drag handle */}

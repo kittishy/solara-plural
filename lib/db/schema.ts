@@ -77,16 +77,78 @@ export const systemPartnerRequests = sqliteTable('system_partner_requests', {
 
 // Partnerships
 export const systemPartnerships = sqliteTable('system_partnerships', {
-  id:                text('id').primaryKey(),
-  systemAId:         text('system_a_id').notNull().references(() => systems.id, { onDelete: 'cascade' }),
-  systemBId:         text('system_b_id').notNull().references(() => systems.id, { onDelete: 'cascade' }),
-  relationshipLabel: text('relationship_label'),
-  partneredSince:    integer('partnered_since', { mode: 'timestamp' }),
-  createdAt:         integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(strftime('%s', 'now'))`),
+  id:                  text('id').primaryKey(),
+  systemAId:           text('system_a_id').notNull().references(() => systems.id, { onDelete: 'cascade' }),
+  systemBId:           text('system_b_id').notNull().references(() => systems.id, { onDelete: 'cascade' }),
+  relationshipLabel:   text('relationship_label'),
+  partneredSince:      integer('partnered_since', { mode: 'timestamp' }),
+  anniversaryDate:     integer('anniversary_date', { mode: 'timestamp' }),
+  nicknameForA:        text('nickname_for_a'),
+  nicknameForB:        text('nickname_for_b'),
+  howWeMet:            text('how_we_met'),
+  checkinIntervalDays: integer('checkin_interval_days'),
+  lastCheckinAt:       integer('last_checkin_at', { mode: 'timestamp' }),
+  createdAt:           integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(strftime('%s', 'now'))`),
 }, (t) => ({
   systemAIdx: index('idx_partnerships_system_a').on(t.systemAId),
   systemBIdx: index('idx_partnerships_system_b').on(t.systemBId),
   pairUnique: uniqueIndex('ux_partnerships_pair').on(t.systemAId, t.systemBId),
+}));
+
+// Shared diary entries between partners
+export const partnershipNotes = sqliteTable('partnership_notes', {
+  id:             text('id').primaryKey(),
+  partnershipId:  text('partnership_id').notNull().references(() => systemPartnerships.id, { onDelete: 'cascade' }),
+  authorSystemId: text('author_system_id').notNull().references(() => systems.id, { onDelete: 'cascade' }),
+  content:        text('content').notNull(),
+  mood:           text('mood'),
+  createdAt:      integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(strftime('%s', 'now'))`),
+  updatedAt:      integer('updated_at', { mode: 'timestamp' }).notNull().default(sql`(strftime('%s', 'now'))`),
+}, (t) => ({
+  partnershipIdx: index('idx_partnership_notes_partnership_id').on(t.partnershipId),
+  createdIdx: index('idx_partnership_notes_created_at').on(t.createdAt),
+}));
+
+// Alter ↔ alter pairings within a partnership
+export const alterPartnerPairings = sqliteTable('alter_partner_pairings', {
+  id:            text('id').primaryKey(),
+  partnershipId: text('partnership_id').notNull().references(() => systemPartnerships.id, { onDelete: 'cascade' }),
+  memberAId:     text('member_a_id').notNull().references(() => members.id, { onDelete: 'cascade' }),
+  memberBId:     text('member_b_id').notNull().references(() => members.id, { onDelete: 'cascade' }),
+  label:         text('label'),
+  createdAt:     integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(strftime('%s', 'now'))`),
+}, (t) => ({
+  partnershipIdx: index('idx_alter_pairings_partnership_id').on(t.partnershipId),
+  pairUnique: uniqueIndex('ux_alter_pairings_pair').on(t.partnershipId, t.memberAId, t.memberBId),
+}));
+
+// Relationship milestones / memories with dates
+export const partnershipMilestones = sqliteTable('partnership_milestones', {
+  id:            text('id').primaryKey(),
+  partnershipId: text('partnership_id').notNull().references(() => systemPartnerships.id, { onDelete: 'cascade' }),
+  title:         text('title').notNull(),
+  description:   text('description'),
+  occurredOn:    integer('occurred_on', { mode: 'timestamp' }).notNull(),
+  createdAt:     integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(strftime('%s', 'now'))`),
+}, (t) => ({
+  partnershipIdx: index('idx_partnership_milestones_partnership_id').on(t.partnershipId),
+  occurredIdx: index('idx_partnership_milestones_occurred_on').on(t.occurredOn),
+}));
+
+// Shared bucket list of things to do together
+export const partnershipBucketItems = sqliteTable('partnership_bucket_items', {
+  id:                text('id').primaryKey(),
+  partnershipId:     text('partnership_id').notNull().references(() => systemPartnerships.id, { onDelete: 'cascade' }),
+  title:             text('title').notNull(),
+  note:              text('note'),
+  category:          text('category'),
+  completedAt:       integer('completed_at', { mode: 'timestamp' }),
+  createdBySystemId: text('created_by_system_id').notNull().references(() => systems.id, { onDelete: 'cascade' }),
+  createdAt:         integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(strftime('%s', 'now'))`),
+  updatedAt:         integer('updated_at', { mode: 'timestamp' }).notNull().default(sql`(strftime('%s', 'now'))`),
+}, (t) => ({
+  partnershipIdx: index('idx_bucket_items_partnership_id').on(t.partnershipId),
+  completedIdx: index('idx_bucket_items_completed_at').on(t.completedAt),
 }));
 
 // System Blocks
@@ -271,11 +333,13 @@ export const systemNotes = sqliteTable('system_notes', {
   memberId:  text('member_id').references(() => members.id, { onDelete: 'set null' }),
   title:     text('title'),
   content:   text('content').notNull(),
+  isPrivate: integer('is_private').notNull().default(0),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(strftime('%s', 'now'))`),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull().default(sql`(strftime('%s', 'now'))`),
 }, (t) => ({
   systemIdx: index('idx_system_notes_system_id').on(t.systemId),
   memberIdx: index('idx_system_notes_member_id').on(t.memberId),
+  privateIdx: index('idx_system_notes_is_private').on(t.isPrivate),
 }));
 
 // Inferred Types
@@ -315,3 +379,11 @@ export type SystemPartnerRequest = typeof systemPartnerRequests.$inferSelect;
 export type NewSystemPartnerRequest = typeof systemPartnerRequests.$inferInsert;
 export type SystemPartnership = typeof systemPartnerships.$inferSelect;
 export type NewSystemPartnership = typeof systemPartnerships.$inferInsert;
+export type PartnershipNote = typeof partnershipNotes.$inferSelect;
+export type NewPartnershipNote = typeof partnershipNotes.$inferInsert;
+export type AlterPartnerPairing = typeof alterPartnerPairings.$inferSelect;
+export type NewAlterPartnerPairing = typeof alterPartnerPairings.$inferInsert;
+export type PartnershipMilestone = typeof partnershipMilestones.$inferSelect;
+export type NewPartnershipMilestone = typeof partnershipMilestones.$inferInsert;
+export type PartnershipBucketItem = typeof partnershipBucketItems.$inferSelect;
+export type NewPartnershipBucketItem = typeof partnershipBucketItems.$inferInsert;

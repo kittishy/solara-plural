@@ -2,11 +2,11 @@ import { db } from '@/lib/db';
 import { members, frontEntries } from '@/lib/db/schema';
 import { eq, and, isNull } from 'drizzle-orm';
 import FrontTracker from './FrontTracker';
-import { requireSystemId } from '@/lib/auth/session';
+import { requireSystemAccount } from '@/lib/auth/session';
 import { Trans } from '@/components/language/Trans';
 
 export default async function FrontPage() {
-  const systemId = await requireSystemId();
+  const systemId = await requireSystemAccount();
 
   const [allMembers, activeFront] = await Promise.all([
     db.query.members.findMany({
