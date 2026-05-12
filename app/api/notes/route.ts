@@ -1,7 +1,7 @@
 import { db } from '@/lib/db';
 import { systemNotes } from '@/lib/db/schema';
 import { eq, and, desc } from 'drizzle-orm';
-import { requireAuth, ok, err } from '@/lib/api/helpers';
+import { requireAuth, ok, err, parseJsonRecord } from '@/lib/api/helpers';
 import { createId } from '@paralleldrive/cuid2';
 import { revalidatePath } from 'next/cache';
 
@@ -33,24 +33,21 @@ export async function POST(request: Request) {
   const auth = await requireAuth();
   if (auth.error) return auth.error;
 
-  let body: any;
-  try {
-    body = await request.json();
-  } catch {
-    return err('Invalid JSON payload', 400);
-  }
-  const { title, content, memberId, isPrivate } = body ?? {};
+  const parsed = await parseJsonRecord(request);
+  if (parsed.error) return parsed.error;
 
-  if (!content?.trim()) return err('Content is required');
+  const body = parsed.data;
+  const content = typeof body.content === 'string' ? body.content.trim() : '';
+  if (!content) return err('Content is required');
 
   const now = new Date();
   const note = await db.insert(systemNotes).values({
     id:        createId(),
     systemId:  auth.systemId,
-    memberId:  memberId ?? null,
-    title:     title?.trim() ?? null,
-    content:   content.trim(),
-    isPrivate: isPrivate ? 1 : 0,
+    memberId:  typeof body.memberId === 'string' ? body.memberId : null,
+    title:     typeof body.title === 'string' ? body.title.trim() || null : null,
+    content,
+    isPrivate: body.isPrivate === true ? 1 : 0,
     createdAt: now,
     updatedAt: now,
   }).returning();

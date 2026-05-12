@@ -5,6 +5,7 @@ import Link from 'next/link';
 import useSWR from 'swr';
 import DynamicAvatarImage from '@/components/ui/DynamicAvatarImage';
 import { apiFetcher, revalidatePartners, swrKeys } from '@/lib/swr';
+import { formatDateLong, formatTimeSince } from '@/lib/client/format';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -65,17 +66,8 @@ const PARTNER_COLOR = '#f472b6'; // partner rose
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function formatTimeSince(date: Date | string): string {
-  const ms = Date.now() - new Date(date).getTime();
-  const h = Math.floor(ms / 3_600_000);
-  const m = Math.floor((ms % 3_600_000) / 60_000);
-  if (h > 0) return `${h}h ${m}m`;
-  if (m > 0) return `${m}m`;
-  return 'just now';
-}
-
 function formatDate(date: Date | string): string {
-  return new Date(date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+  return formatDateLong(date, 'Unknown date');
 }
 
 function SystemAvatar({

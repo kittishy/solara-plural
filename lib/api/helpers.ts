@@ -21,6 +21,33 @@ export function err(message: string, status = 400) {
   return NextResponse.json({ success: false, error: message }, { status });
 }
 
+export function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+export async function parseJsonBody<T = unknown>(
+  request: Request,
+): Promise<
+  { data: T; error?: never } | { data?: never; error: NextResponse }
+> {
+  try {
+    return { data: await request.json() as T };
+  } catch {
+    return { error: err('Invalid JSON payload', 400) };
+  }
+}
+
+export async function parseJsonRecord(
+  request: Request,
+): Promise<
+  { data: Record<string, unknown>; error?: never } | { data?: never; error: NextResponse }
+> {
+  const parsed = await parseJsonBody<unknown>(request);
+  if (parsed.error) return { error: parsed.error };
+  if (!isRecord(parsed.data)) return { error: err('JSON payload must be an object', 400) };
+  return { data: parsed.data };
+}
+
 export async function requireAuth(): Promise<
   { systemId: string; error?: never } | { systemId?: never; error: NextResponse }
 > {

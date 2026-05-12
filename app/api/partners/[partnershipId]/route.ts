@@ -2,7 +2,7 @@ import { eq } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { db } from '@/lib/db';
 import { systemPartnerships } from '@/lib/db/schema';
-import { err, ok, requireAuth } from '@/lib/api/helpers';
+import { err, ok, parseJsonRecord, requireAuth } from '@/lib/api/helpers';
 import { getPartnershipForSystem } from '@/lib/partnerships';
 
 type Params = { params: Promise<{ partnershipId: string }> };
@@ -40,10 +40,10 @@ export async function PATCH(request: Request, { params }: Params) {
   const { partnershipId } = await params;
   if (!partnershipId) return err('Partnership ID is required.', 400);
 
-  let body: unknown;
-  try { body = await request.json(); } catch { return err('Invalid request payload.', 400); }
+  const parsed = await parseJsonRecord(request);
+  if (parsed.error) return parsed.error;
 
-  const payload = body as { relationshipLabel?: unknown; partneredSince?: unknown };
+  const payload = parsed.data;
 
   const access = await getPartnershipForSystem(partnershipId, auth.systemId);
   if (!access) return err('Partnership not found.', 404);

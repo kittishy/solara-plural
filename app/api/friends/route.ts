@@ -11,7 +11,7 @@ import {
   systemFriendships,
   systems,
 } from '@/lib/db/schema';
-import { err, ok, requireAuth } from '@/lib/api/helpers';
+import { err, ok, requireAuth, parseJsonRecord } from '@/lib/api/helpers';
 import {
   canonicalFriendPair,
   normalizeEmail,
@@ -20,10 +20,9 @@ import {
   type FriendMemberVisibility,
 } from '@/lib/friends';
 
-function mapRequestPayload(body: unknown): { email: string; message: string | null } {
-  const payload = body as { email?: unknown; message?: unknown };
-  const email = typeof payload?.email === 'string' ? normalizeEmail(payload.email) : '';
-  const message = typeof payload?.message === 'string' ? payload.message.trim().slice(0, 280) : '';
+function mapRequestPayload(body: Record<string, unknown>): { email: string; message: string | null } {
+  const email = typeof body.email === 'string' ? normalizeEmail(body.email) : '';
+  const message = typeof body.message === 'string' ? body.message.trim().slice(0, 280) : '';
 
   return {
     email,
@@ -359,14 +358,10 @@ export async function POST(request: Request) {
   const auth = await requireAuth();
   if (auth.error) return auth.error;
 
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return err('Invalid request payload.', 400);
-  }
+  const parsed = await parseJsonRecord(request);
+  if (parsed.error) return parsed.error;
 
-  const { email, message } = mapRequestPayload(body);
+  const { email, message } = mapRequestPayload(parsed.data);
   if (!email) return err('Friend email is required.', 400);
 
   const receiver = await db.query.systems.findFirst({

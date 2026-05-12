@@ -1,7 +1,7 @@
 import { db } from '@/lib/db';
 import { frontEntries, members } from '@/lib/db/schema';
 import { eq, and, inArray } from 'drizzle-orm';
-import { requireAuth, ok, err } from '@/lib/api/helpers';
+import { requireAuth, ok, err, parseJsonRecord } from '@/lib/api/helpers';
 import { parseDatetimeLocalValue, serializeMemberIds } from '@/lib/front';
 import { revalidatePath } from 'next/cache';
 
@@ -20,8 +20,9 @@ export async function PUT(request: Request, { params }: RouteContext) {
 
   if (!existing) return err('Front entry not found', 404);
 
-  const body = await request.json().catch(() => null);
-  if (!body) return err('Invalid JSON body');
+  const parsed = await parseJsonRecord(request);
+  if (parsed.error) return parsed.error;
+  const body = parsed.data;
 
   const memberIds = Array.isArray(body.memberIds) ? body.memberIds : null;
   const startedAt = typeof body.startedAt === 'string' ? parseDatetimeLocalValue(body.startedAt) : null;
