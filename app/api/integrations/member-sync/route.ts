@@ -1,6 +1,6 @@
 import { db } from '@/lib/db';
 import { frontEntries, memberExternalLinks, members, systemIntegrations } from '@/lib/db/schema';
-import { requireAuth, ok, err } from '@/lib/api/helpers';
+import { requireAuth, ok, err, isRecord, parseJsonRecord } from '@/lib/api/helpers';
 import { createId } from '@paralleldrive/cuid2';
 import { and, eq, inArray, isNull, or } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
@@ -91,8 +91,9 @@ export async function POST(request: Request) {
   const auth = await requireAuth();
   if (auth.error) return auth.error;
 
-  const body = await request.json().catch(() => null) as SyncBody | null;
-  if (!body || typeof body !== 'object') return err('Invalid JSON body.');
+  const parsed = await parseJsonRecord(request);
+  if (parsed.error) return parsed.error;
+  const body = parsed.data as SyncBody;
 
   const provider = parseProvider(body.provider);
   if (!provider) return err('Choose PluralKit before syncing.');
@@ -587,10 +588,6 @@ function compactOperations(operations: SyncOperation[]) {
 
 function toNullableString(value: unknown): string | null {
   return typeof value === 'string' ? value : null;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 function toRecord(value: unknown): Record<string, unknown> {

@@ -3,7 +3,7 @@ import { and, eq, inArray, or } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { db } from '@/lib/db';
 import { alterPartnerPairings, members } from '@/lib/db/schema';
-import { err, ok, requireAuth } from '@/lib/api/helpers';
+import { err, ok, parseJsonRecord, requireAuth } from '@/lib/api/helpers';
 import { getPartnershipForSystem } from '@/lib/partnerships';
 
 type Params = { params: Promise<{ partnershipId: string }> };
@@ -29,8 +29,10 @@ export async function POST(request: Request, { params }: Params) {
   const access = await getPartnershipForSystem(partnershipId, auth.systemId);
   if (!access) return err('Partnership not found.', 404);
 
-  let body: any;
-  try { body = await request.json(); } catch { return err('Invalid JSON payload', 400); }
+  const parsed = await parseJsonRecord(request);
+  if (parsed.error) return parsed.error;
+
+  const body = parsed.data;
   const memberAId = typeof body?.memberAId === 'string' ? body.memberAId : '';
   const memberBId = typeof body?.memberBId === 'string' ? body.memberBId : '';
   if (!memberAId || !memberBId) return err('memberAId and memberBId are required.', 400);

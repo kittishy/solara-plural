@@ -5,6 +5,7 @@ import DynamicAvatarImage from '@/components/ui/DynamicAvatarImage';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import useSWR from 'swr';
 import { apiFetcher, revalidateMembersAndFront, swrKeys } from '@/lib/swr';
+import { formatTimeSince } from '@/lib/client/format';
 
 const INITIAL_VISIBLE_MEMBERS = 60;
 const VISIBLE_MEMBERS_INCREMENT = 60;
@@ -39,15 +40,6 @@ function mergeMembersWithFront(
 ): MemberItem[] {
   const frontingIds = new Set(front?.memberIds ?? []);
   return members.map((m) => ({ ...m, isFronting: frontingIds.has(m.id) }));
-}
-
-function formatTimeSince(startedAt: Date | string): string {
-  const ms = Date.now() - new Date(startedAt).getTime();
-  const h = Math.floor(ms / 3_600_000);
-  const m = Math.floor((ms % 3_600_000) / 60_000);
-  if (h > 0) return `${h}h ${m}m`;
-  if (m > 0) return `${m}m`;
-  return 'just now';
 }
 
 // ─── BottomSheet ──────────────────────────────────────────────────────────────

@@ -11,12 +11,11 @@ import {
   systemPartnerships,
   systems,
 } from '@/lib/db/schema';
-import { err, ok, requireAuth } from '@/lib/api/helpers';
+import { err, ok, requireAuth, parseJsonRecord } from '@/lib/api/helpers';
 import { canonicalFriendPair } from '@/lib/friends';
 
-function parseBlockedSystemId(body: unknown): string {
-  const value = (body as { blockedSystemId?: unknown })?.blockedSystemId;
-  return typeof value === 'string' ? value.trim() : '';
+function parseBlockedSystemId(body: Record<string, unknown>): string {
+  return typeof body.blockedSystemId === 'string' ? body.blockedSystemId.trim() : '';
 }
 
 // POST /api/friends/blocks
@@ -25,14 +24,10 @@ export async function POST(request: Request) {
   const auth = await requireAuth();
   if (auth.error) return auth.error;
 
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return err('Invalid request payload.', 400);
-  }
+  const parsed = await parseJsonRecord(request);
+  if (parsed.error) return parsed.error;
 
-  const blockedSystemId = parseBlockedSystemId(body);
+  const blockedSystemId = parseBlockedSystemId(parsed.data);
   if (!blockedSystemId) return err('Blocked account is required.', 400);
   if (blockedSystemId === auth.systemId) return err('You cannot block your own account.', 400);
 

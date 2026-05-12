@@ -3,7 +3,7 @@ import { and, eq, or } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { db } from '@/lib/db';
 import { members, systemBlocks, systemFriendMemberShares, systemFriendships, systems } from '@/lib/db/schema';
-import { err, ok, requireAuth } from '@/lib/api/helpers';
+import { err, ok, requireAuth, parseJsonRecord } from '@/lib/api/helpers';
 import {
   canonicalFriendPair,
   defaultFieldVisibilityForLevel,
@@ -13,12 +13,6 @@ import {
 } from '@/lib/friends';
 
 type Params = { params: Promise<{ friendSystemId: string }> };
-
-type SharingBody = {
-  memberId?: unknown;
-  visibility?: unknown;
-  fieldVisibility?: unknown;
-};
 
 async function ensureActiveFriendship(ownerSystemId: string, friendSystemId: string) {
   const pair = canonicalFriendPair(ownerSystemId, friendSystemId);
@@ -126,12 +120,9 @@ export async function PUT(request: Request, { params }: Params) {
   const relationship = await ensureActiveFriendship(auth.systemId, friendSystemId);
   if ('error' in relationship) return relationship.error;
 
-  let body: SharingBody;
-  try {
-    body = (await request.json()) as SharingBody;
-  } catch {
-    return err('Invalid request payload.', 400);
-  }
+  const parsed = await parseJsonRecord(request);
+  if (parsed.error) return parsed.error;
+  const body = parsed.data;
 
   const memberId = typeof body.memberId === 'string' ? body.memberId.trim() : '';
   if (!memberId) return err('memberId is required.', 400);

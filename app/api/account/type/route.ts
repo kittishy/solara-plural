@@ -1,6 +1,6 @@
 import { db } from '@/lib/db';
 import { systems } from '@/lib/db/schema';
-import { requireAuth, err, ok } from '@/lib/api/helpers';
+import { requireAuth, err, ok, parseJsonRecord } from '@/lib/api/helpers';
 import { eq } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 
@@ -17,14 +17,11 @@ export async function PUT(request: Request) {
   const auth = await requireAuth();
   if (auth.error) return auth.error;
 
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return err('Invalid JSON payload.', 400);
-  }
+  const parsed = await parseJsonRecord(request);
+  if (parsed.error) return parsed.error;
+  const body = parsed.data;
 
-  const accountType = parseAccountType((body as { accountType?: unknown })?.accountType);
+  const accountType = parseAccountType(body.accountType);
   if (!accountType) {
     return err('Invalid account type. Use "system" or "singlet".', 400);
   }
@@ -38,7 +35,7 @@ export async function PUT(request: Request) {
     return err('Account not found.', 404);
   }
 
-  const acknowledgeDataRisk = Boolean((body as { acknowledgeDataRisk?: unknown })?.acknowledgeDataRisk);
+  const acknowledgeDataRisk = Boolean(body.acknowledgeDataRisk);
   const isDowngradingToSinglet = current.accountType !== 'singlet' && accountType === 'singlet';
   if (isDowngradingToSinglet && !acknowledgeDataRisk) {
     return err('Changing a system account to singlet requires acknowledging the data risk.', 400);

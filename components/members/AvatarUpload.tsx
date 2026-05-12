@@ -41,7 +41,7 @@ export default function AvatarUpload({
     setError(null);
 
     if (file.size > MAX_FILE_BYTES) {
-      setError(t('avatar.fileTooLarge' as any));
+      setError(t('avatar.fileTooLarge'));
       e.target.value = '';
       return;
     }
@@ -56,7 +56,7 @@ export default function AvatarUpload({
       onUpload(dataUrl);
     } catch {
       setPreviewUrl(currentUrl ?? null);
-      setError(t('avatar.uploadFailed' as any));
+      setError(t('avatar.uploadFailed'));
     } finally {
       setIsUploading(false);
       e.target.value = '';
@@ -66,13 +66,13 @@ export default function AvatarUpload({
   function handleUrlApply() {
     const trimmed = urlInput.trim();
     if (!trimmed) {
-      setError(t('avatar.enterUrl' as any));
+      setError(t('avatar.enterUrl'));
       return;
     }
     try {
       new URL(trimmed);
     } catch {
-      setError(t('avatar.invalidUrl' as any));
+      setError(t('avatar.invalidUrl'));
       return;
     }
     setError(null);

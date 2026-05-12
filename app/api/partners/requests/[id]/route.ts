@@ -3,7 +3,7 @@ import { and, eq } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { db } from '@/lib/db';
 import { systemPartnerRequests, systemPartnerships } from '@/lib/db/schema';
-import { err, ok, requireAuth } from '@/lib/api/helpers';
+import { err, ok, parseJsonRecord, requireAuth } from '@/lib/api/helpers';
 import { canonicalFriendPair } from '@/lib/friends';
 
 type Params = { params: Promise<{ id: string }> };
@@ -22,10 +22,10 @@ export async function POST(request: Request, { params }: Params) {
 
   const { id } = await params;
 
-  let body: unknown;
-  try { body = await request.json(); } catch { return err('Invalid request payload.', 400); }
+  const parsed = await parseJsonRecord(request);
+  if (parsed.error) return parsed.error;
 
-  const action = parseAction((body as { action?: unknown })?.action);
+  const action = parseAction(parsed.data.action);
   if (!action) return err('Invalid action.', 400);
 
   const partnerRequest = await db.query.systemPartnerRequests.findFirst({

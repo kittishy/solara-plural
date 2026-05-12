@@ -2,7 +2,7 @@ import { and, eq } from 'drizzle-orm';
 import { createId } from '@paralleldrive/cuid2';
 import { db } from '@/lib/db';
 import { notificationPushTokens } from '@/lib/db/schema';
-import { err, ok, requireAuth } from '@/lib/api/helpers';
+import { err, ok, requireAuth, parseJsonRecord, parseJsonBody } from '@/lib/api/helpers';
 import { encryptPushSubscription, hashPushEndpoint } from '@/lib/notifications/tokens';
 
 type PushSubscriptionPayload = {
@@ -34,8 +34,9 @@ export async function POST(request: Request) {
   const auth = await requireAuth();
   if (auth.error) return auth.error;
 
-  const body = await request.json().catch(() => null);
-  const subscription = readSubscription((body as { subscription?: unknown } | null)?.subscription);
+  const parsed = await parseJsonRecord(request);
+  if (parsed.error) return parsed.error;
+  const subscription = readSubscription(parsed.data.subscription);
   if (!subscription) return err('Missing push subscription.');
 
   const now = new Date();
@@ -85,9 +86,9 @@ export async function DELETE(request: Request) {
   const auth = await requireAuth();
   if (auth.error) return auth.error;
 
-  const body = await request.json().catch(() => null);
-  const endpoint = typeof (body as { endpoint?: unknown } | null)?.endpoint === 'string'
-    ? ((body as { endpoint: string }).endpoint).trim()
+  const parsedDel = await parseJsonBody<{ endpoint?: unknown }>(request);
+  const endpoint = !parsedDel.error && typeof parsedDel.data.endpoint === 'string'
+    ? parsedDel.data.endpoint.trim()
     : '';
   if (!endpoint) return err('Missing push endpoint.');
 

@@ -12,7 +12,7 @@ import {
   systemPartnerships,
   systems,
 } from '@/lib/db/schema';
-import { err, ok, requireAuth } from '@/lib/api/helpers';
+import { err, ok, requireAuth, parseJsonRecord } from '@/lib/api/helpers';
 import {
   canonicalFriendPair,
   normalizeEmail,
@@ -209,14 +209,10 @@ export async function POST(request: Request) {
   const auth = await requireAuth();
   if (auth.error) return auth.error;
 
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return err('Invalid request payload.', 400);
-  }
+  const parsed = await parseJsonRecord(request);
+  if (parsed.error) return parsed.error;
+  const payload = parsed.data;
 
-  const payload = body as { email?: unknown; systemId?: unknown; message?: unknown };
   const rawMessage = typeof payload.message === 'string' ? payload.message.trim().slice(0, 280) : '';
   const message = rawMessage.length > 0 ? rawMessage : null;
 
