@@ -192,11 +192,16 @@ export function Sidebar({ systemName, accountType = 'system' }: SidebarProps) {
     persistSolaraTheme(themeId);
   }
 
-  // Settings item is pulled out to the right action area.
+  // Settings is pulled out of the center nav into the right action area.
   const centerNavItems = navItems.filter(
     (item) => item.href !== '/settings' && (accountType === 'system' || !item.systemOnly),
   );
-  const settingsItem = navItems.find((item) => item.href === '/settings')!;
+  // Use find without a non-null assertion so the bar degrades gracefully if
+  // navItems is ever modified. Also honour accountType so singlets can't see
+  // a settings button they shouldn't have access to.
+  const settingsItem = navItems.find(
+    (item) => item.href === '/settings' && (accountType === 'system' || !item.systemOnly),
+  );
   const isSettingsActive = activePathname.startsWith('/settings');
 
   return (
@@ -324,22 +329,24 @@ export function Sidebar({ systemName, accountType = 'system' }: SidebarProps) {
         })}
       </nav>
 
-      {/* RIGHT: Settings + Logout */}
+      {/* RIGHT: Settings (only when visible for this accountType) + Logout */}
       <div className="flex flex-shrink-0 items-center gap-1 px-3">
-        <Link
-          href={localizePathname('/settings', language)}
-          prefetch={true}
-          aria-current={isSettingsActive ? 'page' : undefined}
-          aria-label={t(settingsItem.labelKey)}
-          className={`flex h-9 w-9 items-center justify-center rounded-xl transition-all duration-150
-            focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 ${
-            isSettingsActive
-              ? 'bg-primary text-bg shadow-glow'
-              : 'text-muted hover:bg-surface-alt hover:text-text'
-          }`}
-        >
-          <IconSettings size={17} />
-        </Link>
+        {settingsItem && (
+          <Link
+            href={localizePathname('/settings', language)}
+            prefetch={true}
+            aria-current={isSettingsActive ? 'page' : undefined}
+            aria-label={t(settingsItem.labelKey)}
+            className={`flex h-9 w-9 items-center justify-center rounded-xl transition-all duration-150
+              focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 ${
+              isSettingsActive
+                ? 'bg-primary text-bg shadow-glow'
+                : 'text-muted hover:bg-surface-alt hover:text-text'
+            }`}
+          >
+            <IconSettings size={17} />
+          </Link>
+        )}
 
         <button
           type="button"
