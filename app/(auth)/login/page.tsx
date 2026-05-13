@@ -39,9 +39,6 @@ export default function LoginPage() {
     <div className="w-full max-w-sm animate-fade-in">
       {/* Wordmark */}
       <div className="mb-10 text-center">
-        <p className="text-[10px] font-black uppercase tracking-[0.35em] text-muted mb-3">
-          SYSTEM HQ
-        </p>
         <h1 className="text-5xl font-black tracking-tight leading-none text-text">
           SOLARA<span className="text-primary">.</span>
         </h1>
