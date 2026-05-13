@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import DynamicAvatarImage from '@/components/ui/DynamicAvatarImage';
-import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import useSWR from 'swr';
 import { apiFetcher, revalidateMembersAndFront, swrKeys } from '@/lib/swr';
 import { formatTimeSince } from '@/lib/client/format';
@@ -226,101 +226,118 @@ function BottomSheet({
   );
 }
 
-// ─── MemberRow ────────────────────────────────────────────────────────────────
+// ─── MemberCard ───────────────────────────────────────────────────────────────
 
-function MemberRow({
+function MemberCard({
   member,
   onOpenSheet,
 }: {
   member: MemberItem;
   onOpenSheet: (member: MemberItem) => void;
 }) {
-  const accentColor = member.color ?? '#b48efa';
+  const accent = member.color ?? '#b48efa';
   const frontColor = '#f472b6';
-  const barColor = member.isFronting ? frontColor : accentColor;
+  const isF = member.isFronting;
 
   return (
-    <li
-      role="listitem"
-      className="flex rounded-xl overflow-hidden border border-border/60 bg-surface shadow-card transition-all duration-150 hover:border-border-strong hover:shadow-[0_0_0_1px_rgb(var(--theme-border-strong-rgb)/0.6),0_4px_20px_rgba(0,0,0,0.45)]"
-    >
-      {/* Left color bar */}
+    <li role="listitem">
       <div
-        className="w-2 shrink-0"
-        style={{ backgroundColor: barColor }}
-        aria-hidden="true"
-      />
-
-      {/* Content area */}
-      <div className="relative flex flex-1 items-center min-w-0">
+        className="relative rounded-xl overflow-hidden transition-all duration-200 hover:-translate-y-0.5 active:scale-[0.97]"
+        style={{
+          border: `1.5px solid color-mix(in srgb, ${isF ? frontColor : accent} 40%, transparent)`,
+          boxShadow: isF
+            ? `0 0 24px color-mix(in srgb, ${frontColor} 22%, transparent), 0 6px 24px rgba(0,0,0,0.55)`
+            : `0 4px 20px rgba(0,0,0,0.45)`,
+        }}
+      >
+        {/* Portrait zone — avatar on color gradient */}
         <Link
           href={`/members/${member.id}`}
-          className="flex flex-1 items-center gap-3 px-3 py-3 pr-14 min-w-0 focus:outline-none
-            focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-inset"
+          className="block focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/60"
+          aria-label={`View ${member.name}'s profile`}
         >
-          {/* Avatar */}
           <div
-            className="w-12 h-12 rounded-xl shrink-0 overflow-hidden flex items-center justify-center text-sm font-black text-bg"
-            style={{ backgroundColor: member.avatarUrl ? undefined : accentColor }}
-            aria-hidden="true"
+            className="relative flex items-center justify-center py-7"
+            style={{
+              background: `linear-gradient(180deg,
+                color-mix(in srgb, ${accent} 60%, transparent) 0%,
+                color-mix(in srgb, ${accent} 8%, transparent) 100%)`,
+            }}
           >
+            {/* Fronting badge */}
+            {isF && (
+              <span
+                className="absolute top-2 left-2 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[9px] font-black uppercase tracking-widest text-bg"
+                style={{ backgroundColor: frontColor }}
+              >
+                <span className="relative flex h-1.5 w-1.5 shrink-0">
+                  <span className="animate-ping absolute h-full w-full rounded-full bg-bg/80 opacity-75" />
+                  <span className="relative h-1.5 w-1.5 rounded-full bg-bg/80" />
+                </span>
+                Front
+              </span>
+            )}
+
+            {/* Avatar */}
             {member.avatarUrl ? (
-              <DynamicAvatarImage src={member.avatarUrl} alt="" className="w-full h-full object-cover" />
+              <DynamicAvatarImage
+                src={member.avatarUrl}
+                alt={member.name}
+                className="w-[72px] h-[72px] rounded-2xl object-cover shadow-[0_4px_20px_rgba(0,0,0,0.6)]"
+              />
             ) : (
-              member.name[0]?.toUpperCase() ?? '?'
+              <span
+                className="flex w-[72px] h-[72px] items-center justify-center rounded-2xl text-2xl font-black text-bg shadow-[0_4px_20px_rgba(0,0,0,0.6)]"
+                style={{ backgroundColor: accent }}
+                aria-hidden="true"
+              >
+                {member.name[0]?.toUpperCase() ?? '?'}
+              </span>
             )}
           </div>
 
-          {/* Text */}
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 min-w-0">
-              <p className="font-black text-text text-sm truncate">{member.name}</p>
-              {member.isFronting && (
-                <span className="shrink-0 relative inline-flex h-2 w-2" aria-hidden="true">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-front opacity-75" />
-                  <span className="relative inline-flex h-2 w-2 rounded-full bg-front" />
-                </span>
-              )}
-            </div>
+          {/* Info area */}
+          <div className="bg-surface px-3 pt-3 pb-2.5">
+            <p className="font-black text-text text-sm leading-tight truncate">{member.name}</p>
             {member.pronouns && (
-              <p className="text-muted text-xs truncate mt-0.5">{member.pronouns}</p>
+              <p className="text-[11px] text-muted truncate mt-0.5">{member.pronouns}</p>
             )}
             {member.tags.length > 0 && (
-              <div className="flex flex-wrap gap-1 mt-1.5" aria-label="Tags">
-                {member.tags.slice(0, 3).map((tag) => (
+              <div className="flex flex-wrap gap-1 mt-2">
+                {member.tags.slice(0, 2).map((tag) => (
                   <span key={tag} className="tag">{tag}</span>
                 ))}
-                {member.tags.length > 3 && (
-                  <span className="text-[10px] text-subtle">+{member.tags.length - 3}</span>
+                {member.tags.length > 2 && (
+                  <span className="text-[10px] text-subtle">+{member.tags.length - 2}</span>
                 )}
               </div>
             )}
           </div>
         </Link>
 
-        {/* Action button */}
-        <div className="absolute right-2 top-1/2 -translate-y-1/2">
-          <button
-            type="button"
-            aria-label={`Actions for ${member.name}`}
-            aria-haspopup="dialog"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              onOpenSheet(member);
-            }}
-            className="flex items-center justify-center min-w-[44px] min-h-[44px] w-9 h-9 rounded-lg
-              border border-border/60 bg-surface-alt text-muted
-              hover:border-primary/50 hover:text-primary
-              active:scale-95 transition-all duration-150
-              focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <line x1="12" x2="12" y1="5" y2="19" />
-              <line x1="5" x2="19" y1="12" y2="12" />
-            </svg>
-          </button>
-        </div>
+        {/* Front action strip */}
+        <button
+          type="button"
+          aria-label={`Front actions for ${member.name}`}
+          aria-haspopup="dialog"
+          onClick={() => onOpenSheet(member)}
+          className="w-full flex items-center justify-center gap-1.5 py-2.5 text-[10px] font-black uppercase tracking-widest transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/60"
+          style={{
+            background: `color-mix(in srgb, ${isF ? frontColor : accent} 8%, transparent)`,
+            borderTop: `1px solid color-mix(in srgb, ${isF ? frontColor : accent} 20%, transparent)`,
+            color: isF ? frontColor : accent,
+          }}
+        >
+          {isF ? (
+            <>
+              <span className="relative flex h-1.5 w-1.5 shrink-0">
+                <span className="animate-ping absolute h-full w-full rounded-full opacity-75" style={{ backgroundColor: frontColor }} />
+                <span className="relative h-1.5 w-1.5 rounded-full" style={{ backgroundColor: frontColor }} />
+              </span>
+              In Front
+            </>
+          ) : '+ Front'}
+        </button>
       </div>
     </li>
   );
@@ -500,12 +517,18 @@ export default function MembersClient({
             <div className="h-4 w-24 animate-pulse rounded-lg bg-surface-alt" />
           </div>
         </div>
-        <div className="rounded-xl overflow-hidden border border-border/40">
-          {[1, 2, 3, 4].map((i) => (
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
             <div
               key={i}
-              className="h-[72px] animate-pulse bg-surface-alt/60 border-b border-border/40 last:border-0"
-            />
+              className="rounded-xl overflow-hidden border border-border/40"
+            >
+              <div className="h-[108px] animate-pulse bg-surface-alt/60" />
+              <div className="bg-surface p-3 space-y-2">
+                <div className="h-3.5 w-3/4 animate-pulse rounded bg-surface-alt" />
+                <div className="h-3 w-1/2 animate-pulse rounded bg-surface-alt" />
+              </div>
+            </div>
           ))}
         </div>
       </div>
@@ -622,36 +645,40 @@ export default function MembersClient({
         ) : (
           <div className="space-y-4">
             {!isFiltering && frontingCount > 0 && (
-              <p className="section-header px-1">
-                In front · {frontingCount}
-              </p>
+              <div>
+                <p className="section-header px-1 mb-3">In front · {frontingCount}</p>
+                <ul role="list" className="grid grid-cols-2 gap-3 md:grid-cols-3">
+                  {visibleMembers
+                    .filter((m) => m.isFronting)
+                    .map((member) => (
+                      <MemberCard
+                        key={member.id}
+                        member={member}
+                        onOpenSheet={setSheetMember}
+                      />
+                    ))}
+                </ul>
+              </div>
             )}
-            <ul role="list" className="space-y-2">
-              {visibleMembers.map((member, idx) => {
-                const prevMember = visibleMembers[idx - 1];
-                const showDivider =
-                  !isFiltering &&
-                  frontingCount > 0 &&
-                  idx > 0 &&
-                  !member.isFronting &&
-                  prevMember?.isFronting;
-                return (
-                  <Fragment key={member.id}>
-                    {showDivider && (
-                      <li role="presentation" className="px-4 py-2 border-b border-border/40 bg-surface-alt/40">
-                        <p className="section-header text-[10px]">
-                          All members · {orderedMembers.filter(m => !m.isFronting).length}
-                        </p>
-                      </li>
-                    )}
-                    <MemberRow
+
+            <div>
+              {!isFiltering && frontingCount > 0 && (
+                <p className="section-header px-1 mb-3">
+                  All members · {orderedMembers.filter((m) => !m.isFronting).length}
+                </p>
+              )}
+              <ul role="list" className="grid grid-cols-2 gap-3 md:grid-cols-3">
+                {visibleMembers
+                  .filter((m) => isFiltering || !m.isFronting)
+                  .map((member) => (
+                    <MemberCard
+                      key={member.id}
                       member={member}
                       onOpenSheet={setSheetMember}
                     />
-                  </Fragment>
-                );
-              })}
-            </ul>
+                  ))}
+              </ul>
+            </div>
 
             {hasMore && (
               <button
