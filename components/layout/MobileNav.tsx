@@ -203,8 +203,8 @@ export function MobileNav({ accountType = 'system' }: { accountType?: 'system' |
           </div>
         )}
 
-        <div className="min-w-0 flex-1 rounded-2xl border border-white/10 bg-surface/85 backdrop-blur-xl shadow-[0_10px_28px_rgba(0,0,0,0.28)]">
-          <div className={`grid gap-1 px-1 py-1.5 ${navItems.length === 3 ? 'grid-cols-3' : 'grid-cols-4'}`}>
+        <div className="min-w-0 flex-1 rounded-2xl border border-border/50 bg-surface-raised/90 backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.45)]">
+          <div className={`grid ${navItems.length === 3 ? 'grid-cols-3' : 'grid-cols-4'}`}>
           {navItems.map((item) => {
             const current = isActive(activePathname, item.href);
 
@@ -216,19 +216,22 @@ export function MobileNav({ accountType = 'system' }: { accountType?: 'system' |
                 aria-label={t(item.labelKey)}
                 aria-current={current ? 'page' : undefined}
                 onClick={() => setMenuOpen(false)}
-                className={`relative flex min-h-[54px] min-w-0 flex-col items-center justify-center gap-0.5 rounded-xl px-1 py-1 text-[11px] font-medium leading-none transition-all duration-200 focus-visible:ring-2 focus-visible:ring-primary/70 focus-visible:ring-offset-2 focus-visible:ring-offset-bg ${
+                className={`relative flex min-h-[56px] min-w-0 flex-col items-center justify-center gap-0.5 px-1 py-1.5 text-[11px] font-bold uppercase tracking-wide leading-none transition-all duration-200 focus-visible:ring-2 focus-visible:ring-primary/70 focus-visible:ring-offset-2 focus-visible:ring-offset-bg ${
                   current
-                    ? 'border border-primary/35 bg-primary/15 text-text'
-                    : 'border border-transparent text-muted hover:border-border/60 hover:text-text'
+                    ? 'text-primary'
+                    : 'text-muted hover:text-text'
                 }`}
               >
-                <span className={`leading-none transition-transform duration-200 ${current ? 'scale-105 text-primary' : ''}`}>
+                {current && (
+                  <span
+                    className="absolute top-0 left-3 right-3 h-0.5 rounded-b-full bg-primary"
+                    aria-hidden="true"
+                  />
+                )}
+                <span className={`leading-none transition-transform duration-200 ${current ? 'scale-110' : ''}`}>
                   <item.Icon />
                 </span>
                 <span className="max-w-full truncate leading-none">{t(item.labelKey)}</span>
-                {current && (
-                  <span className="absolute bottom-1 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-primary" aria-hidden="true" />
-                )}
               </Link>
             );
           })}
@@ -241,12 +244,18 @@ export function MobileNav({ accountType = 'system' }: { accountType?: 'system' |
           aria-label={t('nav.moreOptions')}
           aria-expanded={menuOpen}
           aria-haspopup="menu"
-          className={`flex min-h-[66px] w-[68px] shrink-0 flex-col items-center justify-center gap-1 rounded-2xl border text-[11px] font-semibold leading-none backdrop-blur-xl transition-all duration-200 focus-visible:ring-2 focus-visible:ring-primary/70 focus-visible:ring-offset-2 focus-visible:ring-offset-bg ${
+          className={`relative flex min-h-[56px] w-[64px] shrink-0 flex-col items-center justify-center gap-0.5 rounded-2xl border text-[11px] font-bold uppercase tracking-wide leading-none backdrop-blur-xl transition-all duration-200 focus-visible:ring-2 focus-visible:ring-primary/70 focus-visible:ring-offset-2 focus-visible:ring-offset-bg ${
             menuIsActive || menuOpen
-              ? 'border-primary/40 bg-primary/15 text-text shadow-[0_0_14px_rgba(167,139,250,0.16)]'
-              : 'border-white/10 bg-surface/85 text-muted hover:border-border/70 hover:text-text'
+              ? 'border-border/50 bg-surface-raised/90 text-primary shadow-[0_8px_32px_rgba(0,0,0,0.45)]'
+              : 'border-border/50 bg-surface-raised/90 text-muted hover:text-text shadow-[0_8px_32px_rgba(0,0,0,0.45)]'
           }`}
         >
+          {(menuIsActive || menuOpen) && (
+            <span
+              className="absolute top-0 left-3 right-3 h-0.5 rounded-b-full bg-primary"
+              aria-hidden="true"
+            />
+          )}
           <span className={menuIsActive || menuOpen ? 'text-primary' : undefined}>
             <IconMenu size={20} />
           </span>

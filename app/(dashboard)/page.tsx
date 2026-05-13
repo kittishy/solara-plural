@@ -68,53 +68,81 @@ export default async function DashboardPage() {
         </h1>
       </section>
 
-      <section className={`card p-5 md:p-6 ${activeFront ? 'border-front/40 shadow-front-glow' : ''}`}>
-          <div className="mb-4 flex items-center justify-between gap-3">
-            <h2 className="text-lg font-semibold text-text"><Trans k="dashboard.currentFront" /></h2>
-            <Link href="/front" className="inline-flex min-h-[44px] items-center gap-1 text-sm text-primary transition-colors hover:text-primary-glow">
-              <Trans k="common.manage" /> <IconArrowRight />
+      <section
+        className="card p-5 md:p-6"
+        style={activeFront ? {
+          borderColor: 'rgb(var(--theme-front-rgb) / 0.4)',
+          boxShadow: '0 0 0 1px rgb(var(--theme-front-rgb) / 0.15), 0 4px 24px rgba(0,0,0,0.4)',
+        } : undefined}
+      >
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            {activeFront && (
+              <span className="relative inline-flex h-2.5 w-2.5 flex-shrink-0" aria-hidden="true">
+                <span className="absolute inline-flex h-full w-full rounded-full bg-front opacity-50 animate-pulse" />
+                <span className="absolute inline-flex h-full w-full animate-pulse-ring rounded-full bg-front" />
+                <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-front shadow-[0_0_8px_rgba(244,114,182,0.8)]" />
+              </span>
+            )}
+            <h2 className={`text-base font-bold ${activeFront ? 'text-front' : 'text-text'}`}>
+              <Trans k="dashboard.currentFront" />
+            </h2>
+          </div>
+          <Link href="/front" className="inline-flex min-h-[44px] items-center gap-1 text-sm text-primary transition-colors hover:text-primary-glow">
+            <Trans k="common.manage" /> <IconArrowRight />
+          </Link>
+        </div>
+
+        {frontingMembers.length > 0 ? (
+          <div className="space-y-3">
+            <div className="flex flex-wrap gap-2">
+              {frontingMembers.map((member) => (
+                <div
+                  key={member.id}
+                  className="flex items-center gap-2.5 rounded-xl px-3 py-2"
+                  style={{
+                    background: `${member.color ?? '#f472b6'}14`,
+                    border: `1px solid ${member.color ?? '#f472b6'}35`,
+                  }}
+                >
+                  {member.avatarUrl ? (
+                    <DynamicAvatarImage src={member.avatarUrl}
+                      alt={member.name}
+                      className="h-7 w-7 rounded-lg object-cover"
+                    />
+                  ) : (
+                    <span
+                      className="flex h-7 w-7 items-center justify-center rounded-lg text-xs font-bold text-bg"
+                      style={{ backgroundColor: member.color ?? '#f472b6' }}
+                      aria-hidden="true"
+                    >
+                      {member.name[0].toUpperCase()}
+                    </span>
+                  )}
+                  <div>
+                    <p className="text-sm font-bold text-text leading-none">{member.name}</p>
+                    {member.pronouns && (
+                      <p className="text-xs text-muted leading-none mt-0.5">{member.pronouns}</p>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+            {activeFront && (
+              <p className="text-xs text-front/60">
+                <Trans k="dashboard.since" /> <LocalizedTime date={activeFront.startedAt} />
+              </p>
+            )}
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <p className="text-sm text-muted"><Trans k="dashboard.noCurrentFront" /></p>
+            <Link href="/front" className="btn-primary min-h-[44px] justify-center md:w-auto">
+              <Trans k="dashboard.startFront" />
             </Link>
           </div>
-
-          {frontingMembers.length > 0 ? (
-            <div className="space-y-3">
-              <div className="flex flex-wrap gap-2">
-                {frontingMembers.map((member) => (
-                  <div key={member.id} className="flex items-center gap-2 rounded-full border border-border/50 bg-surface-alt px-3 py-1.5">
-                    {member.avatarUrl ? (
-                      <DynamicAvatarImage src={member.avatarUrl}
-                        alt={member.name}
-                        className="h-6 w-6 rounded-full object-cover ring-1 ring-border/50"
-                      />
-                    ) : (
-                      <span
-                        className="flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold text-bg"
-                        style={{ backgroundColor: member.color ?? '#a78bfa' }}
-                        aria-hidden="true"
-                      >
-                        {member.name[0].toUpperCase()}
-                      </span>
-                    )}
-                    <span className="text-sm font-medium text-text">{member.name}</span>
-                    {member.pronouns && <span className="text-xs text-muted">{member.pronouns}</span>}
-                  </div>
-                ))}
-              </div>
-              {activeFront && (
-                <p className="text-sm text-muted">
-                  <Trans k="dashboard.since" /> <LocalizedTime date={activeFront.startedAt} />
-                </p>
-              )}
-            </div>
-          ) : (
-            <div className="space-y-3">
-              <p className="text-sm text-muted"><Trans k="dashboard.noCurrentFront" /></p>
-              <Link href="/front" className="btn-primary min-h-[44px] justify-center md:w-auto">
-                <Trans k="dashboard.startFront" />
-              </Link>
-            </div>
-          )}
-        </section>
+        )}
+      </section>
 
       <section className="card p-5 md:p-6">
         <div className="mb-4 flex items-center justify-between gap-3">
