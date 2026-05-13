@@ -2,7 +2,7 @@ import { eq } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { db } from '@/lib/db';
 import { systems } from '@/lib/db/schema';
-import { err, ok, requireAuth } from '@/lib/api/helpers';
+import { err, ok, requireAuth, parseJsonRecord } from '@/lib/api/helpers';
 
 type AvatarMode = 'emoji' | 'url';
 
@@ -75,14 +75,10 @@ export async function PUT(request: Request) {
   const auth = await requireAuth();
   if (auth.error) return auth.error;
 
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return err('Invalid JSON payload.', 400);
-  }
+  const parsed = await parseJsonRecord(request);
+  if (parsed.error) return parsed.error;
+  const payload = parsed.data;
 
-  const payload = body as Record<string, unknown>;
   const name = parseName(payload.name);
   if (!name) return err('Name is required.', 400);
 

@@ -72,10 +72,37 @@ Production PWA install should use real PNG icons, at least 192x192 and 512x512, 
 **Area:** Security | Dependencies | Deploy
 
 **Description:**
-`npm audit --omit=dev` reports vulnerabilities in `next@14.2.35` and nested `postcss`. The automatic audit fix would install Next 16, which is a breaking framework upgrade.
+`npm audit --omit=dev` reports vulnerabilities in `next@14.2.35`, nested `postcss`, and `nodemailer` through both the app dependency and Auth.js. The automatic audit fix would install Next 16 and newer Auth/Nodemailer packages, which is a breaking framework/auth upgrade.
 
 **Expected Behavior:**
 Plan and test a framework upgrade separately, or choose a patched compatible version if one becomes available.
+
+### [ISSUE-013] Drizzle migration journal and snapshots need reconciliation
+
+**Status:** Open
+**Priority:** High
+**Area:** Database | Tooling
+
+**Description:**
+The migration journal references migrations after `0007`, but matching snapshot files are missing for the later migrations. There is also an orphan `0007_system_integrations.sql` file while `0007_silly_cyclops.sql` already creates `system_integrations`.
+
+**Expected Behavior:**
+Drizzle migrations and metadata should be consistent before running `npm run db:generate` again.
+
+**Notes / Workaround:**
+Do not regenerate migrations until production migration state is checked. Prefer a forward-only repair plan: validate the Turso migrations table, remove or quarantine orphan SQL only after confirmation, reconstruct snapshots in a clean branch, and test by applying all migrations to a blank database.
+
+### [ISSUE-014] Auth rate limiting is local-only and should move to durable storage
+
+**Status:** Open
+**Priority:** Medium
+**Area:** Security | Auth
+
+**Description:**
+Password reset endpoints now have an in-memory limiter, which helps local/runtime instances but is not a global limit across Vercel serverless instances.
+
+**Expected Behavior:**
+Public auth surfaces should use a durable shared limiter, such as Upstash Redis/KV or a database-backed failed-attempt table, before broader public use.
 
 ## Resolved Issues
 

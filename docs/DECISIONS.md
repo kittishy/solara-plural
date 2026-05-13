@@ -634,3 +634,36 @@
 - `DashboardClientProviders` applies the stored appearance on app load.
 
 ---
+
+## [2026-05-12] D035 - API Boundaries Parse JSON as Unknown First
+
+**Decision:** Route handlers should parse request JSON through shared helpers and treat the payload as `unknown`/record data until each field is narrowed.
+
+**Justification:**
+- The app already has strict TypeScript enabled, but route boundaries were the biggest remaining `any` surface.
+- Parsing as a record makes API validation consistent and avoids silently persisting malformed arrays or object values.
+- Centralizing invalid JSON responses keeps client behavior predictable while preserving the existing `{ success, data/error }` response family.
+
+**Implementation:**
+- Added `parseJsonBody`, `parseJsonRecord`, and `isRecord` in `lib/api/helpers.ts`.
+- Converted register, members, notes, front, and partner subresource routes away from `let body: any`.
+- Member tag payloads now require string arrays, and stored tag JSON falls back to `[]` if corrupted.
+
+---
+
+## [2026-05-12] D036 - Integration Token Encryption Uses Versioned Key Derivation
+
+**Decision:** New encrypted integration tokens use a `v2` AES-GCM payload with an HKDF-derived key from `INTEGRATIONS_TOKEN_SECRET`. Production no longer silently falls back to `NEXTAUTH_SECRET` for new encryption.
+
+**Justification:**
+- Reusing the Auth.js JWT secret for stored integration-token encryption weakens key separation.
+- Versioned payloads let Solara improve encryption without breaking already stored data immediately.
+- Legacy decrypt support gives operators a controlled migration path instead of silently losing saved PluralKit tokens.
+
+**Implementation:**
+- `encryptIntegrationToken()` now writes `v2` payloads.
+- `decryptIntegrationToken()` can read `v2` and legacy `v1` payloads.
+- Production requires `INTEGRATIONS_TOKEN_SECRET`; legacy `v1` payloads encrypted with a different prior secret can be read via `INTEGRATIONS_LEGACY_TOKEN_SECRET`.
+- Added unit coverage for secret requirements, roundtrip encryption, random IVs, tamper rejection, and legacy decrypt.
+
+---

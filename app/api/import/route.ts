@@ -1,6 +1,6 @@
 import { db } from '@/lib/db';
 import { members } from '@/lib/db/schema';
-import { requireAuth, ok, err } from '@/lib/api/helpers';
+import { requireAuth, ok, err, parseJsonBody } from '@/lib/api/helpers';
 import {
   coerceImportedTags,
   findDuplicateInsideImport,
@@ -163,12 +163,9 @@ export async function POST(request: Request) {
   const auth = await requireAuth();
   if (auth.error) return auth.error;
 
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return err('Invalid JSON file. Choose a Solara export or a member array.');
-  }
+  const parsed = await parseJsonBody(request);
+  if (parsed.error) return err('Invalid JSON file. Choose a Solara export or a member array.');
+  const body = parsed.data;
 
   const options = parseImportOptions(body);
 

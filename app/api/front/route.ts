@@ -1,7 +1,7 @@
 import { db } from '@/lib/db';
 import { frontEntries, memberExternalLinks, members, systemIntegrations } from '@/lib/db/schema';
 import { eq, and, isNull, inArray } from 'drizzle-orm';
-import { requireAuth, ok, err } from '@/lib/api/helpers';
+import { requireAuth, ok, err, parseJsonRecord } from '@/lib/api/helpers';
 import { createId } from '@paralleldrive/cuid2';
 import { parseMemberIds, serializeMemberIds } from '@/lib/front';
 import { revalidatePath } from 'next/cache';
@@ -206,14 +206,11 @@ export async function POST(request: Request) {
   if (auth.error) return auth.error;
 
   const requestId = getRequestId(request);
-  let body: any;
-  try {
-    body = await request.json();
-  } catch {
-    return err('Invalid JSON payload', 400);
-  }
-  const { memberIds, note } = body ?? {};
+  const parsed = await parseJsonRecord(request);
+  if (parsed.error) return parsed.error;
 
+  const body = parsed.data;
+  const memberIds = body.memberIds;
   if (!Array.isArray(memberIds) || memberIds.length === 0) {
     return err('memberIds must be a non-empty array');
   }
@@ -281,7 +278,7 @@ export async function POST(request: Request) {
     memberIds: serializeMemberIds(uniqueMemberIds),
     startedAt: now,
     endedAt:   null,
-    note:      note ?? null,
+    note:      typeof body.note === 'string' ? body.note : null,
     createdAt: now,
   }).returning();
 

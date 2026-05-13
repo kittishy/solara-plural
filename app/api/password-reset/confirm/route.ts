@@ -3,15 +3,30 @@ import { and, eq, gt, isNull } from 'drizzle-orm';
 import bcrypt from 'bcryptjs';
 import { db } from '@/lib/db';
 import { passwordResetTokens, systems } from '@/lib/db/schema';
+import { parseJsonRecord } from '@/lib/api/helpers';
 import {
   hashPasswordResetToken,
   isPasswordStrongEnough,
 } from '@/lib/auth/password-reset';
+import { consumeRateLimit, getClientIp } from '@/lib/rate-limit';
 
 export async function POST(request: Request) {
-  const body = await request.json().catch(() => null);
-  const token = body && typeof body === 'object' ? (body as { token?: unknown }).token : null;
-  const password = body && typeof body === 'object' ? (body as { password?: unknown }).password : null;
+  const ipLimit = consumeRateLimit(
+    `password-reset-confirm:ip:${getClientIp(request)}`,
+    { limit: 20, windowMs: 15 * 60 * 1000 },
+  );
+  if (!ipLimit.allowed) {
+    return NextResponse.json(
+      { success: false, code: 'RATE_LIMITED' },
+      { status: 429, headers: { 'Retry-After': String(ipLimit.retryAfterSeconds) } },
+    );
+  }
+
+  const parsed = await parseJsonRecord(request);
+  if (parsed.error) return parsed.error;
+
+  const token = parsed.data.token;
+  const password = parsed.data.password;
 
   if (typeof token !== 'string' || token.length < 32) {
     return NextResponse.json({ success: false, code: 'INVALID_TOKEN' }, { status: 400 });
@@ -23,13 +38,25 @@ export async function POST(request: Request) {
 
   const now = new Date();
   const tokenHash = hashPasswordResetToken(token);
-  const resetToken = await db.query.passwordResetTokens.findFirst({
-    where: and(
+  const tokenLimit = consumeRateLimit(
+    `password-reset-confirm:token:${tokenHash}`,
+    { limit: 5, windowMs: 15 * 60 * 1000 },
+  );
+  if (!tokenLimit.allowed) {
+    return NextResponse.json(
+      { success: false, code: 'RATE_LIMITED' },
+      { status: 429, headers: { 'Retry-After': String(tokenLimit.retryAfterSeconds) } },
+    );
+  }
+
+  const [resetToken] = await db.update(passwordResetTokens)
+    .set({ usedAt: now })
+    .where(and(
       eq(passwordResetTokens.tokenHash, tokenHash),
       isNull(passwordResetTokens.usedAt),
       gt(passwordResetTokens.expiresAt, now)
-    ),
-  });
+    ))
+    .returning();
 
   if (!resetToken) {
     return NextResponse.json({ success: false, code: 'INVALID_TOKEN' }, { status: 400 });

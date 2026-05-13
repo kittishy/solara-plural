@@ -29,6 +29,8 @@ DATABASE_URL=libsql://your-database.turso.io
 DATABASE_AUTH_TOKEN=your-turso-auth-token
 NEXTAUTH_SECRET=your-random-secret
 INTEGRATIONS_TOKEN_SECRET=your-separate-random-secret
+# Optional only during legacy token migration if old encrypted rows used a prior secret.
+INTEGRATIONS_LEGACY_TOKEN_SECRET=your-previous-token-secret
 NEXTAUTH_URL=https://solara-plural.vercel.app
 RESEND_API_KEY=your-resend-api-key
 PASSWORD_RESET_FROM_EMAIL="Solara Plural <reset@example.com>"
@@ -46,6 +48,7 @@ vercel env add DATABASE_URL --sensitive
 vercel env add DATABASE_AUTH_TOKEN --sensitive
 vercel env add NEXTAUTH_SECRET --sensitive
 vercel env add INTEGRATIONS_TOKEN_SECRET --sensitive
+vercel env add INTEGRATIONS_LEGACY_TOKEN_SECRET --sensitive
 vercel env add RESEND_API_KEY --sensitive
 vercel env add WEB_PUSH_VAPID_PRIVATE_KEY --sensitive
 ```
@@ -68,6 +71,7 @@ vercel env add WEB_PUSH_VAPID_PRIVATE_KEY --sensitive
 - [ ] `public/manifest.json` exists if `app/layout.tsx` references `/manifest.json`.
 - [ ] `public/service-worker.js` and PWA icons exist before enabling browser push.
 - [ ] Native Web Push VAPID env vars are set before expecting push delivery.
+- [ ] `INTEGRATIONS_TOKEN_SECRET` is set; production token encryption no longer falls back to `NEXTAUTH_SECRET`.
 - [ ] Remote image hostnames are restricted before public production use.
 - [ ] Import/export actions have visible success and error states.
 - [ ] Run `npm run db:migrate` before deploying member sync changes that depend on `member_external_links`.

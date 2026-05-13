@@ -21,6 +21,7 @@
 ## [Unreleased]
 
 ### Added
+- Defensive unit coverage for token encryption, password reset helpers, custom fields, friend visibility helpers, front helpers, and in-memory rate limiting
 - Password reset flow with `/forgot-password`, `/reset-password`, hashed one-time reset tokens, and optional Resend email delivery
 - PWA service worker, production PNG app icons, and installable manifest updates
 - Native Web Push setup through the browser Push API and VAPID keys
@@ -55,6 +56,10 @@
 - Initial project orchestration and planning
 
 ### Changed
+- Route handlers for register, members, notes, front, and partner subresources now use shared JSON body parsing with `unknown`/record boundaries instead of `any`
+- Member tag parsing now fails closed for malformed stored JSON and rejects non-string submitted tags
+- Integration token encryption now writes HKDF-derived `v2` payloads, requires `INTEGRATIONS_TOKEN_SECRET` in production, and can read legacy `v1` payloads through an explicit legacy secret
+- Password reset confirmation now claims reset tokens atomically before password hashing, reducing the replay window for concurrent submissions
 - Middleware now handles only locale redirects/rewrites; dashboard layouts and API routes own auth checks, removing Auth.js/Jose Edge runtime build warnings
 - PluralKit apply-mode sync now parses `/fronters` as a switch object, preserves ordered fronters, and uses the remote switch timestamp for local front history
 - PluralKit member/front apply now commits local member/link/front changes in one database transaction
@@ -90,6 +95,9 @@
 - Front empty state and front-history back navigation now use clearer accessible language and intentional visual affordances
 
 ### Security
+- Added baseline security headers in `next.config.mjs` (`nosniff`, frame denial, strict referrer policy, opener isolation, permissions policy, and production HSTS)
+- Added in-memory rate limiting to password reset request and confirmation endpoints as a local defense-in-depth layer
+- Password reset delivery failures for existing accounts now return the same generic success shape to avoid account enumeration through SMTP failures
 - Password reset requests now return generic success responses, store only token hashes, expire tokens, and invalidate prior unused reset links
 - Documented `npm audit --omit=dev` production vulnerabilities in Next.js 14 as a separate upgrade-planning issue instead of applying a breaking Next 16 force upgrade
 - docs/PLAN.md — orchestration plan with project type, routing and quality gates

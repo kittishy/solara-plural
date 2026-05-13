@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import DynamicAvatarImage from '@/components/ui/DynamicAvatarImage';
+import { formatDate, formatTime } from '@/lib/client/format';
 
 type AccountType = 'system' | 'singlet';
 type ShareVisibility = 'hidden' | 'profile' | 'full';
@@ -1042,17 +1043,6 @@ async function readJson<T>(res: Response): Promise<ApiResponse<T>> {
   return res.json();
 }
 
-function formatDate(value: string): string {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return 'Unknown date';
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-}
-
-function formatTime(value: string): string {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return 'unknown time';
-  return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
-}
 
 function isLikelyEmail(value: string): boolean {
   const email = value.trim().toLowerCase();
