@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useLanguage } from '@/components/providers/LanguageProvider';
 import { localizePathname, stripLanguageFromPathname } from '@/lib/i18n';
+import { SCANLINE_BG } from '@/lib/styles';
 
 type IconProps = { size?: number };
 
@@ -168,7 +169,9 @@ export function MobileNav({ accountType = 'system' }: { accountType?: 'system' |
       className="md:hidden fixed bottom-0 left-0 right-0 z-20 border-t-2 border-border-strong"
       style={{
         paddingBottom: 'max(0.4rem, env(safe-area-inset-bottom))',
-        background: 'var(--theme-surface-raised)',
+        background: 'var(--theme-surface)',
+        backgroundImage: SCANLINE_BG,
+        boxShadow: '0 -2px 0 rgb(var(--theme-primary-rgb) / 0.2)',
       }}
       aria-label={t('nav.mobilePrimary')}
     >
@@ -176,9 +179,13 @@ export function MobileNav({ accountType = 'system' }: { accountType?: 'system' |
         {/* Popup menu */}
         {(menuOpen || isMenuClosing) && (
           <div
-            className={`absolute bottom-full left-0 right-0 border-t-2 border-border-strong bg-surface-raised ${isMenuClosing ? 'animate-slide-down' : 'animate-slide-up'}`}
+            className={`absolute bottom-full left-0 right-0 border-t-2 border-border-strong ${isMenuClosing ? 'animate-slide-down' : 'animate-slide-up'}`}
             role="menu"
             aria-label={t('nav.moreMenu')}
+            style={{
+              background: 'var(--theme-surface-raised)',
+              backgroundImage: SCANLINE_BG,
+            }}
           >
             {menuItems.map((item) => {
               const current = isActive(activePathname, item.href);
@@ -190,13 +197,18 @@ export function MobileNav({ accountType = 'system' }: { accountType?: 'system' |
                   role="menuitem"
                   aria-current={current ? 'page' : undefined}
                   onClick={closeMenu}
-                  className={`flex min-h-[52px] items-center gap-4 px-6 text-sm font-bold transition-colors ${
+                  className={`flex min-h-[52px] items-center gap-4 px-6 text-sm font-bold transition-colors border-l-2 ${
                     current
-                      ? 'bg-primary text-bg'
-                      : 'text-muted hover:bg-surface-alt hover:text-text'
+                      ? 'border-l-primary bg-primary/10 text-primary'
+                      : 'border-l-transparent text-muted hover:bg-surface-alt hover:text-text'
                   }`}
                 >
                   <item.Icon size={18} />
+                  {current && (
+                    <span className="text-primary mr-1" aria-hidden="true">
+                      ◆
+                    </span>
+                  )}
                   {t(item.labelKey)}
                 </Link>
               );
@@ -219,13 +231,19 @@ export function MobileNav({ accountType = 'system' }: { accountType?: 'system' |
                 aria-label={t(item.labelKey)}
                 aria-current={current ? 'page' : undefined}
                 onClick={() => setMenuOpen(false)}
-                className={`flex flex-col items-center justify-center gap-1 min-h-[62px] py-2 text-[10px] font-black uppercase tracking-widest transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/70 ${
+                className={`relative flex flex-col items-center justify-center gap-1 min-h-[64px] py-2 text-[9px] font-black uppercase tracking-widest transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/70 ${
                   current
                     ? 'bg-primary text-bg'
                     : 'text-muted hover:text-text hover:bg-surface-alt'
                 }`}
+                style={current ? {
+                  filter: 'drop-shadow(0 0 6px rgb(var(--theme-primary-rgb) / 0.5))',
+                } : undefined}
               >
-                <item.Icon size={current ? 24 : 22} />
+                {current && (
+                  <span className="absolute top-0 inset-x-0 h-0.5 bg-primary" aria-hidden="true" />
+                )}
+                <item.Icon size={current ? 22 : 20} />
                 <span className="leading-none">{t(item.labelKey)}</span>
               </Link>
             );
@@ -237,13 +255,19 @@ export function MobileNav({ accountType = 'system' }: { accountType?: 'system' |
             aria-label={t('nav.moreOptions')}
             aria-expanded={menuOpen}
             aria-haspopup="menu"
-            className={`flex flex-col items-center justify-center gap-1 min-h-[62px] py-2 text-[10px] font-black uppercase tracking-widest transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/70 ${
+            className={`relative flex flex-col items-center justify-center gap-1 min-h-[64px] py-2 text-[9px] font-black uppercase tracking-widest transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/70 ${
               menuIsActive || menuOpen
                 ? 'bg-primary text-bg'
                 : 'text-muted hover:text-text hover:bg-surface-alt'
             }`}
+            style={(menuIsActive || menuOpen) ? {
+              filter: 'drop-shadow(0 0 6px rgb(var(--theme-primary-rgb) / 0.5))',
+            } : undefined}
           >
-            <IconMenu size={menuIsActive || menuOpen ? 24 : 22} />
+            {(menuIsActive || menuOpen) && (
+              <span className="absolute top-0 inset-x-0 h-0.5 bg-primary" aria-hidden="true" />
+            )}
+            <IconMenu size={(menuIsActive || menuOpen) ? 22 : 20} />
             <span className="leading-none">{t('nav.more')}</span>
           </button>
         </div>

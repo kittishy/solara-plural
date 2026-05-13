@@ -17,6 +17,16 @@ function IconArrowRight() {
   );
 }
 
+function IconPlus() {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <line x1="12" x2="12" y1="5" y2="19" />
+      <line x1="5" x2="19" y1="12" y2="12" />
+    </svg>
+  );
+}
+
 export default async function DashboardPage() {
   const systemId = await requireSystemId();
 
@@ -61,103 +71,204 @@ export default async function DashboardPage() {
     <div className="animate-fade-in space-y-5 md:space-y-6">
       {/* Page header */}
       <section className="-mx-4 px-4 pt-4 pb-2 md:mx-0 md:px-0 md:pt-0">
-        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted">
-          <LocalizedToday />
-        </p>
-        <h1 className="mt-1 text-3xl font-black leading-none tracking-tight text-text sm:text-4xl">
+        {/* Section label */}
+        <div className="flex items-center gap-2 mb-3">
+          <span className="text-primary text-[10px] font-black" aria-hidden="true">◆</span>
+          <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted">
+            <Trans k="dashboard.systemSummary" />
+          </span>
+          <span className="flex-1 h-px bg-border-strong/50" aria-hidden="true" />
+        </div>
+
+        <h1 className="text-3xl font-black leading-none tracking-tight text-text sm:text-4xl">
           <DashboardGreeting name={system?.name ?? 'friend'} />
         </h1>
+        <p className="mt-1.5 text-[10px] font-black uppercase tracking-[0.2em] text-muted">
+          <LocalizedToday />
+        </p>
       </section>
 
-      {/* Front — hero banner when active, minimal card when not */}
+      {/* Front section */}
       {frontingMembers.length > 0 && activeFront ? (
         <section
-          className="-mx-4 md:mx-0 md:rounded-xl overflow-hidden"
           aria-labelledby="front-section-label"
+          className="relative overflow-hidden"
           style={{
-            background: 'linear-gradient(135deg, rgb(var(--theme-front-soft-rgb) / 0.3) 0%, rgb(var(--theme-surface-rgb) / 0.95) 60%)',
-            borderTop: '2px solid rgb(var(--theme-front-rgb) / 0.6)',
-            borderBottom: '2px solid rgb(var(--theme-front-rgb) / 0.2)',
+            background: 'linear-gradient(135deg, rgb(var(--theme-front-soft-rgb) / 0.2) 0%, rgb(var(--theme-surface-rgb)) 60%)',
+            borderLeft: '3px solid rgb(var(--theme-front-rgb))',
+            padding: '1rem 1.25rem',
           }}
         >
-          <div className="px-4 py-4 md:px-6">
-            <div className="flex items-center justify-between gap-3 mb-4">
-              <div className="flex items-center gap-2.5">
-                <span className="relative inline-flex h-3 w-3 shrink-0" aria-hidden="true">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-front opacity-75" />
-                  <span className="relative inline-flex h-3 w-3 rounded-full bg-front shadow-front-glow" />
-                </span>
-                <span id="front-section-label" className="text-[10px] font-black uppercase tracking-[0.2em] text-front">
-                  <Trans k="dashboard.currentFront" />
-                </span>
-              </div>
-              <Link href="/front" className="inline-flex min-h-[44px] items-center gap-1 text-xs font-bold text-front/70 hover:text-front transition-colors">
-                <Trans k="common.manage" /> <IconArrowRight />
-              </Link>
-            </div>
+          {/* Corner ornaments */}
+          <span
+            className="pointer-events-none absolute top-0 right-0 block w-3 h-3 border-t-2 border-r-2 border-front/50"
+            aria-hidden="true"
+          />
+          <span
+            className="pointer-events-none absolute bottom-0 right-0 block w-3 h-3 border-b-2 border-r-2 border-front/30"
+            aria-hidden="true"
+          />
 
-            <div className="flex flex-wrap gap-3">
-              {frontingMembers.map((member) => (
-                <div
-                  key={member.id}
-                  className="flex items-center gap-3 rounded-xl px-3 py-2.5"
-                  style={{
-                    background: `color-mix(in srgb, ${member.color ?? '#f472b6'} 12%, transparent)`,
-                    border: `1px solid color-mix(in srgb, ${member.color ?? '#f472b6'} 35%, transparent)`,
-                  }}
-                >
-                  {member.avatarUrl ? (
-                    <DynamicAvatarImage src={member.avatarUrl} alt={member.name} className="h-9 w-9 rounded-lg object-cover" />
-                  ) : (
-                    <span
-                      className="flex h-9 w-9 items-center justify-center rounded-lg text-sm font-black text-bg"
-                      style={{ backgroundColor: member.color ?? '#f472b6' }}
-                      aria-hidden="true"
-                    >
-                      {member.name[0].toUpperCase()}
-                    </span>
-                  )}
-                  <div>
-                    <p className="text-sm font-black text-text leading-none">{member.name}</p>
-                    {member.pronouns && (
-                      <p className="text-xs text-muted leading-none mt-0.5">{member.pronouns}</p>
-                    )}
-                  </div>
-                </div>
-              ))}
+          {/* Header row */}
+          <div className="flex items-center justify-between gap-3 mb-4">
+            <div className="flex items-center gap-2.5">
+              <span className="relative inline-flex h-3 w-3 shrink-0" aria-hidden="true">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-front opacity-75" />
+                <span className="relative inline-flex h-3 w-3 rounded-full bg-front shadow-front-glow" />
+              </span>
+              <span
+                id="front-section-label"
+                className="text-[10px] font-black uppercase tracking-[0.2em] text-front"
+              >
+                <Trans k="dashboard.currentFront" />
+              </span>
             </div>
-
-            <p className="text-[10px] font-bold uppercase tracking-widest text-front/50 mt-3">
-              <Trans k="dashboard.since" /> <LocalizedTime date={activeFront.startedAt} />
-            </p>
+            <Link
+              href="/front"
+              className="inline-flex min-h-[44px] items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-front/60 hover:text-front transition-colors"
+            >
+              <Trans k="common.manage" />
+              <IconArrowRight />
+            </Link>
           </div>
+
+          {/* Member cards */}
+          <div className="flex flex-wrap gap-3">
+            {frontingMembers.map((member) => (
+              <div
+                key={member.id}
+                className="flex items-center gap-3 px-3 py-2.5 min-w-[160px]"
+                style={{
+                  background: `linear-gradient(135deg, color-mix(in srgb, ${member.color ?? '#c084fc'} 25%, #100c1e) 0%, #100c1e 100%)`,
+                  borderLeft: `3px solid ${member.color ?? 'rgb(var(--theme-front-rgb))'}`,
+                  clipPath: 'polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 0 100%)',
+                }}
+              >
+                {member.avatarUrl ? (
+                  <div
+                    className="h-9 w-9 flex-shrink-0 overflow-hidden"
+                    style={{ clipPath: 'polygon(0 0, calc(100% - 4px) 0, 100% 4px, 100% 100%, 0 100%)' }}
+                  >
+                    <DynamicAvatarImage
+                      src={member.avatarUrl}
+                      alt={member.name}
+                      className="h-9 w-9 object-cover"
+                    />
+                  </div>
+                ) : (
+                  <span
+                    className="flex h-9 w-9 items-center justify-center text-sm font-black text-bg flex-shrink-0"
+                    style={{
+                      backgroundColor: member.color ?? '#c084fc',
+                      clipPath: 'polygon(0 0, calc(100% - 4px) 0, 100% 4px, 100% 100%, 0 100%)',
+                    }}
+                    aria-hidden="true"
+                  >
+                    {member.name[0].toUpperCase()}
+                  </span>
+                )}
+                <div>
+                  <p className="text-sm font-black text-text leading-none">{member.name}</p>
+                  {member.pronouns && (
+                    <p className="text-[10px] text-muted leading-none mt-0.5 font-black uppercase tracking-wider">
+                      {member.pronouns}
+                    </p>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Since timestamp */}
+          <p className="text-[10px] font-black uppercase tracking-widest text-front/50 mt-3">
+            <Trans k="dashboard.since" />{' '}
+            <LocalizedTime date={activeFront.startedAt} />
+          </p>
         </section>
       ) : (
-        <section className="card p-4 md:p-5 border-border/50">
+        <section
+          className="relative overflow-hidden"
+          style={{
+            background: 'rgb(var(--theme-surface-rgb))',
+            borderLeft: '3px solid rgb(var(--theme-border-strong-rgb))',
+            padding: '1rem 1.25rem',
+          }}
+        >
+          {/* Corner ornament */}
+          <span
+            className="pointer-events-none absolute top-0 right-0 block w-3 h-3 border-t-2 border-r-2 border-border-strong/50"
+            aria-hidden="true"
+          />
+
           <div className="flex items-center justify-between gap-3">
             <div>
-              <h2 className="text-xs font-black uppercase tracking-widest text-muted"><Trans k="dashboard.currentFront" /></h2>
-              <p className="text-sm text-muted mt-1"><Trans k="dashboard.noCurrentFront" /></p>
+              <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted">
+                <Trans k="dashboard.currentFront" />
+              </h2>
+              <p className="text-sm text-muted mt-1.5 font-bold">
+                <Trans k="dashboard.noCurrentFront" />
+              </p>
             </div>
-            <Link href="/front" className="btn-primary shrink-0 min-h-[44px]">
+            <Link
+              href="/front"
+              className="inline-flex items-center gap-2 min-h-[44px] px-4 py-2 text-[11px] font-black uppercase tracking-widest transition-all duration-150 hover:shadow-glow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+              style={{
+                background: 'rgb(var(--theme-primary-rgb))',
+                color: 'rgb(var(--theme-bg-rgb))',
+                clipPath: 'polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%)',
+              }}
+            >
+              <IconPlus />
               <Trans k="dashboard.startFront" />
             </Link>
           </div>
         </section>
       )}
 
-      <section className="card p-5 md:p-6">
-        <div className="mb-4 flex items-center justify-between gap-3">
-          <h2 className="text-lg font-semibold text-text"><Trans k="dashboard.recentNotes" /></h2>
-          <Link href="/notes" className="inline-flex min-h-[44px] items-center gap-1 text-sm text-primary transition-colors hover:text-primary-glow">
-            <Trans k="common.seeAll" /> <IconArrowRight />
+      {/* Recent Notes */}
+      <section>
+        {/* Section header */}
+        <div className="flex items-center justify-between gap-3 mb-3">
+          <div className="flex items-center gap-2">
+            <span className="text-primary text-[10px] font-black" aria-hidden="true">◆</span>
+            <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted">
+              <Trans k="dashboard.recentNotes" />
+            </h2>
+          </div>
+          <Link
+            href="/notes"
+            className="inline-flex min-h-[44px] items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-primary/60 hover:text-primary transition-colors"
+          >
+            <Trans k="common.seeAll" />
+            <IconArrowRight />
           </Link>
         </div>
 
         {recentNotes.length === 0 ? (
-          <div className="space-y-3 py-2">
-            <p className="text-sm text-muted"><Trans k="dashboard.notesEmpty" /></p>
-            <Link href="/notes/new" className="btn-ghost min-h-[44px] justify-center border border-border">
+          <div
+            className="relative overflow-hidden py-6 px-5"
+            style={{
+              background: 'rgb(var(--theme-surface-rgb))',
+              borderLeft: '3px solid rgb(var(--theme-border-strong-rgb))',
+            }}
+          >
+            <span
+              className="pointer-events-none absolute top-0 right-0 block w-3 h-3 border-t-2 border-r-2 border-border-strong/50"
+              aria-hidden="true"
+            />
+            <p className="text-sm text-muted mb-4">
+              <Trans k="dashboard.notesEmpty" />
+            </p>
+            <Link
+              href="/notes/new"
+              className="inline-flex items-center gap-2 min-h-[44px] px-4 py-2 text-[11px] font-black uppercase tracking-widest transition-all duration-150 hover:shadow-glow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+              style={{
+                background: 'rgb(var(--theme-primary-rgb))',
+                color: 'rgb(var(--theme-bg-rgb))',
+                clipPath: 'polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%)',
+              }}
+            >
+              <IconPlus />
               <Trans k="dashboard.writeFirstNote" />
             </Link>
           </div>
@@ -167,10 +278,22 @@ export default async function DashboardPage() {
               <Link
                 key={note.id}
                 href={`/notes/${note.id}`}
-                className="block rounded-xl border border-border/60 bg-surface-alt/40 px-4 py-3 transition-all duration-150 hover:border-primary/30 hover:bg-surface-alt/70 hover:-translate-y-px active:scale-[0.99]"
+                className="block relative overflow-hidden transition-all duration-150 hover:-translate-y-px hover:shadow-[0_0_0_1px_rgb(var(--theme-primary-rgb)/0.3),0_8px_24px_rgba(0,0,0,0.7)]"
+                style={{
+                  background: 'rgb(var(--theme-surface-alt-rgb))',
+                  borderLeft: '3px solid rgb(var(--theme-primary-rgb))',
+                  padding: '0.75rem 1rem',
+                }}
               >
-                <p className="line-clamp-1 text-sm font-medium text-text">{note.title ?? <Trans k="dashboard.untitledNote" />}</p>
-                <p className="mt-1 line-clamp-2 text-xs text-muted">{note.content}</p>
+                {/* Corner ornament */}
+                <span
+                  className="pointer-events-none absolute top-0 right-0 block w-2.5 h-2.5 border-t border-r border-primary/30"
+                  aria-hidden="true"
+                />
+                <p className="text-sm font-black text-text line-clamp-1">
+                  {note.title ?? <Trans k="dashboard.untitledNote" />}
+                </p>
+                <p className="text-xs text-muted mt-1 line-clamp-2">{note.content}</p>
               </Link>
             ))}
           </div>
@@ -179,4 +302,3 @@ export default async function DashboardPage() {
     </div>
   );
 }
-
