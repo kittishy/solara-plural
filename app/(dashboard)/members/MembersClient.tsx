@@ -251,8 +251,7 @@ function MemberCard({
       }}
     >
       <div
-        className="overflow-hidden transition-transform duration-200 hover:-translate-y-0.5 active:scale-[0.97]"
-        style={{ clipPath: 'polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 0 100%)' }}
+        className="card-cut overflow-hidden transition-transform duration-200 hover:-translate-y-0.5 active:scale-[0.97]"
       >
         {/* Portrait zone */}
         <Link
@@ -290,7 +289,7 @@ function MemberCard({
             ) : (
               <span
                 className="flex w-[76px] h-[76px] items-center justify-center rounded-xl text-3xl font-black shadow-[0_4px_24px_rgba(0,0,0,0.7)]"
-                style={{ backgroundColor: '#09070f', color: accent }}
+                style={{ backgroundColor: 'var(--theme-surface)', color: accent }}
                 aria-hidden="true"
               >
                 {member.name[0]?.toUpperCase() ?? '?'}
