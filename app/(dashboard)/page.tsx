@@ -59,60 +59,58 @@ export default async function DashboardPage() {
 
   return (
     <div className="animate-fade-in space-y-5 md:space-y-6">
-      <section className="-mx-4 px-4 py-4 md:mx-0 md:px-0 md:py-0">
-        <p className="text-sm font-medium text-muted">
+      {/* Page header */}
+      <section className="-mx-4 px-4 pt-4 pb-2 md:mx-0 md:px-0 md:pt-0">
+        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted">
           <LocalizedToday />
         </p>
-        <h1 className="mt-1 text-2xl font-bold leading-tight text-text sm:text-3xl">
+        <h1 className="mt-1 text-3xl font-black leading-none tracking-tight text-text sm:text-4xl">
           <DashboardGreeting name={system?.name ?? 'friend'} />
         </h1>
       </section>
 
-      <section
-        className="card p-5 md:p-6"
-        style={activeFront ? {
-          borderColor: 'rgb(var(--theme-front-rgb) / 0.4)',
-          boxShadow: '0 0 0 1px rgb(var(--theme-front-rgb) / 0.15), 0 4px 24px rgba(0,0,0,0.4)',
-        } : undefined}
-      >
-        <div className="mb-4 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2.5">
-            {activeFront && (
-              <span className="relative inline-flex h-2.5 w-2.5 flex-shrink-0" aria-hidden="true">
-                <span className="absolute inline-flex h-full w-full rounded-full bg-front opacity-50 animate-pulse" />
-                <span className="absolute inline-flex h-full w-full animate-pulse-ring rounded-full bg-front" />
-                <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-front shadow-[0_0_8px_rgba(244,114,182,0.8)]" />
-              </span>
-            )}
-            <h2 className={`text-base font-bold ${activeFront ? 'text-front' : 'text-text'}`}>
-              <Trans k="dashboard.currentFront" />
-            </h2>
-          </div>
-          <Link href="/front" className="inline-flex min-h-[44px] items-center gap-1 text-sm text-primary transition-colors hover:text-primary-glow">
-            <Trans k="common.manage" /> <IconArrowRight />
-          </Link>
-        </div>
+      {/* Front — hero banner when active, minimal card when not */}
+      {frontingMembers.length > 0 && activeFront ? (
+        <section
+          className="-mx-4 md:mx-0 md:rounded-xl overflow-hidden"
+          aria-labelledby="front-section-label"
+          style={{
+            background: 'linear-gradient(135deg, rgb(var(--theme-front-soft-rgb) / 0.3) 0%, rgb(var(--theme-surface-rgb) / 0.95) 60%)',
+            borderTop: '2px solid rgb(var(--theme-front-rgb) / 0.6)',
+            borderBottom: '2px solid rgb(var(--theme-front-rgb) / 0.2)',
+          }}
+        >
+          <div className="px-4 py-4 md:px-6">
+            <div className="flex items-center justify-between gap-3 mb-4">
+              <div className="flex items-center gap-2.5">
+                <span className="relative inline-flex h-3 w-3 shrink-0" aria-hidden="true">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-front opacity-75" />
+                  <span className="relative inline-flex h-3 w-3 rounded-full bg-front shadow-[0_0_10px_rgba(244,114,182,0.9)]" />
+                </span>
+                <span id="front-section-label" className="text-[10px] font-black uppercase tracking-[0.2em] text-front">
+                  <Trans k="dashboard.currentFront" />
+                </span>
+              </div>
+              <Link href="/front" className="inline-flex min-h-[44px] items-center gap-1 text-xs font-bold text-front/70 hover:text-front transition-colors">
+                <Trans k="common.manage" /> <IconArrowRight />
+              </Link>
+            </div>
 
-        {frontingMembers.length > 0 ? (
-          <div className="space-y-3">
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-3">
               {frontingMembers.map((member) => (
                 <div
                   key={member.id}
-                  className="flex items-center gap-2.5 rounded-xl px-3 py-2"
+                  className="flex items-center gap-3 rounded-xl px-3 py-2.5"
                   style={{
-                    background: `${member.color ?? '#f472b6'}14`,
-                    border: `1px solid ${member.color ?? '#f472b6'}35`,
+                    background: `color-mix(in srgb, ${member.color ?? '#f472b6'} 12%, transparent)`,
+                    border: `1px solid color-mix(in srgb, ${member.color ?? '#f472b6'} 35%, transparent)`,
                   }}
                 >
                   {member.avatarUrl ? (
-                    <DynamicAvatarImage src={member.avatarUrl}
-                      alt={member.name}
-                      className="h-7 w-7 rounded-lg object-cover"
-                    />
+                    <DynamicAvatarImage src={member.avatarUrl} alt={member.name} className="h-9 w-9 rounded-lg object-cover" />
                   ) : (
                     <span
-                      className="flex h-7 w-7 items-center justify-center rounded-lg text-xs font-bold text-bg"
+                      className="flex h-9 w-9 items-center justify-center rounded-lg text-sm font-black text-bg"
                       style={{ backgroundColor: member.color ?? '#f472b6' }}
                       aria-hidden="true"
                     >
@@ -120,7 +118,7 @@ export default async function DashboardPage() {
                     </span>
                   )}
                   <div>
-                    <p className="text-sm font-bold text-text leading-none">{member.name}</p>
+                    <p className="text-sm font-black text-text leading-none">{member.name}</p>
                     {member.pronouns && (
                       <p className="text-xs text-muted leading-none mt-0.5">{member.pronouns}</p>
                     )}
@@ -128,21 +126,25 @@ export default async function DashboardPage() {
                 </div>
               ))}
             </div>
-            {activeFront && (
-              <p className="text-xs text-front/60">
-                <Trans k="dashboard.since" /> <LocalizedTime date={activeFront.startedAt} />
-              </p>
-            )}
+
+            <p className="text-[10px] font-bold uppercase tracking-widest text-front/50 mt-3">
+              <Trans k="dashboard.since" /> <LocalizedTime date={activeFront.startedAt} />
+            </p>
           </div>
-        ) : (
-          <div className="space-y-3">
-            <p className="text-sm text-muted"><Trans k="dashboard.noCurrentFront" /></p>
-            <Link href="/front" className="btn-primary min-h-[44px] justify-center md:w-auto">
+        </section>
+      ) : (
+        <section className="card p-4 md:p-5 border-border/50">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h2 className="text-xs font-black uppercase tracking-widest text-muted"><Trans k="dashboard.currentFront" /></h2>
+              <p className="text-sm text-muted mt-1"><Trans k="dashboard.noCurrentFront" /></p>
+            </div>
+            <Link href="/front" className="btn-primary shrink-0 min-h-[44px]">
               <Trans k="dashboard.startFront" />
             </Link>
           </div>
-        )}
-      </section>
+        </section>
+      )}
 
       <section className="card p-5 md:p-6">
         <div className="mb-4 flex items-center justify-between gap-3">
