@@ -1,14 +1,9 @@
 import { db } from '@/lib/db';
 import { systems } from '@/lib/db/schema';
-import { requireAuth, err, ok } from '@/lib/api/helpers';
+import { requireAuth, err, ok, parseJsonRecord } from '@/lib/api/helpers';
 import { createDeletionWindow } from '@/lib/account-deletion';
 import { eq } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
-
-type DeletionBody = {
-  confirmEmail?: unknown;
-  acknowledgeRecoveryWindow?: unknown;
-};
 
 function normalizeEmail(value: unknown): string {
   return typeof value === 'string' ? value.trim().toLowerCase() : '';
@@ -20,12 +15,9 @@ export async function DELETE(request: Request) {
   const auth = await requireAuth();
   if (auth.error) return auth.error;
 
-  let body: DeletionBody;
-  try {
-    body = await request.json();
-  } catch {
-    return err('Invalid JSON payload.', 400);
-  }
+  const parsed = await parseJsonRecord(request);
+  if (parsed.error) return parsed.error;
+  const body = parsed.data;
 
   const system = await db.query.systems.findFirst({
     columns: {

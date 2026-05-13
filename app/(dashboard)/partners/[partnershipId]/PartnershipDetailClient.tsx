@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { formatDateLong } from '@/lib/client/format';
 
 type Member = { id: string; name: string; color: string | null; avatarUrl: string | null };
 
@@ -86,8 +87,7 @@ function toDateInput(value: Date | string | null | undefined): string {
 }
 
 function formatDate(value: Date | string | null | undefined): string {
-  if (!value) return '—';
-  return new Date(value).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+  return formatDateLong(value);
 }
 
 export default function PartnershipDetailClient(props: Props) {

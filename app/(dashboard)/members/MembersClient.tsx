@@ -2,9 +2,10 @@
 
 import Link from 'next/link';
 import DynamicAvatarImage from '@/components/ui/DynamicAvatarImage';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import useSWR from 'swr';
 import { apiFetcher, revalidateMembersAndFront, swrKeys } from '@/lib/swr';
+import { formatTimeSince } from '@/lib/client/format';
 
 const INITIAL_VISIBLE_MEMBERS = 60;
 const VISIBLE_MEMBERS_INCREMENT = 60;
@@ -39,15 +40,6 @@ function mergeMembersWithFront(
 ): MemberItem[] {
   const frontingIds = new Set(front?.memberIds ?? []);
   return members.map((m) => ({ ...m, isFronting: frontingIds.has(m.id) }));
-}
-
-function formatTimeSince(startedAt: Date | string): string {
-  const ms = Date.now() - new Date(startedAt).getTime();
-  const h = Math.floor(ms / 3_600_000);
-  const m = Math.floor((ms % 3_600_000) / 60_000);
-  if (h > 0) return `${h}h ${m}m`;
-  if (m > 0) return `${m}m`;
-  return 'just now';
 }
 
 // ─── BottomSheet ──────────────────────────────────────────────────────────────
@@ -243,29 +235,32 @@ function MemberRow({
   member: MemberItem;
   onOpenSheet: (member: MemberItem) => void;
 }) {
-  const accentColor = member.isFronting
-    ? '#f9a8d4'
-    : (member.color ?? '#a78bfa');
+  const accentColor = member.color ?? '#b48efa';
+  const frontColor = '#f472b6';
+  const borderColor = member.isFronting ? frontColor : accentColor;
 
   return (
     <li
       role="listitem"
       className={`relative flex items-center border-b border-border/40 transition-colors duration-150
-        ${member.isFronting ? 'bg-front/5' : 'bg-surface hover:bg-surface-alt/60'}`}
-      style={{ borderLeft: `3px solid ${accentColor}` }}
+        ${member.isFronting ? 'bg-front/[0.06]' : 'bg-surface hover:bg-surface-alt/70'}`}
+      style={{ borderLeft: `3px solid ${borderColor}` }}
     >
       <Link
         href={`/members/${member.id}`}
-        className="flex flex-1 items-center gap-3.5 px-4 py-3.5 pr-14 min-w-0 focus:outline-none
+        className="flex flex-1 items-center gap-3 px-3.5 py-3 pr-14 min-w-0 focus:outline-none
           focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-inset"
       >
         {/* Avatar */}
         <div
-          className="w-14 h-14 rounded-lg flex-shrink-0 overflow-hidden flex items-center justify-center
-            text-lg font-bold text-bg"
+          className="w-11 h-11 rounded-xl flex-shrink-0 overflow-hidden flex items-center justify-center
+            text-base font-bold text-bg"
           style={!member.avatarUrl ? {
-            backgroundColor: member.color ?? '#a78bfa',
-          } : undefined}
+            backgroundColor: accentColor,
+            boxShadow: `0 0 0 2px color-mix(in srgb, ${member.isFronting ? frontColor : accentColor} 35%, transparent)`,
+          } : {
+            boxShadow: `0 0 0 2px color-mix(in srgb, ${member.isFronting ? frontColor : accentColor} 35%, transparent)`,
+          }}
           aria-hidden="true"
         >
           {member.avatarUrl ? (
@@ -281,32 +276,42 @@ function MemberRow({
 
         {/* Text */}
         <div className="flex-1 min-w-0">
-          <p className="font-semibold text-text text-base leading-snug truncate">
-            {member.name}
-          </p>
-          {member.pronouns && (
-            <p className="text-muted text-sm leading-snug truncate">
-              {member.pronouns}
+          <div className="flex items-center gap-2 min-w-0">
+            <p className="font-bold text-text text-sm leading-snug truncate">
+              {member.name}
             </p>
-          )}
-          {member.isFronting && (
-            <div
-              className="inline-flex items-center gap-1.5 mt-1"
-              aria-label="Currently fronting"
-            >
+            {member.isFronting && (
               <span className="relative inline-flex h-2 w-2 flex-shrink-0" aria-hidden="true">
                 <span className="absolute inline-flex h-full w-full rounded-full bg-front opacity-60 animate-pulse" />
                 <span className="relative inline-flex h-2 w-2 rounded-full bg-front" />
               </span>
-              <span className="text-front text-xs font-semibold tracking-wide uppercase">
-                In front
-              </span>
+            )}
+          </div>
+          {member.pronouns && (
+            <p className="text-muted text-xs leading-snug truncate mt-0.5">
+              {member.pronouns}
+            </p>
+          )}
+          {member.tags.length > 0 && (
+            <div className="flex flex-wrap gap-1 mt-1.5" aria-label="Tags">
+              {member.tags.slice(0, 3).map((tag) => (
+                <span
+                  key={tag}
+                  className="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium leading-none
+                    bg-primary/10 border border-primary/25 text-primary-glow"
+                >
+                  {tag}
+                </span>
+              ))}
+              {member.tags.length > 3 && (
+                <span className="text-[11px] text-subtle">+{member.tags.length - 3}</span>
+              )}
             </div>
           )}
         </div>
       </Link>
 
-      {/* + action button */}
+      {/* action button */}
       <div className="absolute right-3 top-1/2 -translate-y-1/2">
         <button
           type="button"
@@ -367,18 +372,25 @@ function FrontStatusBar({
   }
 
   return (
-    <div className="flex items-center justify-between gap-3 rounded-xl border border-front/30 bg-front/5 px-4 py-2.5">
-      <div className="flex items-center gap-2 min-w-0">
-        <span className="relative inline-flex h-2 w-2 flex-shrink-0" aria-hidden="true">
-          <span className="absolute inline-flex h-full w-full rounded-full bg-front opacity-60 animate-pulse" />
-          <span className="relative inline-flex h-2 w-2 rounded-full bg-front shadow-[0_0_6px_rgba(249,168,212,0.7)]" />
+    <div
+      className="flex items-center justify-between gap-3 rounded-xl px-4 py-3"
+      style={{
+        background: 'rgb(var(--theme-front-soft-rgb) / 0.18)',
+        border: '1px solid rgb(var(--theme-front-rgb) / 0.35)',
+      }}
+    >
+      <div className="flex items-center gap-2.5 min-w-0">
+        <span className="relative inline-flex h-2.5 w-2.5 flex-shrink-0" aria-hidden="true">
+          <span className="absolute inline-flex h-full w-full rounded-full bg-front opacity-50 animate-pulse" />
+          <span className="absolute inline-flex h-full w-full animate-pulse-ring rounded-full bg-front" />
+          <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-front shadow-[0_0_8px_rgba(244,114,182,0.8)]" />
         </span>
-        <span className="text-sm font-medium text-front">
-          {count === 1 ? '1 member' : `${count} members`} fronting
+        <span className="text-sm font-bold text-front tracking-wide">
+          {count === 1 ? '1 IN FRONT' : `${count} IN FRONT`}
         </span>
         <span className="text-subtle text-xs" aria-hidden="true">·</span>
-        <span className="text-muted text-xs truncate">
-          since {formatTimeSince(front.startedAt)}
+        <span className="text-front/60 text-xs truncate">
+          {formatTimeSince(front.startedAt)}
         </span>
       </div>
       <button
@@ -386,8 +398,8 @@ function FrontStatusBar({
         aria-label="End current front session"
         onClick={endFront}
         disabled={ending}
-        className="flex-shrink-0 rounded-lg border border-border/60 px-3 py-1 text-xs font-medium text-muted
-          transition-colors hover:border-border hover:text-text disabled:opacity-50"
+        className="flex-shrink-0 rounded-lg border border-front/30 px-3 py-1 text-xs font-semibold text-front/80
+          transition-colors hover:border-front/60 hover:text-front disabled:opacity-50"
       >
         {ending ? 'Ending…' : 'End front'}
       </button>
@@ -631,17 +643,39 @@ export default function MembersClient({
           </div>
         ) : (
           <div className="space-y-4">
+            {!isFiltering && frontingCount > 0 && (
+              <p className="section-header px-1">
+                In front · {frontingCount}
+              </p>
+            )}
             <ul
               role="list"
-              className="rounded-xl overflow-hidden border border-border/40"
+              className="rounded-xl overflow-hidden border border-border/50 shadow-card"
             >
-              {visibleMembers.map((member) => (
-                <MemberRow
-                  key={member.id}
-                  member={member}
-                  onOpenSheet={setSheetMember}
-                />
-              ))}
+              {visibleMembers.map((member, idx) => {
+                const prevMember = visibleMembers[idx - 1];
+                const showDivider =
+                  !isFiltering &&
+                  frontingCount > 0 &&
+                  idx > 0 &&
+                  !member.isFronting &&
+                  prevMember?.isFronting;
+                return (
+                  <Fragment key={member.id}>
+                    {showDivider && (
+                      <li role="presentation" className="px-4 py-2 border-b border-border/40 bg-surface-alt/40">
+                        <p className="section-header text-[10px]">
+                          All members · {orderedMembers.filter(m => !m.isFronting).length}
+                        </p>
+                      </li>
+                    )}
+                    <MemberRow
+                      member={member}
+                      onOpenSheet={setSheetMember}
+                    />
+                  </Fragment>
+                );
+              })}
             </ul>
 
             {hasMore && (

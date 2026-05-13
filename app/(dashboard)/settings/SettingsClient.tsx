@@ -5,6 +5,7 @@ import { LanguageSelector } from '@/components/language/LanguageSelector';
 import DynamicAvatarImage from '@/components/ui/DynamicAvatarImage';
 import { signOut } from 'next-auth/react';
 import { prepareAvatarDataUrl } from '@/lib/client/avatar-upload';
+import { formatDateTime } from '@/lib/client/format';
 import {
   applySolaraTheme,
   applySolaraAppearance,
@@ -1853,17 +1854,6 @@ function asCount(value: unknown): number {
   return typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : 0;
 }
 
-function formatDateTime(value: Date | string): string {
-  const date = value instanceof Date ? value : new Date(value);
-  if (Number.isNaN(date.getTime())) return 'the scheduled time';
-  return date.toLocaleString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-  });
-}
 
 function toAccountType(value: unknown): 'system' | 'singlet' {
   return value === 'singlet' ? 'singlet' : 'system';

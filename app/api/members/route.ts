@@ -1,10 +1,11 @@
 import { db } from '@/lib/db';
 import { members } from '@/lib/db/schema';
 import { eq, and } from 'drizzle-orm';
-import { requireAuth, ok, err } from '@/lib/api/helpers';
+import { requireAuth, ok, err, parseJsonRecord } from '@/lib/api/helpers';
 import { createId } from '@paralleldrive/cuid2';
 import { revalidatePath } from 'next/cache';
 import { saveMemberCustomFieldValues } from '@/lib/member-custom-fields';
+import { parseStoredTags, readOptionalString, readTags } from '@/lib/members/fields';
 
 // GET /api/members — list all members for current system
 export async function GET() {
@@ -28,10 +29,9 @@ export async function GET() {
     orderBy: (m, { asc }) => [asc(m.name)],
   });
 
-  // Parse tags JSON for each member
   const parsed = result.map((m) => ({
     ...m,
-    tags: m.tags ? JSON.parse(m.tags) : [],
+    tags: parseStoredTags(m.tags),
   }));
 
   return ok(parsed, 200, {
@@ -46,29 +46,29 @@ export async function POST(request: Request) {
   const auth = await requireAuth();
   if (auth.error) return auth.error;
 
-  let body: any;
-  try {
-    body = await request.json();
-  } catch {
-    return err('Invalid JSON payload', 400);
-  }
-  const { name, pronouns, avatarUrl, description, color, role, tags, notes, customFieldValues } = body ?? {};
+  const parsed = await parseJsonRecord(request);
+  if (parsed.error) return parsed.error;
 
-  if (!name?.trim()) return err('Name is required');
+  const body = parsed.data;
+  const name = typeof body.name === 'string' ? body.name.trim() : '';
+  const tags = readTags(body.tags);
+
+  if (!name) return err('Name is required');
+  if (!tags) return err('tags must be an array of strings');
 
   const now = new Date();
   const newMemberId = createId();
   const newMember = await db.insert(members).values({
     id:          newMemberId,
     systemId:    auth.systemId,
-    name:        name.trim(),
-    pronouns:    pronouns ?? null,
-    avatarUrl:   avatarUrl ?? null,
-    description: description ?? null,
-    color:       color ?? null,
-    role:        role ?? null,
-    tags:        tags ? JSON.stringify(tags) : null,
-    notes:       notes ?? null,
+    name,
+    pronouns:    readOptionalString(body.pronouns),
+    avatarUrl:   readOptionalString(body.avatarUrl),
+    description: readOptionalString(body.description),
+    color:       readOptionalString(body.color),
+    role:        readOptionalString(body.role),
+    tags:        tags.length > 0 ? JSON.stringify(tags) : null,
+    notes:       readOptionalString(body.notes),
     isArchived:  0,
     createdAt:   now,
     updatedAt:   now,
@@ -77,12 +77,12 @@ export async function POST(request: Request) {
   const savedCustomFieldValues = await saveMemberCustomFieldValues(
     auth.systemId,
     newMemberId,
-    customFieldValues,
+    body.customFieldValues,
   );
 
   revalidatePath('/');
   revalidatePath('/members');
   revalidatePath('/front');
 
-  return ok({ ...newMember[0], tags: tags ?? [], customFieldValues: savedCustomFieldValues }, 201);
+  return ok({ ...newMember[0], tags, customFieldValues: savedCustomFieldValues }, 201);
 }

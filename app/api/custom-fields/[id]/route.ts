@@ -2,7 +2,7 @@ import { and, eq } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { db } from '@/lib/db';
 import { customFields, memberFieldValues } from '@/lib/db/schema';
-import { err, ok, requireAuth } from '@/lib/api/helpers';
+import { err, ok, requireAuth, parseJsonRecord } from '@/lib/api/helpers';
 import {
   normalizeCustomFieldDescription,
   normalizeCustomFieldName,
@@ -19,19 +19,16 @@ export async function PATCH(request: Request, { params }: Params) {
   if (auth.error) return auth.error;
 
   const { id } = await params;
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return err('Invalid request payload.', 400);
-  }
+
+  const parsed = await parseJsonRecord(request);
+  if (parsed.error) return parsed.error;
+  const payload = parsed.data;
 
   const current = await db.query.customFields.findFirst({
     where: and(eq(customFields.id, id), eq(customFields.systemId, auth.systemId)),
   });
   if (!current) return err('Custom field not found.', 404);
 
-  const payload = body as Record<string, unknown>;
   const nextType = parseCustomFieldType(payload.type) ?? parseCustomFieldType(current.type) ?? 'text';
   const nextName = 'name' in payload ? normalizeCustomFieldName(payload.name) : current.name;
   if (!nextName) return err('Field name is required and must be 80 characters or less.', 400);

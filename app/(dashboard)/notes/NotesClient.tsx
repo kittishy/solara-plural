@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useState } from 'react';
 import useSWR from 'swr';
 import { apiFetcher, swrKeys } from '@/lib/swr';
+import { formatDate } from '@/lib/client/format';
 
 const INITIAL_VISIBLE_NOTES = 60;
 const VISIBLE_NOTES_INCREMENT = 60;
@@ -34,13 +35,6 @@ function IconChevronRight() {
   );
 }
 
-function formatDate(date: Date | string) {
-  return new Date(date).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  });
-}
 
 export default function NotesClient({ initialNotes }: { initialNotes: NoteListItem[] }) {
   const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE_NOTES);

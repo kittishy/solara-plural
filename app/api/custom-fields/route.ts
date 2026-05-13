@@ -3,7 +3,7 @@ import { asc, eq, sql } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { db } from '@/lib/db';
 import { customFields } from '@/lib/db/schema';
-import { err, ok, requireAuth } from '@/lib/api/helpers';
+import { err, ok, requireAuth, parseJsonRecord } from '@/lib/api/helpers';
 import {
   normalizeCustomFieldDescription,
   normalizeCustomFieldName,
@@ -34,14 +34,10 @@ export async function POST(request: Request) {
   const auth = await requireAuth();
   if (auth.error) return auth.error;
 
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return err('Invalid request payload.', 400);
-  }
+  const parsed = await parseJsonRecord(request);
+  if (parsed.error) return parsed.error;
+  const payload = parsed.data;
 
-  const payload = body as Record<string, unknown>;
   const name = normalizeCustomFieldName(payload.name);
   const type = parseCustomFieldType(payload.type) ?? 'text';
 

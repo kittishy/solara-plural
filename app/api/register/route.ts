@@ -3,42 +3,43 @@ import { systems } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { createId } from '@paralleldrive/cuid2';
 import bcrypt from 'bcryptjs';
-import { NextResponse } from 'next/server';
+import { err, ok, parseJsonRecord } from '@/lib/api/helpers';
 
 export async function POST(request: Request) {
-  let body: any;
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: 'Invalid JSON payload' }, { status: 400 });
-  }
-  const { name, email, password, description, accountType } = body ?? {};
+  const parsed = await parseJsonRecord(request);
+  if (parsed.error) return parsed.error;
 
-  const normalizedAccountType = accountType === 'singlet' ? 'singlet' : 'system';
+  const body = parsed.data;
+  const name = typeof body.name === 'string' ? body.name.trim() : '';
+  const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : '';
+  const password = typeof body.password === 'string' ? body.password : '';
+  const description = typeof body.description === 'string' ? body.description.trim() || null : null;
 
-  if (!name?.trim() || !email?.trim() || !password) {
-    return NextResponse.json({ error: 'Name, email, and password are required' }, { status: 400 });
+  const normalizedAccountType = body.accountType === 'singlet' ? 'singlet' : 'system';
+
+  if (!name || !email || !password) {
+    return err('Name, email, and password are required', 400);
   }
   if (password.length < 8) {
-    return NextResponse.json({ error: 'Password must be at least 8 characters' }, { status: 400 });
+    return err('Password must be at least 8 characters', 400);
   }
 
   const existing = await db.query.systems.findFirst({ where: eq(systems.email, email) });
   if (existing) {
-    return NextResponse.json({ error: 'An account with that email already exists' }, { status: 409 });
+    return err('An account with that email already exists', 409);
   }
 
   const passwordHash = await bcrypt.hash(password, 12);
   const now = new Date();
 
   await db.insert(systems).values({
-    id: createId(), name: name.trim(), email: email.toLowerCase().trim(),
+    id: createId(), name, email,
     passwordHash,
-    description: description?.trim() ?? null,
+    description,
     accountType: normalizedAccountType,
     createdAt: now,
     updatedAt: now,
   });
 
-  return NextResponse.json({ success: true }, { status: 201 });
+  return ok({ registered: true }, 201);
 }
