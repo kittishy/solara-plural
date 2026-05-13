@@ -15,7 +15,7 @@ export default async function DashboardLayout({
   const accountType = await getAccountType();
 
   return (
-    <div className="min-h-dvh bg-bg flex">
+    <div className="min-h-dvh bg-bg">
       {/* Accessibility: skip to main content */}
       <a
         href="#main-content"
@@ -28,7 +28,7 @@ export default async function DashboardLayout({
 
       <Sidebar systemName={systemName} accountType={accountType} />
 
-      <main id="main-content" className="relative flex-1 md:ml-60 pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-0 min-h-dvh">
+      <main id="main-content" className="relative flex-1 md:pt-14 pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-0 min-h-dvh">
         {/* Ultra-subtle aurora presence — static, no animation, pointer-events none */}
         <div className="aurora-bg-subtle pointer-events-none fixed inset-0 z-0" aria-hidden="true" />
         <DashboardClientProviders>

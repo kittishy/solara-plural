@@ -123,6 +123,7 @@ const navItems = [
 
 const SIDEBAR_SYMBOLS = ['☀️', '🌙', '⭐', '🌸', '💜', '✨', '🪷', '🌿', '🫧', '🧭'] as const;
 const SIDEBAR_SYMBOL_STORAGE = 'solara.sidebar.symbol';
+
 interface SidebarProps {
   systemName?: string;
   accountType?: 'system' | 'singlet';
@@ -151,7 +152,6 @@ export function Sidebar({ systemName, accountType = 'system' }: SidebarProps) {
     const theme = readStoredSolaraTheme();
     setSelectedTheme(theme);
     applySolaraTheme(theme);
-
   }, []);
 
   useEffect(() => {
@@ -190,31 +190,46 @@ export function Sidebar({ systemName, accountType = 'system' }: SidebarProps) {
     setSelectedTheme(themeId);
     applySolaraTheme(themeId);
     persistSolaraTheme(themeId);
-
   }
 
+  // Settings is pulled out of the center nav into the right action area.
+  const centerNavItems = navItems.filter(
+    (item) => item.href !== '/settings' && (accountType === 'system' || !item.systemOnly),
+  );
+  // Use find without a non-null assertion so the bar degrades gracefully if
+  // navItems is ever modified. Also honour accountType so singlets can't see
+  // a settings button they shouldn't have access to.
+  const settingsItem = navItems.find(
+    (item) => item.href === '/settings' && (accountType === 'system' || !item.systemOnly),
+  );
+  const isSettingsActive = activePathname.startsWith('/settings');
+
   return (
-    <aside
-      className="hidden md:flex fixed left-0 top-0 z-10 min-h-dvh w-60 flex-col border-r-2 border-border-strong"
-      style={{ background: 'var(--theme-surface)' }}
+    <header
+      className="hidden md:flex fixed top-0 left-0 right-0 z-20 h-14 items-center border-b-2 border-border-strong backdrop-blur-md"
+      style={{
+        background: 'var(--theme-surface)',
+        boxShadow:
+          '0 1px 0 rgb(var(--theme-border-strong-rgb, 74 61 122)), inset 0 -1px 40px rgba(244,114,182,0.04)',
+      }}
     >
-      {/* Brand / system name */}
-      <div ref={brandMenuRef} className="relative border-b-2 border-border-strong px-4 py-5">
+      {/* LEFT: brand button + dropdown */}
+      <div ref={brandMenuRef} className="relative flex-shrink-0">
         <button
           ref={triggerRef}
           type="button"
           onClick={() => setMenuOpen((prev) => !prev)}
           aria-expanded={menuOpen}
           aria-haspopup="menu"
-          className="flex w-full items-center gap-3 rounded-xl px-2 py-2 text-left transition-colors duration-150 hover:bg-surface-alt focus-visible:ring-2 focus-visible:ring-primary/60"
+          className="flex h-14 items-center gap-2.5 px-4 transition-colors duration-150 hover:bg-surface-alt focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/60"
         >
-          <span className="text-xl drop-shadow-[0_0_10px_rgba(244,114,182,0.5)]">{sidebarSymbol}</span>
+          <span className="text-lg drop-shadow-[0_0_10px_rgba(244,114,182,0.5)]">{sidebarSymbol}</span>
           <div className="min-w-0">
-            <p className="text-xl font-black tracking-tight leading-none text-text">
+            <p className="text-lg font-black tracking-tight leading-none text-text">
               SOLARA<span className="text-primary">.</span>
             </p>
             {systemName && (
-              <p className="max-w-[130px] truncate text-[9px] font-black uppercase tracking-[0.2em] text-muted mt-0.5">
+              <p className="max-w-[120px] truncate text-[9px] font-black uppercase tracking-[0.2em] text-muted mt-0.5">
                 {systemName}
               </p>
             )}
@@ -225,7 +240,7 @@ export function Sidebar({ systemName, accountType = 'system' }: SidebarProps) {
           <div
             role="menu"
             aria-label={t('nav.systemMenu')}
-            className="absolute left-4 right-4 top-[calc(100%-6px)] z-20 space-y-4 rounded-xl border-2 border-border-strong bg-surface p-3 shadow-card-float backdrop-blur-sm animate-slide-up"
+            className="absolute left-0 top-full mt-1 z-30 w-64 space-y-4 rounded-xl border-2 border-border-strong bg-surface p-3 shadow-card-float backdrop-blur-sm animate-slide-up"
           >
             <div>
               <p className="mb-2 text-[10px] font-black uppercase tracking-widest text-muted">{t('nav.sidebarSymbol')}</p>
@@ -281,9 +296,12 @@ export function Sidebar({ systemName, accountType = 'system' }: SidebarProps) {
         )}
       </div>
 
-      {/* Nav */}
-      <nav className="flex-1 space-y-1 px-2 py-4" aria-label={t('nav.primary')}>
-        {navItems.filter((item) => accountType === 'system' || !item.systemOnly).map((item) => {
+      {/* Divider */}
+      <div className="mx-3 h-6 w-px flex-shrink-0 bg-border-strong" aria-hidden="true" />
+
+      {/* CENTER: nav items */}
+      <nav className="flex flex-1 items-center gap-1 overflow-x-auto" aria-label={t('nav.primary')}>
+        {centerNavItems.map((item) => {
           const isActive =
             item.href === '/'
               ? activePathname === '/'
@@ -295,7 +313,7 @@ export function Sidebar({ systemName, accountType = 'system' }: SidebarProps) {
               href={localizePathname(item.href, language)}
               prefetch={true}
               aria-current={isActive ? 'page' : undefined}
-              className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-[11px] font-black uppercase tracking-widest transition-all duration-150
+              className={`flex flex-shrink-0 items-center gap-1.5 rounded-xl px-3 py-1.5 text-[11px] font-black uppercase tracking-widest transition-all duration-150
                 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 ${
                 isActive
                   ? 'bg-primary text-bg shadow-glow'
@@ -303,7 +321,7 @@ export function Sidebar({ systemName, accountType = 'system' }: SidebarProps) {
               }`}
             >
               <span className="flex-shrink-0">
-                <item.Icon />
+                <item.Icon size={15} />
               </span>
               {t(item.labelKey)}
             </Link>
@@ -311,18 +329,34 @@ export function Sidebar({ systemName, accountType = 'system' }: SidebarProps) {
         })}
       </nav>
 
-      <div className="border-t-2 border-border-strong px-2 py-4">
+      {/* RIGHT: Settings (only when visible for this accountType) + Logout */}
+      <div className="flex flex-shrink-0 items-center gap-1 px-3">
+        {settingsItem && (
+          <Link
+            href={localizePathname('/settings', language)}
+            prefetch={true}
+            aria-current={isSettingsActive ? 'page' : undefined}
+            aria-label={t(settingsItem.labelKey)}
+            className={`flex h-9 w-9 items-center justify-center rounded-xl transition-all duration-150
+              focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 ${
+              isSettingsActive
+                ? 'bg-primary text-bg shadow-glow'
+                : 'text-muted hover:bg-surface-alt hover:text-text'
+            }`}
+          >
+            <IconSettings size={17} />
+          </Link>
+        )}
+
         <button
           type="button"
           onClick={() => signOut({ callbackUrl: localizePathname('/login', language) })}
-          className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-[11px] font-black uppercase tracking-widest text-error/60 transition-all duration-150 hover:bg-error/10 hover:text-error"
+          aria-label={t('nav.signOut')}
+          className="flex h-9 w-9 items-center justify-center rounded-xl text-error/60 transition-all duration-150 hover:bg-error/10 hover:text-error focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-error/60"
         >
-          <span className="flex-shrink-0"><IconLogout /></span>
-          {t('nav.signOut')}
+          <IconLogout size={17} />
         </button>
       </div>
-    </aside>
+    </header>
   );
 }
-
-
