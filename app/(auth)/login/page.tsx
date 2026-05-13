@@ -89,7 +89,7 @@ export default function LoginPage() {
             marginBottom: '0.5rem',
           }}
         >
-          // SOLARA SYSTEM
+          {'// SOLARA SYSTEM'}
         </p>
         <h1
           className="font-black tracking-tight leading-none"
