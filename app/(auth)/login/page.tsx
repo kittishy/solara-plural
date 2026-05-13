@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState } from 'react';
 import { signIn } from 'next-auth/react';
@@ -36,21 +36,22 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="w-full max-w-md animate-fade-in">
-      <div className="text-center mb-8">
-        <div className="inline-flex items-center justify-center relative mb-4">
-          <span className="absolute inset-0 rounded-full bg-primary/10 animate-pulse-ring" aria-hidden="true" />
-          <div className="relative inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/15 shadow-glow">
-            <span className="text-3xl">☀️</span>
-          </div>
-        </div>
-        <h1 className="text-3xl font-bold text-text">Solara Plural</h1>
-        <p className="text-muted mt-2 text-sm">{t('auth.login.tagline')}</p>
+    <div className="w-full max-w-sm animate-fade-in">
+      {/* Wordmark */}
+      <div className="mb-10 text-center">
+        <p className="text-[10px] font-black uppercase tracking-[0.35em] text-muted mb-3">
+          SYSTEM HQ
+        </p>
+        <h1 className="text-5xl font-black tracking-tight leading-none text-text">
+          SOLARA<span className="text-primary">.</span>
+        </h1>
+        <p className="text-xs font-bold uppercase tracking-[0.2em] text-muted/60 mt-3">
+          {t('auth.login.tagline')}
+        </p>
       </div>
 
-      <div className="card p-8 animate-slide-up" style={{ animationDelay: '80ms' }}>
-        <h2 className="text-xl font-semibold text-text mb-6">{t('auth.login.title')}</h2>
-
+      {/* Form — no card wrapper */}
+      <div className="animate-slide-up" style={{ animationDelay: '80ms' }}>
         <form onSubmit={handleSubmit} className="space-y-4">
           <LanguageSelector />
 
@@ -81,7 +82,7 @@ export default function LoginPage() {
               onChange={(e) => setPassword(e.target.value)}
             />
             <div className="mt-2 text-right">
-              <Link href="/forgot-password" className="text-sm text-primary hover:text-primary-glow transition-colors duration-150">
+              <Link href="/forgot-password" className="text-sm font-bold text-primary hover:text-primary-glow transition-colors duration-150">
                 {t('auth.login.forgotPassword')}
               </Link>
             </div>
@@ -99,7 +100,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="btn-primary w-full justify-center mt-2 min-h-[48px] text-base"
+            className="btn-primary w-full justify-center mt-2 min-h-[52px] text-sm font-black uppercase tracking-widest"
           >
             {loading ? (
               <span className="flex items-center gap-2">
@@ -114,9 +115,9 @@ export default function LoginPage() {
         </form>
       </div>
 
-      <p className="text-center text-muted text-sm mt-6">
+      <p className="text-center text-muted text-sm mt-8">
         {t('auth.login.newHere')}{' '}
-        <Link href="/register" className="text-primary hover:text-primary-glow transition-colors duration-150">
+        <Link href="/register" className="font-bold text-primary hover:text-primary-glow transition-colors duration-150">
           {t('auth.login.createAccount')}
         </Link>
       </p>

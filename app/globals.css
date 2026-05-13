@@ -296,15 +296,15 @@ html[data-solara-theme='mist'] {
 
   /* ─── Buttons ────────────────────────────────────────────── */
   .btn {
-    @apply inline-flex items-center gap-2 px-4 py-2 rounded-xl font-medium text-sm
+    @apply inline-flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm
            transition-all duration-150 focus-visible:ring-2 focus-visible:ring-primary/60
            focus-visible:ring-offset-2 focus-visible:ring-offset-bg
            disabled:opacity-50 disabled:cursor-not-allowed;
   }
 
   .btn-primary {
-    @apply btn bg-primary-soft text-white hover:bg-primary hover:text-bg
-           shadow-sm active:scale-[0.98] active:shadow-none;
+    @apply btn bg-primary text-bg hover:bg-primary-glow
+           shadow-glow active:scale-[0.97] active:shadow-none;
   }
 
   .btn-ghost {
@@ -319,26 +319,30 @@ html[data-solara-theme='mist'] {
 
   /* ─── Inputs ─────────────────────────────────────────────── */
   .input {
-    @apply w-full bg-surface-alt border border-border rounded-xl px-3 py-2
+    @apply w-full bg-surface-alt border border-border rounded-xl px-3 py-2.5
            text-text placeholder:text-subtle text-sm
-           focus:outline-none focus:border-primary/60 focus:ring-2 focus:ring-primary/30
-           focus:shadow-[0_0_0_3px_rgba(167,139,250,0.12)]
+           focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/25
            transition-all duration-150;
   }
 
   .label {
-    @apply block text-sm font-medium text-muted mb-1;
+    @apply block text-xs font-black uppercase tracking-widest text-muted mb-1.5;
   }
 
   /* ─── Tags ───────────────────────────────────────────────── */
   .tag {
-    @apply text-xs bg-surface-alt text-muted px-2 py-0.5 rounded-full
-           border border-border/50 inline-flex items-center gap-1;
+    @apply text-[10px] font-black uppercase tracking-wide bg-primary/10 text-primary-glow
+           px-1.5 py-0.5 rounded border border-primary/25 inline-flex items-center gap-1;
   }
 
   /* ─── Front badge ────────────────────────────────────────── */
   .badge-front {
-    @apply inline-flex items-center gap-1.5 text-xs font-semibold text-front tracking-wide;
+    @apply inline-flex items-center gap-1.5 text-xs font-black uppercase tracking-widest text-front;
+  }
+
+  /* ─── Page header ────────────────────────────────────────── */
+  .page-title {
+    @apply text-3xl font-black text-text tracking-tight leading-none;
   }
 }
 

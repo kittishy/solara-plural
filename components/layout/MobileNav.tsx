@@ -8,7 +8,7 @@ import { localizePathname, stripLanguageFromPathname } from '@/lib/i18n';
 
 type IconProps = { size?: number };
 
-function IconHome({ size = 18 }: IconProps) {
+function IconHome({ size = 22 }: IconProps) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
@@ -17,7 +17,7 @@ function IconHome({ size = 18 }: IconProps) {
   );
 }
 
-function IconMembers({ size = 18 }: IconProps) {
+function IconMembers({ size = 22 }: IconProps) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
@@ -28,7 +28,7 @@ function IconMembers({ size = 18 }: IconProps) {
   );
 }
 
-function IconPartners({ size = 18 }: IconProps) {
+function IconPartners({ size = 22 }: IconProps) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
@@ -36,19 +36,18 @@ function IconPartners({ size = 18 }: IconProps) {
   );
 }
 
-function IconNotes({ size = 18 }: IconProps) {
+function IconNotes({ size = 22 }: IconProps) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
       <polyline points="14 2 14 8 20 8" />
       <line x1="16" x2="8" y1="13" y2="13" />
       <line x1="16" x2="8" y1="17" y2="17" />
-      <polyline points="10 9 9 9 8 9" />
     </svg>
   );
 }
 
-function IconFriends({ size = 18 }: IconProps) {
+function IconFriends({ size = 22 }: IconProps) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d="M16 11c1.66 0 3-1.79 3-4s-1.34-4-3-4-3 1.79-3 4 1.34 4 3 4Z" />
@@ -61,7 +60,7 @@ function IconFriends({ size = 18 }: IconProps) {
   );
 }
 
-function IconSettings({ size = 18 }: IconProps) {
+function IconSettings({ size = 22 }: IconProps) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
@@ -70,7 +69,7 @@ function IconSettings({ size = 18 }: IconProps) {
   );
 }
 
-function IconBell({ size = 18 }: IconProps) {
+function IconBell({ size = 22 }: IconProps) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d="M10.27 21a2 2 0 0 0 3.46 0" />
@@ -79,17 +78,7 @@ function IconBell({ size = 18 }: IconProps) {
   );
 }
 
-function IconMenu({ size = 18 }: IconProps) {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <line x1="4" x2="20" y1="6" y2="6" />
-      <line x1="4" x2="20" y1="12" y2="12" />
-      <line x1="4" x2="20" y1="18" y2="18" />
-    </svg>
-  );
-}
-
-function IconCalendar({ size = 18 }: IconProps) {
+function IconCalendar({ size = 22 }: IconProps) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <rect width="18" height="18" x="3" y="4" rx="2" ry="2" />
@@ -97,6 +86,16 @@ function IconCalendar({ size = 18 }: IconProps) {
       <line x1="8" x2="8" y1="2" y2="6" />
       <line x1="3" x2="21" y1="10" y2="10" />
       <path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01" />
+    </svg>
+  );
+}
+
+function IconMenu({ size = 22 }: IconProps) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <line x1="4" x2="20" y1="6" y2="6" />
+      <line x1="4" x2="20" y1="12" y2="12" />
+      <line x1="4" x2="20" y1="18" y2="18" />
     </svg>
   );
 }
@@ -149,38 +148,40 @@ export function MobileNav({ accountType = 'system' }: { accountType?: 'system' |
       if (!menuRef.current) return;
       if (!menuRef.current.contains(event.target as Node)) closeMenu();
     }
-
     function closeOnEscape(event: KeyboardEvent) {
       if (event.key === 'Escape') closeMenu();
     }
-
     if (menuOpen) {
       document.addEventListener('pointerdown', closeOnOutsideClick);
       document.addEventListener('keydown', closeOnEscape);
     }
-
     return () => {
       document.removeEventListener('pointerdown', closeOnOutsideClick);
       document.removeEventListener('keydown', closeOnEscape);
     };
   }, [menuOpen]);
 
+  const colCount = navItems.length + 1;
+
   return (
     <nav
-      className="md:hidden fixed bottom-0 left-0 right-0 z-20 px-2 pt-1"
-      style={{ paddingBottom: 'max(0.4rem, env(safe-area-inset-bottom))' }}
+      className="md:hidden fixed bottom-0 left-0 right-0 z-20 border-t-2 border-border-strong"
+      style={{
+        paddingBottom: 'env(safe-area-inset-bottom)',
+        background: 'var(--theme-surface-raised)',
+      }}
       aria-label={t('nav.mobilePrimary')}
     >
-      <div ref={menuRef} className="relative flex items-end gap-2">
+      <div ref={menuRef} className="relative">
+        {/* Popup menu */}
         {(menuOpen || isMenuClosing) && (
           <div
-            className={`absolute bottom-[calc(100%+0.5rem)] right-0 w-48 rounded-xl border border-border bg-surface/95 p-2 shadow-card backdrop-blur-xl ${isMenuClosing ? 'animate-slide-down' : 'animate-slide-up'}`}
+            className={`absolute bottom-full left-0 right-0 border-t-2 border-border-strong bg-surface-raised ${isMenuClosing ? 'animate-slide-down' : 'animate-slide-up'}`}
             role="menu"
             aria-label={t('nav.moreMenu')}
           >
             {menuItems.map((item) => {
               const current = isActive(activePathname, item.href);
-
               return (
                 <Link
                   key={item.href}
@@ -189,13 +190,13 @@ export function MobileNav({ accountType = 'system' }: { accountType?: 'system' |
                   role="menuitem"
                   aria-current={current ? 'page' : undefined}
                   onClick={closeMenu}
-                  className={`flex min-h-[48px] items-center gap-3 rounded-lg px-3 text-sm font-medium transition-colors ${
-                    current ? 'bg-primary/15 text-text' : 'text-muted hover:bg-surface-alt hover:text-text'
+                  className={`flex min-h-[52px] items-center gap-4 px-6 text-sm font-bold transition-colors ${
+                    current
+                      ? 'bg-primary text-bg'
+                      : 'text-muted hover:bg-surface-alt hover:text-text'
                   }`}
                 >
-                  <span className={current ? 'text-primary' : undefined}>
-                    <item.Icon />
-                  </span>
+                  <item.Icon size={18} />
                   {t(item.labelKey)}
                 </Link>
               );
@@ -203,11 +204,13 @@ export function MobileNav({ accountType = 'system' }: { accountType?: 'system' |
           </div>
         )}
 
-        <div className="min-w-0 flex-1 rounded-2xl border border-border/50 bg-surface-raised/90 backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.45)]">
-          <div className={`grid ${navItems.length === 3 ? 'grid-cols-3' : 'grid-cols-4'}`}>
+        {/* Flat tab bar */}
+        <div
+          className="grid"
+          style={{ gridTemplateColumns: `repeat(${colCount}, 1fr)` }}
+        >
           {navItems.map((item) => {
             const current = isActive(activePathname, item.href);
-
             return (
               <Link
                 key={item.href}
@@ -216,51 +219,34 @@ export function MobileNav({ accountType = 'system' }: { accountType?: 'system' |
                 aria-label={t(item.labelKey)}
                 aria-current={current ? 'page' : undefined}
                 onClick={() => setMenuOpen(false)}
-                className={`relative flex min-h-[56px] min-w-0 flex-col items-center justify-center gap-0.5 px-1 py-1.5 text-[11px] font-bold uppercase tracking-wide leading-none transition-all duration-200 focus-visible:ring-2 focus-visible:ring-primary/70 focus-visible:ring-offset-2 focus-visible:ring-offset-bg ${
+                className={`flex flex-col items-center justify-center gap-1 min-h-[62px] py-2 text-[10px] font-black uppercase tracking-widest transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/70 ${
                   current
-                    ? 'text-primary'
-                    : 'text-muted hover:text-text'
+                    ? 'bg-primary text-bg'
+                    : 'text-muted hover:text-text hover:bg-surface-alt'
                 }`}
               >
-                {current && (
-                  <span
-                    className="absolute top-0 left-3 right-3 h-0.5 rounded-b-full bg-primary"
-                    aria-hidden="true"
-                  />
-                )}
-                <span className={`leading-none transition-transform duration-200 ${current ? 'scale-110' : ''}`}>
-                  <item.Icon />
-                </span>
-                <span className="max-w-full truncate leading-none">{t(item.labelKey)}</span>
+                <item.Icon size={current ? 24 : 22} />
+                <span className="leading-none">{t(item.labelKey)}</span>
               </Link>
             );
           })}
-          </div>
-        </div>
 
-        <button
-          type="button"
-          onClick={() => menuOpen ? closeMenu() : setMenuOpen(true)}
-          aria-label={t('nav.moreOptions')}
-          aria-expanded={menuOpen}
-          aria-haspopup="menu"
-          className={`relative flex min-h-[56px] w-[64px] shrink-0 flex-col items-center justify-center gap-0.5 rounded-2xl border text-[11px] font-bold uppercase tracking-wide leading-none backdrop-blur-xl transition-all duration-200 focus-visible:ring-2 focus-visible:ring-primary/70 focus-visible:ring-offset-2 focus-visible:ring-offset-bg ${
-            menuIsActive || menuOpen
-              ? 'border-border/50 bg-surface-raised/90 text-primary shadow-[0_8px_32px_rgba(0,0,0,0.45)]'
-              : 'border-border/50 bg-surface-raised/90 text-muted hover:text-text shadow-[0_8px_32px_rgba(0,0,0,0.45)]'
-          }`}
-        >
-          {(menuIsActive || menuOpen) && (
-            <span
-              className="absolute top-0 left-3 right-3 h-0.5 rounded-b-full bg-primary"
-              aria-hidden="true"
-            />
-          )}
-          <span className={menuIsActive || menuOpen ? 'text-primary' : undefined}>
-            <IconMenu size={20} />
-          </span>
-          {t('nav.more')}
-        </button>
+          <button
+            type="button"
+            onClick={() => menuOpen ? closeMenu() : setMenuOpen(true)}
+            aria-label={t('nav.moreOptions')}
+            aria-expanded={menuOpen}
+            aria-haspopup="menu"
+            className={`flex flex-col items-center justify-center gap-1 min-h-[62px] py-2 text-[10px] font-black uppercase tracking-widest transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/70 ${
+              menuIsActive || menuOpen
+                ? 'bg-primary text-bg'
+                : 'text-muted hover:text-text hover:bg-surface-alt'
+            }`}
+          >
+            <IconMenu size={menuIsActive || menuOpen ? 24 : 22} />
+            <span className="leading-none">{t('nav.more')}</span>
+          </button>
+        </div>
       </div>
     </nav>
   );
