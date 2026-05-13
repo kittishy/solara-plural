@@ -167,7 +167,7 @@ export function MobileNav({ accountType = 'system' }: { accountType?: 'system' |
     <nav
       className="md:hidden fixed bottom-0 left-0 right-0 z-20 border-t-2 border-border-strong"
       style={{
-        paddingBottom: 'env(safe-area-inset-bottom)',
+        paddingBottom: 'max(0.4rem, env(safe-area-inset-bottom))',
         background: 'var(--theme-surface-raised)',
       }}
       aria-label={t('nav.mobilePrimary')}

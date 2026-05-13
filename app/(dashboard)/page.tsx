@@ -73,7 +73,7 @@ export default async function DashboardPage() {
       {frontingMembers.length > 0 && activeFront ? (
         <section
           className="-mx-4 md:mx-0 md:rounded-xl overflow-hidden"
-          aria-label="Currently fronting"
+          aria-labelledby="front-section-label"
           style={{
             background: 'linear-gradient(135deg, rgb(var(--theme-front-soft-rgb) / 0.3) 0%, rgb(var(--theme-surface-rgb) / 0.95) 60%)',
             borderTop: '2px solid rgb(var(--theme-front-rgb) / 0.6)',
@@ -87,7 +87,7 @@ export default async function DashboardPage() {
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-front opacity-75" />
                   <span className="relative inline-flex h-3 w-3 rounded-full bg-front shadow-[0_0_10px_rgba(244,114,182,0.9)]" />
                 </span>
-                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-front">
+                <span id="front-section-label" className="text-[10px] font-black uppercase tracking-[0.2em] text-front">
                   <Trans k="dashboard.currentFront" />
                 </span>
               </div>
