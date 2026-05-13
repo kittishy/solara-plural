@@ -34,9 +34,15 @@ export function consumeRateLimit(
   now = Date.now(),
 ): { allowed: true } | { allowed: false; retryAfterSeconds: number } {
   const store = getStore();
+
+  // Prune expired entries to keep the store bounded.
+  store.forEach((bucket, k) => {
+    if (bucket.resetAt <= now) store.delete(k);
+  });
+
   const existing = store.get(key);
 
-  if (!existing || existing.resetAt <= now) {
+  if (!existing) {
     store.set(key, { count: 1, resetAt: now + windowMs });
     return { allowed: true };
   }

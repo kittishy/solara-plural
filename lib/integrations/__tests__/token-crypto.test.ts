@@ -89,4 +89,25 @@ describe('token-crypto', () => {
     const { decryptIntegrationToken } = await import('../token-crypto');
     expect(() => decryptIntegrationToken(unknownPayload)).toThrow();
   });
+
+  it('falls back to NEXTAUTH_SECRET in non-production when INTEGRATIONS_TOKEN_SECRET is absent', async () => {
+    setEnv({ NODE_ENV: 'development', INTEGRATIONS_TOKEN_SECRET: undefined, NEXTAUTH_SECRET: 'next-secret' });
+    const { encryptIntegrationToken, decryptIntegrationToken } = await import('../token-crypto');
+    const token = encryptIntegrationToken('dev-token');
+    expect(token).toMatch(/^v2\./);
+    expect(decryptIntegrationToken(token)).toBe('dev-token');
+  });
+
+  it('prefers INTEGRATIONS_TOKEN_SECRET over NEXTAUTH_SECRET when both are set', async () => {
+    setEnv({ NODE_ENV: 'development', INTEGRATIONS_TOKEN_SECRET: 'primary', NEXTAUTH_SECRET: 'fallback' });
+    const { encryptIntegrationToken, decryptIntegrationToken } = await import('../token-crypto');
+    const token = encryptIntegrationToken('test-token');
+    expect(decryptIntegrationToken(token)).toBe('test-token');
+  });
+
+  it('ignores NEXTAUTH_SECRET in production even if INTEGRATIONS_TOKEN_SECRET is absent', async () => {
+    setEnv({ NODE_ENV: 'production', INTEGRATIONS_TOKEN_SECRET: undefined, NEXTAUTH_SECRET: 'fallback' });
+    const { encryptIntegrationToken } = await import('../token-crypto');
+    expect(() => encryptIntegrationToken('pk-token')).toThrow('INTEGRATIONS_TOKEN_SECRET is required');
+  });
 });
