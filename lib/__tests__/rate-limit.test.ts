@@ -64,6 +64,11 @@ describe('getClientIp', () => {
     expect(getClientIp(req)).toBe('10.0.0.3');
   });
 
+  it('falls back to CF-Connecting-IP', () => {
+    const req = fakeRequest({ 'cf-connecting-ip': '10.0.0.4' });
+    expect(getClientIp(req)).toBe('10.0.0.4');
+  });
+
   it('returns "unknown" when no IP header is present', () => {
     const req = fakeRequest({});
     expect(getClientIp(req)).toBe('unknown');

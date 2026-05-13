@@ -257,13 +257,9 @@ function MemberRow({
             text-base font-bold text-bg"
           style={!member.avatarUrl ? {
             backgroundColor: accentColor,
-            boxShadow: member.isFronting
-              ? `0 0 0 2px ${frontColor}60`
-              : `0 0 0 2px ${accentColor}40`,
+            boxShadow: `0 0 0 2px color-mix(in srgb, ${member.isFronting ? frontColor : accentColor} 35%, transparent)`,
           } : {
-            boxShadow: member.isFronting
-              ? `0 0 0 2px ${frontColor}60`
-              : `0 0 0 2px ${accentColor}40`,
+            boxShadow: `0 0 0 2px color-mix(in srgb, ${member.isFronting ? frontColor : accentColor} 35%, transparent)`,
           }}
           aria-hidden="true"
         >
@@ -301,12 +297,8 @@ function MemberRow({
               {member.tags.slice(0, 3).map((tag) => (
                 <span
                   key={tag}
-                  className="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium leading-none"
-                  style={{
-                    backgroundColor: `${accentColor}18`,
-                    border: `1px solid ${accentColor}40`,
-                    color: accentColor,
-                  }}
+                  className="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium leading-none
+                    bg-primary/10 border border-primary/25 text-primary-glow"
                 >
                   {tag}
                 </span>
