@@ -51,9 +51,9 @@ export default function NotesClient({ initialNotes }: { initialNotes: NoteListIt
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-text">Notes</h1>
-          <p className="text-muted text-sm mt-0.5">
-            {notes.length} note{notes.length !== 1 ? 's' : ''} in your system
+          <h1 className="page-title">Notes</h1>
+          <p className="text-[10px] font-black uppercase tracking-widest text-muted mt-1">
+            {notes.length} note{notes.length !== 1 ? 's' : ''} in system
           </p>
         </div>
         <Link href="/notes/new" className="btn-primary gap-1.5">
@@ -83,36 +83,40 @@ export default function NotesClient({ initialNotes }: { initialNotes: NoteListIt
         </div>
       ) : (
         <div className="space-y-4">
-          <ul role="list" className="rounded-xl overflow-hidden border border-border/40">
+          <ul role="list" className="space-y-2">
             {visibleNotes.map((note) => (
-              <li
-                key={note.id}
-                role="listitem"
-                className="relative border-b border-border/40 last:border-b-0 bg-surface hover:bg-surface-alt/60 transition-colors duration-150"
-                style={{ borderLeft: '3px solid #a78bfa' }}
-              >
+              <li key={note.id} role="listitem">
                 <Link
                   href={`/notes/${note.id}`}
-                  className="flex items-center gap-3.5 px-4 py-3.5 focus:outline-none
-                    focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-inset"
+                  className="group flex gap-0 rounded-xl overflow-hidden border border-border/70 transition-all duration-150
+                    hover:border-primary/40 hover:-translate-y-px hover:shadow-[0_4px_20px_rgba(0,0,0,0.5)]
+                    focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+                  style={{
+                    background: 'linear-gradient(160deg, rgb(var(--theme-surface-alt-rgb) / 0.4) 0%, var(--theme-surface) 60%)',
+                  }}
                 >
-                  <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-text text-sm leading-snug truncate">
-                      {note.title ?? 'Untitled note'}
-                    </p>
-                    {note.content && (
-                      <p className="text-muted text-xs mt-0.5 line-clamp-2 leading-snug">
-                        {note.content}
+                  {/* Accent bar */}
+                  <div className="w-1 shrink-0 bg-primary/60 group-hover:bg-primary transition-colors" />
+                  {/* Content */}
+                  <div className="flex flex-1 items-center gap-3 px-4 py-3.5 min-w-0">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-black text-text text-sm leading-snug truncate">
+                        {note.title ?? 'Untitled note'}
                       </p>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <span className="text-subtle text-xs hidden sm:block">
-                      {formatDate(note.updatedAt)}
-                    </span>
-                    <span className="text-subtle">
-                      <IconChevronRight />
-                    </span>
+                      {note.content && (
+                        <p className="text-muted text-xs mt-0.5 line-clamp-1 leading-snug">
+                          {note.content}
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="hidden sm:inline-flex text-[10px] font-bold uppercase tracking-wide text-subtle">
+                        {formatDate(note.updatedAt)}
+                      </span>
+                      <span className="text-muted group-hover:text-primary transition-colors">
+                        <IconChevronRight />
+                      </span>
+                    </div>
                   </div>
                 </Link>
               </li>
