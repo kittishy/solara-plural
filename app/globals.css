@@ -527,6 +527,15 @@ html[data-solara-theme='mist'] {
     color: rgb(var(--theme-front-rgb));
   }
 
+  /* ─── Link glow hover (replaces onMouseEnter/Leave JS) ──────── */
+  .link-glow {
+    color: rgb(var(--theme-primary-rgb));
+    transition: filter 150ms ease;
+  }
+  .link-glow:hover {
+    filter: brightness(1.2) drop-shadow(0 0 4px rgb(var(--theme-primary-rgb) / 0.5));
+  }
+
   /* ─── Aurora background ───────────────────────────────────── */
   .aurora-bg-subtle {
     background:
@@ -570,18 +579,6 @@ html[data-solara-theme='mist'] {
   @keyframes slideDown {
     from { opacity: 1; transform: translateY(0); }
     to   { opacity: 0; transform: translateY(12px); }
-  }
-  @keyframes fade-in {
-    from { opacity: 0; }
-    to   { opacity: 1; }
-  }
-  @keyframes slide-up {
-    from { opacity: 0; transform: translateY(12px); }
-    to   { opacity: 1; transform: translateY(0); }
-  }
-  @keyframes slide-down {
-    from { opacity: 1; transform: translateY(0); }
-    to   { opacity: 0; transform: translateY(6px); }
   }
   @keyframes pulse-ring {
     0%   { transform: scale(1);   opacity: 0.6; }

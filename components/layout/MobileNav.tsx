@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useLanguage } from '@/components/providers/LanguageProvider';
 import { localizePathname, stripLanguageFromPathname } from '@/lib/i18n';
+import { SCANLINE_BG } from '@/lib/styles';
 
 type IconProps = { size?: number };
 
@@ -118,9 +119,6 @@ function isActive(pathname: string, href: string) {
   if (href === '/') return pathname === '/';
   return pathname.startsWith(href);
 }
-
-const SCANLINE_BG =
-  'repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,0,0,0.07) 3px, rgba(0,0,0,0.07) 4px)';
 
 export function MobileNav({ accountType = 'system' }: { accountType?: 'system' | 'singlet' }) {
   const pathname = usePathname();

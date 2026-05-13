@@ -148,20 +148,8 @@ export default function LoginPage() {
               </label>
               <Link
                 href="/forgot-password"
-                className="font-black uppercase"
-                style={{
-                  fontSize: '9px',
-                  letterSpacing: '0.12em',
-                  color: 'rgb(var(--theme-primary-rgb))',
-                  transition: 'filter 150ms ease',
-                }}
-                onMouseEnter={(e) => {
-                  (e.currentTarget as HTMLAnchorElement).style.filter =
-                    'brightness(1.2) drop-shadow(0 0 4px rgb(var(--theme-primary-rgb) / 0.5))';
-                }}
-                onMouseLeave={(e) => {
-                  (e.currentTarget as HTMLAnchorElement).style.filter = 'none';
-                }}
+                className="link-glow font-black uppercase"
+                style={{ fontSize: '9px', letterSpacing: '0.12em' }}
               >
                 {t('auth.login.forgotPassword')}
               </Link>
@@ -241,21 +229,7 @@ export default function LoginPage() {
         }}
       >
         {t('auth.login.newHere')}{' '}
-        <Link
-          href="/register"
-          className="font-black"
-          style={{
-            color: 'rgb(var(--theme-primary-rgb))',
-            transition: 'filter 150ms ease',
-          }}
-          onMouseEnter={(e) => {
-            (e.currentTarget as HTMLAnchorElement).style.filter =
-              'brightness(1.2) drop-shadow(0 0 4px rgb(var(--theme-primary-rgb) / 0.5))';
-          }}
-          onMouseLeave={(e) => {
-            (e.currentTarget as HTMLAnchorElement).style.filter = 'none';
-          }}
-        >
+        <Link href="/register" className="link-glow font-black">
           {t('auth.login.createAccount')}
         </Link>
       </p>
