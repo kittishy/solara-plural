@@ -237,112 +237,90 @@ function MemberRow({
 }) {
   const accentColor = member.color ?? '#b48efa';
   const frontColor = '#f472b6';
-  const borderColor = member.isFronting ? frontColor : accentColor;
+  const barColor = member.isFronting ? frontColor : accentColor;
 
   return (
     <li
       role="listitem"
-      className={`relative flex items-center border-b border-border/40 transition-colors duration-150
-        ${member.isFronting ? 'bg-front/[0.06]' : 'bg-surface hover:bg-surface-alt/70'}`}
-      style={{ borderLeft: `3px solid ${borderColor}` }}
+      className="flex rounded-xl overflow-hidden border border-border/60 bg-surface shadow-card transition-all duration-150 hover:border-border-strong hover:shadow-[0_0_0_1px_rgb(var(--theme-border-strong-rgb)/0.6),0_4px_20px_rgba(0,0,0,0.45)]"
     >
-      <Link
-        href={`/members/${member.id}`}
-        className="flex flex-1 items-center gap-3 px-3.5 py-3 pr-14 min-w-0 focus:outline-none
-          focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-inset"
-      >
-        {/* Avatar */}
-        <div
-          className="w-11 h-11 rounded-xl flex-shrink-0 overflow-hidden flex items-center justify-center
-            text-base font-bold text-bg"
-          style={!member.avatarUrl ? {
-            backgroundColor: accentColor,
-            boxShadow: `0 0 0 2px color-mix(in srgb, ${member.isFronting ? frontColor : accentColor} 35%, transparent)`,
-          } : {
-            boxShadow: `0 0 0 2px color-mix(in srgb, ${member.isFronting ? frontColor : accentColor} 35%, transparent)`,
-          }}
-          aria-hidden="true"
-        >
-          {member.avatarUrl ? (
-            <DynamicAvatarImage
-              src={member.avatarUrl}
-              alt=""
-              className="w-full h-full object-cover"
-            />
-          ) : (
-            member.name[0]?.toUpperCase() ?? '?'
-          )}
-        </div>
+      {/* Left color bar */}
+      <div
+        className="w-2 shrink-0"
+        style={{ backgroundColor: barColor }}
+        aria-hidden="true"
+      />
 
-        {/* Text */}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 min-w-0">
-            <p className="font-bold text-text text-sm leading-snug truncate">
-              {member.name}
-            </p>
-            {member.isFronting && (
-              <span className="relative inline-flex h-2 w-2 flex-shrink-0" aria-hidden="true">
-                <span className="absolute inline-flex h-full w-full rounded-full bg-front opacity-60 animate-pulse" />
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-front" />
-              </span>
-            )}
-          </div>
-          {member.pronouns && (
-            <p className="text-muted text-xs leading-snug truncate mt-0.5">
-              {member.pronouns}
-            </p>
-          )}
-          {member.tags.length > 0 && (
-            <div className="flex flex-wrap gap-1 mt-1.5" aria-label="Tags">
-              {member.tags.slice(0, 3).map((tag) => (
-                <span
-                  key={tag}
-                  className="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium leading-none
-                    bg-primary/10 border border-primary/25 text-primary-glow"
-                >
-                  {tag}
-                </span>
-              ))}
-              {member.tags.length > 3 && (
-                <span className="text-[11px] text-subtle">+{member.tags.length - 3}</span>
-              )}
-            </div>
-          )}
-        </div>
-      </Link>
-
-      {/* action button */}
-      <div className="absolute right-3 top-1/2 -translate-y-1/2">
-        <button
-          type="button"
-          aria-label={`Actions for ${member.name}`}
-          aria-haspopup="dialog"
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            onOpenSheet(member);
-          }}
-          className="flex items-center justify-center min-w-[44px] min-h-[44px] w-9 h-9 rounded-lg
-            border border-border/60 bg-surface-alt text-muted
-            hover:border-primary/40 hover:text-primary-glow
-            active:scale-95 transition-all duration-150
-            focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+      {/* Content area */}
+      <div className="relative flex flex-1 items-center min-w-0">
+        <Link
+          href={`/members/${member.id}`}
+          className="flex flex-1 items-center gap-3 px-3 py-3 pr-14 min-w-0 focus:outline-none
+            focus-visible:ring-2 focus-visible:ring-primary/60 focus-visible:ring-inset"
         >
-          <svg
-            width="15"
-            height="15"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
+          {/* Avatar */}
+          <div
+            className="w-12 h-12 rounded-xl shrink-0 overflow-hidden flex items-center justify-center text-sm font-black text-bg"
+            style={{ backgroundColor: member.avatarUrl ? undefined : accentColor }}
             aria-hidden="true"
           >
-            <line x1="12" x2="12" y1="5" y2="19" />
-            <line x1="5" x2="19" y1="12" y2="12" />
-          </svg>
-        </button>
+            {member.avatarUrl ? (
+              <DynamicAvatarImage src={member.avatarUrl} alt="" className="w-full h-full object-cover" />
+            ) : (
+              member.name[0]?.toUpperCase() ?? '?'
+            )}
+          </div>
+
+          {/* Text */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 min-w-0">
+              <p className="font-black text-text text-sm truncate">{member.name}</p>
+              {member.isFronting && (
+                <span className="shrink-0 relative inline-flex h-2 w-2" aria-hidden="true">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-front opacity-75" />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-front" />
+                </span>
+              )}
+            </div>
+            {member.pronouns && (
+              <p className="text-muted text-xs truncate mt-0.5">{member.pronouns}</p>
+            )}
+            {member.tags.length > 0 && (
+              <div className="flex flex-wrap gap-1 mt-1.5" aria-label="Tags">
+                {member.tags.slice(0, 3).map((tag) => (
+                  <span key={tag} className="tag">{tag}</span>
+                ))}
+                {member.tags.length > 3 && (
+                  <span className="text-[10px] text-subtle">+{member.tags.length - 3}</span>
+                )}
+              </div>
+            )}
+          </div>
+        </Link>
+
+        {/* Action button */}
+        <div className="absolute right-2 top-1/2 -translate-y-1/2">
+          <button
+            type="button"
+            aria-label={`Actions for ${member.name}`}
+            aria-haspopup="dialog"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onOpenSheet(member);
+            }}
+            className="flex items-center justify-center min-w-[44px] min-h-[44px] w-9 h-9 rounded-lg
+              border border-border/60 bg-surface-alt text-muted
+              hover:border-primary/50 hover:text-primary
+              active:scale-95 transition-all duration-150
+              focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <line x1="12" x2="12" y1="5" y2="19" />
+              <line x1="5" x2="19" y1="12" y2="12" />
+            </svg>
+          </button>
+        </div>
       </div>
     </li>
   );
@@ -540,8 +518,8 @@ export default function MembersClient({
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-text">Members</h1>
-            <p className="text-muted text-sm mt-0.5">{subtitle}</p>
+            <h1 className="page-title">Members</h1>
+            <p className="text-muted text-xs font-bold uppercase tracking-widest mt-1">{subtitle}</p>
           </div>
           <Link href="/members/new" className="btn-primary gap-1.5">
             <svg
@@ -648,10 +626,7 @@ export default function MembersClient({
                 In front · {frontingCount}
               </p>
             )}
-            <ul
-              role="list"
-              className="rounded-xl overflow-hidden border border-border/50 shadow-card"
-            >
+            <ul role="list" className="space-y-2">
               {visibleMembers.map((member, idx) => {
                 const prevMember = visibleMembers[idx - 1];
                 const showDivider =
