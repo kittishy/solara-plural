@@ -235,44 +235,46 @@ function MemberCard({
   member: MemberItem;
   onOpenSheet: (member: MemberItem) => void;
 }) {
-  const accent = member.color ?? '#b48efa';
-  const frontColor = '#f472b6';
+  const accent = member.color ?? '#c084fc';
+  // front color = CSS var --theme-front (purple in Night Bloom)
+  const frontColor = 'rgb(var(--theme-front-rgb))';
   const isF = member.isFronting;
+  const borderColor = isF ? 'rgb(var(--theme-front-rgb))' : accent;
 
   return (
-    <li role="listitem">
+    <li role="listitem"
+      style={{
+        filter: isF
+          ? `drop-shadow(0 0 8px rgb(var(--theme-front-rgb) / 0.55)) drop-shadow(0 4px 16px rgba(0,0,0,0.7))`
+          : `drop-shadow(0 0 3px ${accent}) drop-shadow(0 4px 16px rgba(0,0,0,0.6))`,
+        transition: 'filter 200ms ease, transform 200ms ease',
+      }}
+    >
       <div
-        className="relative rounded-xl overflow-hidden transition-all duration-200 hover:-translate-y-0.5 active:scale-[0.97]"
-        style={{
-          border: `1.5px solid color-mix(in srgb, ${isF ? frontColor : accent} 40%, transparent)`,
-          boxShadow: isF
-            ? `0 0 24px color-mix(in srgb, ${frontColor} 22%, transparent), 0 6px 24px rgba(0,0,0,0.55)`
-            : `0 4px 20px rgba(0,0,0,0.45)`,
-        }}
+        className="overflow-hidden transition-transform duration-200 hover:-translate-y-0.5 active:scale-[0.97]"
+        style={{ clipPath: 'polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 0 100%)' }}
       >
-        {/* Portrait zone — avatar on color gradient */}
+        {/* Portrait zone */}
         <Link
           href={`/members/${member.id}`}
           className="block focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/60"
           aria-label={`View ${member.name}'s profile`}
         >
           <div
-            className="relative flex items-center justify-center py-7"
+            className="relative flex items-center justify-center py-8"
             style={{
-              background: `linear-gradient(180deg,
-                color-mix(in srgb, ${accent} 60%, transparent) 0%,
-                color-mix(in srgb, ${accent} 8%, transparent) 100%)`,
+              background: `linear-gradient(180deg, ${accent} 0%, color-mix(in srgb, ${accent} 18%, #100c1e) 100%)`,
             }}
           >
             {/* Fronting badge */}
             {isF && (
               <span
-                className="absolute top-2 left-2 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[9px] font-black uppercase tracking-widest text-bg"
-                style={{ backgroundColor: frontColor }}
+                className="absolute top-2 left-2 inline-flex items-center gap-1 rounded px-2 py-0.5 text-[9px] font-black uppercase tracking-widest"
+                style={{ backgroundColor: 'rgb(var(--theme-front-rgb))', color: '#09070f' }}
               >
                 <span className="relative flex h-1.5 w-1.5 shrink-0">
-                  <span className="animate-ping absolute h-full w-full rounded-full bg-bg/80 opacity-75" />
-                  <span className="relative h-1.5 w-1.5 rounded-full bg-bg/80" />
+                  <span className="animate-ping absolute h-full w-full rounded-full opacity-75" style={{ backgroundColor: '#09070f' }} />
+                  <span className="relative h-1.5 w-1.5 rounded-full" style={{ backgroundColor: '#09070f' }} />
                 </span>
                 Front
               </span>
@@ -283,12 +285,12 @@ function MemberCard({
               <DynamicAvatarImage
                 src={member.avatarUrl}
                 alt={member.name}
-                className="w-[72px] h-[72px] rounded-2xl object-cover shadow-[0_4px_20px_rgba(0,0,0,0.6)]"
+                className="w-[76px] h-[76px] rounded-xl object-cover shadow-[0_4px_24px_rgba(0,0,0,0.7)]"
               />
             ) : (
               <span
-                className="flex w-[72px] h-[72px] items-center justify-center rounded-2xl text-2xl font-black text-bg shadow-[0_4px_20px_rgba(0,0,0,0.6)]"
-                style={{ backgroundColor: accent }}
+                className="flex w-[76px] h-[76px] items-center justify-center rounded-xl text-3xl font-black shadow-[0_4px_24px_rgba(0,0,0,0.7)]"
+                style={{ backgroundColor: '#09070f', color: accent }}
                 aria-hidden="true"
               >
                 {member.name[0]?.toUpperCase() ?? '?'}
@@ -297,13 +299,15 @@ function MemberCard({
           </div>
 
           {/* Info area */}
-          <div className="bg-surface px-3 pt-3 pb-2.5">
+          <div style={{ background: 'var(--theme-surface)', borderTop: `2px solid ${borderColor}` }}
+            className="px-3 pt-2.5 pb-2"
+          >
             <p className="font-black text-text text-sm leading-tight truncate">{member.name}</p>
             {member.pronouns && (
               <p className="text-[11px] text-muted truncate mt-0.5">{member.pronouns}</p>
             )}
             {member.tags.length > 0 && (
-              <div className="flex flex-wrap gap-1 mt-2">
+              <div className="flex flex-wrap gap-1 mt-1.5">
                 {member.tags.slice(0, 2).map((tag) => (
                   <span key={tag} className="tag">{tag}</span>
                 ))}
@@ -323,9 +327,9 @@ function MemberCard({
           onClick={() => onOpenSheet(member)}
           className="w-full flex items-center justify-center gap-1.5 py-2.5 text-[10px] font-black uppercase tracking-widest transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/60"
           style={{
-            background: `color-mix(in srgb, ${isF ? frontColor : accent} 8%, transparent)`,
-            borderTop: `1px solid color-mix(in srgb, ${isF ? frontColor : accent} 20%, transparent)`,
-            color: isF ? frontColor : accent,
+            background: `color-mix(in srgb, ${borderColor} 12%, var(--theme-surface))`,
+            borderTop: `1px solid color-mix(in srgb, ${borderColor} 30%, transparent)`,
+            color: borderColor,
           }}
         >
           {isF ? (
@@ -378,7 +382,7 @@ function FrontStatusBar({
         <span className="relative inline-flex h-2.5 w-2.5 flex-shrink-0" aria-hidden="true">
           <span className="absolute inline-flex h-full w-full rounded-full bg-front opacity-50 animate-pulse" />
           <span className="absolute inline-flex h-full w-full animate-pulse-ring rounded-full bg-front" />
-          <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-front shadow-[0_0_8px_rgba(244,114,182,0.8)]" />
+          <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-front shadow-front-glow" />
         </span>
         <span className="text-sm font-bold text-front tracking-wide">
           {count === 1 ? '1 IN FRONT' : `${count} IN FRONT`}

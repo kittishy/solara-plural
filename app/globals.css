@@ -3,36 +3,36 @@
 @tailwind utilities;
 
 :root {
-  --theme-bg: #14101f;
-  --theme-bg-rgb: 20 16 31;
-  --theme-surface: #1e1830;
-  --theme-surface-rgb: 30 24 48;
-  --theme-surface-alt: #271f3d;
-  --theme-surface-alt-rgb: 39 31 61;
-  --theme-surface-raised: #312849;
-  --theme-surface-raised-rgb: 49 40 73;
-  --theme-border: #3d3361;
-  --theme-border-rgb: 61 51 97;
-  --theme-border-soft: #2b2248;
-  --theme-border-soft-rgb: 43 34 72;
-  --theme-border-strong: #5c4e8a;
-  --theme-border-strong-rgb: 92 78 138;
-  --theme-text: #eee8fc;
-  --theme-text-rgb: 238 232 252;
-  --theme-muted: #9d90c0;
-  --theme-muted-rgb: 157 144 192;
-  --theme-subtle: #6b5f8a;
-  --theme-subtle-rgb: 107 95 138;
-  --theme-primary: #b48efa;
-  --theme-primary-rgb: 180 142 250;
-  --theme-primary-soft: #7c3aed;
-  --theme-primary-soft-rgb: 124 58 237;
-  --theme-primary-glow: #d4bcff;
-  --theme-primary-glow-rgb: 212 188 255;
-  --theme-front: #f472b6;
-  --theme-front-rgb: 244 114 182;
-  --theme-front-soft: #9d174d;
-  --theme-front-soft-rgb: 157 23 77;
+  --theme-bg: #09070f;
+  --theme-bg-rgb: 9 7 15;
+  --theme-surface: #100c1e;
+  --theme-surface-rgb: 16 12 30;
+  --theme-surface-alt: #181228;
+  --theme-surface-alt-rgb: 24 18 40;
+  --theme-surface-raised: #221939;
+  --theme-surface-raised-rgb: 34 25 57;
+  --theme-border: #2a2248;
+  --theme-border-rgb: 42 34 72;
+  --theme-border-soft: #211a3a;
+  --theme-border-soft-rgb: 33 26 58;
+  --theme-border-strong: #4a3d7a;
+  --theme-border-strong-rgb: 74 61 122;
+  --theme-text: #f2ecff;
+  --theme-text-rgb: 242 236 255;
+  --theme-muted: #a090c8;
+  --theme-muted-rgb: 160 144 200;
+  --theme-subtle: #6a5e8a;
+  --theme-subtle-rgb: 106 94 138;
+  --theme-primary: #f472b6;
+  --theme-primary-rgb: 244 114 182;
+  --theme-primary-soft: #db2777;
+  --theme-primary-soft-rgb: 219 39 119;
+  --theme-primary-glow: #f9a8d4;
+  --theme-primary-glow-rgb: 249 168 212;
+  --theme-front: #c084fc;
+  --theme-front-rgb: 192 132 252;
+  --theme-front-soft: #7c3aed;
+  --theme-front-soft-rgb: 124 58 237;
   --theme-gold: #fbbf24;
   --theme-gold-rgb: 251 191 36;
 
@@ -281,13 +281,19 @@ html[data-solara-theme='mist'] {
 @layer components {
   /* ─── Cards ─────────────────────────────────────────────── */
   .card {
-    @apply rounded-xl border border-border shadow-card transition-all duration-200;
-    background: linear-gradient(160deg, rgb(var(--theme-surface-alt-rgb) / 0.5) 0%, var(--theme-surface) 65%);
+    @apply rounded-xl border border-border transition-all duration-200;
+    background: linear-gradient(160deg, rgb(var(--theme-surface-alt-rgb) / 0.7) 0%, var(--theme-surface) 70%);
+    box-shadow: 0 0 0 1px rgb(var(--theme-border-rgb)), 0 4px 20px rgba(0,0,0,0.55);
   }
 
   .card:hover {
-    border-color: rgb(var(--theme-border-strong-rgb) / 0.8);
-    box-shadow: 0 0 0 1px rgb(var(--theme-primary-rgb) / 0.1), 0 8px 32px rgba(0,0,0,0.55);
+    border-color: rgb(var(--theme-border-strong-rgb));
+    box-shadow: 0 0 0 1px rgb(var(--theme-border-strong-rgb)), 0 0 0 3px rgb(var(--theme-primary-rgb) / 0.12), 0 8px 32px rgba(0,0,0,0.65);
+  }
+
+  /* Angular cut-corner card (game UI style) */
+  .card-cut {
+    clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 0 100%);
   }
 
   /* ─── Section header (label-caps + rule) ────────────────── */
@@ -427,7 +433,7 @@ html[data-solara-theme='mist'] {
     background: linear-gradient(
       105deg,
       transparent 40%,
-      rgba(167,139,250,0.06) 50%,
+      rgba(244,114,182,0.08) 50%,
       transparent 60%
     );
     background-size: 200% 100%;
@@ -442,16 +448,16 @@ html[data-solara-theme='mist'] {
   /* ─── Aurora background utility ──────────────────────────── */
   .aurora-bg {
     background:
-      radial-gradient(ellipse 60% 40% at 20% 50%, rgba(167,139,250,0.07) 0%, transparent 70%),
-      radial-gradient(ellipse 40% 60% at 80% 30%, rgba(249,168,212,0.05) 0%, transparent 70%);
+      radial-gradient(ellipse 60% 40% at 20% 50%, rgba(244,114,182,0.10) 0%, transparent 70%),
+      radial-gradient(ellipse 40% 60% at 80% 30%, rgba(192,132,252,0.08) 0%, transparent 70%);
   }
 
-  /* Ultra-subtle aurora for dashboard layout — lower opacity to avoid distraction */
+  /* Dashboard aurora — hot pink + purple, visible but not distracting */
   .aurora-bg-subtle {
     background:
-      radial-gradient(ellipse 80% 60% at 15% 40%, rgba(167,139,250,0.10) 0%, transparent 65%),
-      radial-gradient(ellipse 60% 80% at 85% 25%, rgba(249,168,212,0.08) 0%, transparent 65%),
-      radial-gradient(ellipse 40% 40% at 50% 85%, rgba(96,165,250,0.05) 0%, transparent 65%);
+      radial-gradient(ellipse 80% 60% at 10% 35%, rgba(244,114,182,0.12) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 80% at 90% 20%, rgba(192,132,252,0.10) 0%, transparent 60%),
+      radial-gradient(ellipse 40% 40% at 50% 90%, rgba(244,114,182,0.06) 0%, transparent 60%);
   }
 
   /* ─── Auth page animated background ──────────────────────── */
@@ -460,16 +466,12 @@ html[data-solara-theme='mist'] {
     50%       { opacity: 0.85; }
   }
   .auth-bg {
-    background:
-      radial-gradient(ellipse 80% 60% at 50% -10%, rgba(124,58,237,0.30) 0%, transparent 60%),
-      radial-gradient(ellipse 50% 40% at 80% 85%, rgba(249,168,212,0.12) 0%, transparent 60%),
-      radial-gradient(ellipse 60% 50% at 10% 60%, rgba(180,142,250,0.10) 0%, transparent 60%),
-      var(--theme-bg);
+    background-color: var(--theme-bg);
     background-image:
-      radial-gradient(ellipse 80% 60% at 50% -10%, rgba(124,58,237,0.30) 0%, transparent 60%),
-      radial-gradient(ellipse 50% 40% at 80% 85%, rgba(249,168,212,0.12) 0%, transparent 60%),
-      radial-gradient(ellipse 60% 50% at 10% 60%, rgba(180,142,250,0.10) 0%, transparent 60%),
-      radial-gradient(circle, rgb(var(--theme-border-rgb) / 0.4) 1px, transparent 1px);
+      radial-gradient(ellipse 90% 70% at 50% -5%, rgba(244,114,182,0.28) 0%, transparent 55%),
+      radial-gradient(ellipse 60% 50% at 85% 80%, rgba(192,132,252,0.18) 0%, transparent 55%),
+      radial-gradient(ellipse 60% 50% at 5% 65%, rgba(244,114,182,0.10) 0%, transparent 55%),
+      radial-gradient(circle, rgb(var(--theme-border-rgb) / 0.5) 1px, transparent 1px);
     background-size: auto, auto, auto, 28px 28px;
     animation: aurora-drift 8s ease-in-out infinite;
   }

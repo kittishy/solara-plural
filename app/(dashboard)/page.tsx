@@ -85,7 +85,7 @@ export default async function DashboardPage() {
               <div className="flex items-center gap-2.5">
                 <span className="relative inline-flex h-3 w-3 shrink-0" aria-hidden="true">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-front opacity-75" />
-                  <span className="relative inline-flex h-3 w-3 rounded-full bg-front shadow-[0_0_10px_rgba(244,114,182,0.9)]" />
+                  <span className="relative inline-flex h-3 w-3 rounded-full bg-front shadow-front-glow" />
                 </span>
                 <span id="front-section-label" className="text-[10px] font-black uppercase tracking-[0.2em] text-front">
                   <Trans k="dashboard.currentFront" />
