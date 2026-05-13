@@ -14,6 +14,7 @@ import {
   type SolaraThemeId,
 } from '@/lib/theme';
 import { localizePathname, stripLanguageFromPathname } from '@/lib/i18n';
+import { SCANLINE_BG } from '@/lib/styles';
 
 type IconProps = { size?: number };
 
@@ -196,9 +197,6 @@ export function Sidebar({ systemName, accountType = 'system' }: SidebarProps) {
   const centerNavItems = navItems.filter(
     (item) => item.href !== '/settings' && (accountType === 'system' || !item.systemOnly),
   );
-  // Use find without a non-null assertion so the bar degrades gracefully if
-  // navItems is ever modified. Also honour accountType so singlets can't see
-  // a settings button they shouldn't have access to.
   const settingsItem = navItems.find(
     (item) => item.href === '/settings' && (accountType === 'system' || !item.systemOnly),
   );
@@ -206,11 +204,12 @@ export function Sidebar({ systemName, accountType = 'system' }: SidebarProps) {
 
   return (
     <header
-      className="hidden md:flex fixed top-0 left-0 right-0 z-20 h-14 items-center border-b-2 border-border-strong backdrop-blur-md"
+      className="hidden md:flex fixed top-0 left-0 right-0 z-20 h-14 items-center border-b-2 border-border-strong"
       style={{
         background: 'var(--theme-surface)',
+        backgroundImage: SCANLINE_BG,
         boxShadow:
-          '0 1px 0 rgb(var(--theme-border-strong-rgb, 74 61 122)), inset 0 -1px 40px rgba(244,114,182,0.04)',
+          '0 2px 0 rgb(var(--theme-primary-rgb) / 0.25), inset 0 -1px 0 rgb(var(--theme-border-strong-rgb))',
       }}
     >
       {/* LEFT: brand button + dropdown */}
@@ -226,6 +225,7 @@ export function Sidebar({ systemName, accountType = 'system' }: SidebarProps) {
           <span className="text-lg drop-shadow-[0_0_10px_rgba(244,114,182,0.5)]">{sidebarSymbol}</span>
           <div className="min-w-0">
             <p className="text-lg font-black tracking-tight leading-none text-text">
+              <span className="text-primary text-xs font-black mr-1">{'// '}</span>
               SOLARA<span className="text-primary">.</span>
             </p>
             {systemName && (
@@ -240,8 +240,15 @@ export function Sidebar({ systemName, accountType = 'system' }: SidebarProps) {
           <div
             role="menu"
             aria-label={t('nav.systemMenu')}
-            className="absolute left-0 top-full mt-1 z-30 w-64 space-y-4 rounded-xl border-2 border-border-strong bg-surface p-3 shadow-card-float backdrop-blur-sm animate-slide-up"
+            className="absolute left-0 top-full mt-1 z-30 w-64 space-y-4 border-2 border-border-strong bg-surface p-3 shadow-card-float animate-slide-up"
+            style={{
+              backgroundImage: SCANLINE_BG,
+              clipPath: 'polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 0 100%)',
+            }}
           >
+            {/* Corner ornament */}
+            <span className="pointer-events-none absolute top-0 right-0 block w-3 h-3 border-t-2 border-r-2 border-primary" aria-hidden="true" />
+
             <div>
               <p className="mb-2 text-[10px] font-black uppercase tracking-widest text-muted">{t('nav.sidebarSymbol')}</p>
               <div className="flex flex-wrap gap-2">
@@ -250,7 +257,7 @@ export function Sidebar({ systemName, accountType = 'system' }: SidebarProps) {
                     key={symbol}
                     type="button"
                     onClick={() => setSymbol(symbol)}
-                    className={`h-9 w-9 rounded-lg border text-lg transition-all duration-150 ${
+                    className={`h-9 w-9 border text-lg transition-all duration-150 rounded-none ${
                       sidebarSymbol === symbol
                         ? 'scale-110 border-primary bg-primary/20'
                         : 'border-border bg-surface-alt hover:bg-surface-alt hover:border-border-strong'
@@ -272,7 +279,7 @@ export function Sidebar({ systemName, accountType = 'system' }: SidebarProps) {
                     key={theme.id}
                     type="button"
                     onClick={() => setTheme(theme.id)}
-                    className={`w-full rounded-lg border px-2 py-1.5 text-left transition-colors ${
+                    className={`w-full border px-2 py-1.5 text-left transition-colors rounded-none ${
                       selectedTheme === theme.id
                         ? 'border-primary bg-primary text-bg'
                         : 'border-border bg-surface-alt text-muted hover:border-border-strong hover:text-text'
@@ -286,7 +293,7 @@ export function Sidebar({ systemName, accountType = 'system' }: SidebarProps) {
               </div>
               <Link
                 href={`${localizePathname('/settings', language)}#appearance`}
-                className="mt-2 block rounded-lg px-2 py-1.5 text-[10px] font-bold uppercase tracking-wide text-muted transition-colors hover:bg-surface-alt hover:text-text"
+                className="mt-2 block px-2 py-1.5 text-[10px] font-bold uppercase tracking-wide text-muted transition-colors hover:bg-surface-alt hover:text-text"
                 onClick={() => setMenuOpen(false)}
               >
                 {t('nav.appearanceSettings')}
@@ -313,17 +320,26 @@ export function Sidebar({ systemName, accountType = 'system' }: SidebarProps) {
               href={localizePathname(item.href, language)}
               prefetch={true}
               aria-current={isActive ? 'page' : undefined}
-              className={`flex flex-shrink-0 items-center gap-1.5 rounded-xl px-3 py-1.5 text-[11px] font-black uppercase tracking-widest transition-all duration-150
+              className={`relative flex flex-shrink-0 items-center gap-1.5 px-3 py-1.5 text-[11px] font-black uppercase tracking-widest transition-all duration-150
                 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 ${
                 isActive
                   ? 'bg-primary text-bg shadow-glow'
-                  : 'text-muted hover:bg-surface-alt hover:text-text'
+                  : 'text-muted hover:text-text'
               }`}
+              style={isActive ? {
+                clipPath: 'polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%)',
+              } : undefined}
             >
               <span className="flex-shrink-0">
                 <item.Icon size={15} />
               </span>
               {t(item.labelKey)}
+              {isActive && (
+                <span
+                  className="absolute -bottom-[9px] left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-primary shadow-glow"
+                  aria-hidden="true"
+                />
+              )}
             </Link>
           );
         })}
@@ -337,12 +353,15 @@ export function Sidebar({ systemName, accountType = 'system' }: SidebarProps) {
             prefetch={true}
             aria-current={isSettingsActive ? 'page' : undefined}
             aria-label={t(settingsItem.labelKey)}
-            className={`flex h-9 w-9 items-center justify-center rounded-xl transition-all duration-150
+            className={`flex h-9 w-9 items-center justify-center transition-all duration-150
               focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 ${
               isSettingsActive
                 ? 'bg-primary text-bg shadow-glow'
-                : 'text-muted hover:bg-surface-alt hover:text-text'
+                : 'text-muted hover:text-text hover:bg-surface-alt'
             }`}
+            style={isSettingsActive ? {
+              clipPath: 'polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%)',
+            } : undefined}
           >
             <IconSettings size={17} />
           </Link>
@@ -352,7 +371,7 @@ export function Sidebar({ systemName, accountType = 'system' }: SidebarProps) {
           type="button"
           onClick={() => signOut({ callbackUrl: localizePathname('/login', language) })}
           aria-label={t('nav.signOut')}
-          className="flex h-9 w-9 items-center justify-center rounded-xl text-error/60 transition-all duration-150 hover:bg-error/10 hover:text-error focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-error/60"
+          className="flex h-9 w-9 items-center justify-center text-error/60 transition-all duration-150 hover:bg-error/10 hover:text-error focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-error/60"
         >
           <IconLogout size={17} />
         </button>
