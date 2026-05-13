@@ -55,8 +55,8 @@ const config: Config = {
       boxShadow: {
         card:        '0 0 0 1px rgb(var(--theme-border-rgb) / 0.8), 0 4px 16px rgba(0,0,0,0.4)',
         'card-float':'0 0 0 1px rgb(var(--theme-border-strong-rgb) / 0.8), 0 12px 40px rgba(0,0,0,0.6)',
-        glow:        '0 0 20px rgba(180,142,250,0.25)',
-        'front-glow':'0 0 24px rgba(244,114,182,0.3)',
+        glow:        '0 0 20px rgba(244,114,182,0.40)',
+        'front-glow':'0 0 24px rgba(192,132,252,0.40)',
         'gold-glow': '0 0 20px rgba(251,191,36,0.25)',
       },
       animation: {

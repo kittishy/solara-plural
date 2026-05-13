@@ -195,22 +195,29 @@ export function Sidebar({ systemName, accountType = 'system' }: SidebarProps) {
 
   return (
     <aside
-      className="hidden md:flex fixed left-0 top-0 z-10 min-h-dvh w-60 flex-col border-r border-border/40"
-      style={{ background: 'linear-gradient(180deg, var(--theme-surface) 0%, var(--theme-bg) 100%)' }}
+      className="hidden md:flex fixed left-0 top-0 z-10 min-h-dvh w-60 flex-col border-r-2 border-border-strong"
+      style={{ background: 'var(--theme-surface)' }}
     >
-      <div ref={brandMenuRef} className="relative border-b border-border/40 px-4 py-4">
+      {/* Brand / system name */}
+      <div ref={brandMenuRef} className="relative border-b-2 border-border-strong px-4 py-5">
         <button
           ref={triggerRef}
           type="button"
           onClick={() => setMenuOpen((prev) => !prev)}
           aria-expanded={menuOpen}
           aria-haspopup="menu"
-          className="flex w-full items-center gap-3 rounded-xl px-2 py-2.5 text-left transition-colors duration-150 hover:bg-surface-alt focus-visible:ring-2 focus-visible:ring-primary/60"
+          className="flex w-full items-center gap-3 rounded-xl px-2 py-2 text-left transition-colors duration-150 hover:bg-surface-alt focus-visible:ring-2 focus-visible:ring-primary/60"
         >
-          <span className="text-2xl drop-shadow-[0_0_8px_rgba(167,139,250,0.4)]">{sidebarSymbol}</span>
+          <span className="text-xl drop-shadow-[0_0_10px_rgba(244,114,182,0.5)]">{sidebarSymbol}</span>
           <div className="min-w-0">
-            <p className="text-sm font-bold text-primary">Solara Plural</p>
-            {systemName && <p className="max-w-[140px] truncate text-xs text-muted/80">{systemName}</p>}
+            <p className="text-xl font-black tracking-tight leading-none text-text">
+              SOLARA<span className="text-primary">.</span>
+            </p>
+            {systemName && (
+              <p className="max-w-[130px] truncate text-[9px] font-black uppercase tracking-[0.2em] text-muted mt-0.5">
+                {systemName}
+              </p>
+            )}
           </div>
         </button>
 
@@ -218,10 +225,10 @@ export function Sidebar({ systemName, accountType = 'system' }: SidebarProps) {
           <div
             role="menu"
             aria-label={t('nav.systemMenu')}
-            className="absolute left-4 right-4 top-[calc(100%-6px)] z-20 space-y-4 rounded-xl border border-border bg-surface-alt/95 p-3 shadow-card backdrop-blur-sm animate-slide-up"
+            className="absolute left-4 right-4 top-[calc(100%-6px)] z-20 space-y-4 rounded-xl border-2 border-border-strong bg-surface p-3 shadow-card-float backdrop-blur-sm animate-slide-up"
           >
             <div>
-              <p className="mb-2 text-xs font-medium text-muted">{t('nav.sidebarSymbol')}</p>
+              <p className="mb-2 text-[10px] font-black uppercase tracking-widest text-muted">{t('nav.sidebarSymbol')}</p>
               <div className="flex flex-wrap gap-2">
                 {SIDEBAR_SYMBOLS.map((symbol) => (
                   <button
@@ -230,8 +237,8 @@ export function Sidebar({ systemName, accountType = 'system' }: SidebarProps) {
                     onClick={() => setSymbol(symbol)}
                     className={`h-9 w-9 rounded-lg border text-lg transition-all duration-150 ${
                       sidebarSymbol === symbol
-                        ? 'scale-110 border-primary/60 bg-primary/10'
-                        : 'border-border bg-surface hover:bg-surface-alt'
+                        ? 'scale-110 border-primary bg-primary/20'
+                        : 'border-border bg-surface-alt hover:bg-surface-alt hover:border-border-strong'
                     }`}
                     aria-label={`Use ${symbol} as sidebar symbol`}
                     aria-pressed={sidebarSymbol === symbol}
@@ -243,7 +250,7 @@ export function Sidebar({ systemName, accountType = 'system' }: SidebarProps) {
             </div>
 
             <div>
-              <p className="mb-2 px-2 text-xs font-medium text-muted">{t('nav.themePreset')}</p>
+              <p className="mb-2 px-1 text-[10px] font-black uppercase tracking-widest text-muted">{t('nav.themePreset')}</p>
               <div className="space-y-1">
                 {SOLARA_THEMES.map((theme) => (
                   <button
@@ -252,19 +259,19 @@ export function Sidebar({ systemName, accountType = 'system' }: SidebarProps) {
                     onClick={() => setTheme(theme.id)}
                     className={`w-full rounded-lg border px-2 py-1.5 text-left transition-colors ${
                       selectedTheme === theme.id
-                        ? 'border-primary/50 bg-primary/10 text-text'
-                        : 'border-border bg-surface text-muted hover:bg-surface-alt hover:text-text'
+                        ? 'border-primary bg-primary text-bg'
+                        : 'border-border bg-surface-alt text-muted hover:border-border-strong hover:text-text'
                     }`}
                     aria-pressed={selectedTheme === theme.id}
                   >
-                    <span className="block text-sm font-medium">{theme.label}</span>
-                    <span className="block text-xs opacity-80">{theme.description}</span>
+                    <span className="block text-xs font-black">{theme.label}</span>
+                    <span className="block text-[10px] opacity-70">{theme.description}</span>
                   </button>
                 ))}
               </div>
               <Link
                 href={`${localizePathname('/settings', language)}#appearance`}
-                className="mt-2 block rounded-lg px-2 py-1.5 text-xs text-muted transition-colors hover:bg-surface hover:text-text"
+                className="mt-2 block rounded-lg px-2 py-1.5 text-[10px] font-bold uppercase tracking-wide text-muted transition-colors hover:bg-surface-alt hover:text-text"
                 onClick={() => setMenuOpen(false)}
               >
                 {t('nav.appearanceSettings')}
@@ -274,7 +281,8 @@ export function Sidebar({ systemName, accountType = 'system' }: SidebarProps) {
         )}
       </div>
 
-      <nav className="flex-1 space-y-0.5 px-3 py-4" aria-label={t('nav.primary')}>
+      {/* Nav */}
+      <nav className="flex-1 space-y-1 px-2 py-4" aria-label={t('nav.primary')}>
         {navItems.filter((item) => accountType === 'system' || !item.systemOnly).map((item) => {
           const isActive =
             item.href === '/'
@@ -287,12 +295,14 @@ export function Sidebar({ systemName, accountType = 'system' }: SidebarProps) {
               href={localizePathname(item.href, language)}
               prefetch={true}
               aria-current={isActive ? 'page' : undefined}
-              className={`relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200 ${
-                isActive ? 'bg-primary/15 text-primary-glow' : 'text-muted hover:bg-surface-alt hover:text-text'
+              className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-[11px] font-black uppercase tracking-widest transition-all duration-150
+                focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 ${
+                isActive
+                  ? 'bg-primary text-bg shadow-glow'
+                  : 'text-muted hover:bg-surface-alt hover:text-text'
               }`}
             >
-              {isActive && <span className="absolute inset-y-1 left-0 w-0.5 rounded-r-full bg-primary" aria-hidden="true" />}
-              <span className={`flex-shrink-0 transition-all duration-200 ${isActive ? 'text-primary' : ''}`}>
+              <span className="flex-shrink-0">
                 <item.Icon />
               </span>
               {t(item.labelKey)}
@@ -301,11 +311,11 @@ export function Sidebar({ systemName, accountType = 'system' }: SidebarProps) {
         })}
       </nav>
 
-      <div className="border-t border-border/40 px-3 py-4">
+      <div className="border-t-2 border-border-strong px-2 py-4">
         <button
           type="button"
           onClick={() => signOut({ callbackUrl: localizePathname('/login', language) })}
-          className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-error/60 transition-all duration-150 hover:bg-error/10 hover:text-error"
+          className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-[11px] font-black uppercase tracking-widest text-error/60 transition-all duration-150 hover:bg-error/10 hover:text-error"
         >
           <span className="flex-shrink-0"><IconLogout /></span>
           {t('nav.signOut')}
