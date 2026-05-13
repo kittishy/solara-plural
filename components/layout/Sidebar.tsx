@@ -14,6 +14,7 @@ import {
   type SolaraThemeId,
 } from '@/lib/theme';
 import { localizePathname, stripLanguageFromPathname } from '@/lib/i18n';
+import { SCANLINE_BG } from '@/lib/styles';
 
 type IconProps = { size?: number };
 
@@ -123,9 +124,6 @@ const navItems = [
 
 const SIDEBAR_SYMBOLS = ['☀️', '🌙', '⭐', '🌸', '💜', '✨', '🪷', '🌿', '🫧', '🧭'] as const;
 const SIDEBAR_SYMBOL_STORAGE = 'solara.sidebar.symbol';
-
-const SCANLINE_BG =
-  'repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,0,0,0.07) 3px, rgba(0,0,0,0.07) 4px)';
 
 interface SidebarProps {
   systemName?: string;
