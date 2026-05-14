@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { LanguageSelector } from '@/components/language/LanguageSelector';
 import DynamicAvatarImage from '@/components/ui/DynamicAvatarImage';
 import { signOut } from 'next-auth/react';
@@ -1046,23 +1046,15 @@ export default function SettingsClient({
                 { key: 'front', label: 'Front', hint: 'In-front indicator' },
               ] as { key: keyof SolaraCustomColors; label: string; hint: string }[]
             ).map(({ key, label, hint }) => (
-              <div key={key} className="flex flex-col gap-1.5">
-                <div>
-                  <p className="text-xs font-semibold text-text">{label}</p>
-                  <p className="text-[10px] text-subtle mt-0.5">{hint}</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <label className="sr-only" htmlFor={`color-${key}`}>{label} color</label>
-                  <input
-                    id={`color-${key}`}
-                    type="color"
-                    value={customColors[key]}
-                    onChange={(e) => updateColor(key, e.target.value)}
-                    className="h-10 w-10 flex-none cursor-pointer rounded-lg border border-border bg-surface p-0.5"
-                  />
-                  <span className="text-[11px] font-mono text-muted select-all">{customColors[key]}</span>
-                </div>
-              </div>
+              <ColorPickerField
+                key={key}
+                colorKey={key}
+                label={label}
+                hint={hint}
+                value={customColors[key]}
+                customColors={customColors}
+                onChange={(v) => updateColor(key, v)}
+              />
             ))}
           </div>
 
@@ -1623,6 +1615,255 @@ function SummaryStat({ label, value }: { label: string; value: number }) {
     <div className="rounded-lg border border-border-soft bg-surface/70 p-2">
       <dt className="text-xs text-muted">{label}</dt>
       <dd className="text-base font-semibold text-text leading-tight mt-1">{value}</dd>
+    </div>
+  );
+}
+
+// ── Color picker utilities ───────────────────────────────────────────────────
+
+function hslToHex(h: number, s: number, l: number): string {
+  const hn = ((h % 360) + 360) % 360;
+  const sn = Math.max(0, Math.min(100, s)) / 100;
+  const ln = Math.max(0, Math.min(100, l)) / 100;
+  const a = sn * Math.min(ln, 1 - ln);
+  const f = (n: number) => {
+    const k = (n + hn / 30) % 12;
+    const c = ln - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+    return Math.round(255 * c).toString(16).padStart(2, '0');
+  };
+  return `#${f(0)}${f(8)}${f(4)}`;
+}
+
+function hexToHsl(hex: string): [number, number, number] {
+  const r = parseInt(hex.slice(1, 3), 16) / 255;
+  const g = parseInt(hex.slice(3, 5), 16) / 255;
+  const b = parseInt(hex.slice(5, 7), 16) / 255;
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const l = (max + min) / 2;
+  if (max === min) return [0, 0, Math.round(l * 100)];
+  const d = max - min;
+  const s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+  let h = 0;
+  if (max === r) h = ((g - b) / d + (g < b ? 6 : 0)) / 6;
+  else if (max === g) h = ((b - r) / d + 2) / 6;
+  else h = ((r - g) / d + 4) / 6;
+  return [Math.round(h * 360), Math.round(s * 100), Math.round(l * 100)];
+}
+
+function isLightHex(hex: string): boolean {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return (r * 299 + g * 587 + b * 114) / 1000 > 128;
+}
+
+function computeColorPresets(key: keyof SolaraCustomColors, colors: SolaraCustomColors): string[] {
+  const [bgH, bgS, bgL] = hexToHsl(colors.bg);
+  const [prH, prS, prL] = hexToHsl(colors.primary);
+  const [frH, frS] = hexToHsl(colors.front);
+  const [cuH, cuS, cuL] = hexToHsl(colors[key]);
+
+  switch (key) {
+    case 'bg':
+      return [
+        hslToHex(cuH, Math.min(cuS, 14), 3),
+        hslToHex(cuH, Math.min(cuS, 14), 6),
+        hslToHex(cuH, Math.min(cuS, 16), 10),
+        hslToHex(cuH, Math.min(cuS, 18), 15),
+        hslToHex(cuH, Math.min(cuS, 20), 20),
+        hslToHex(cuH, Math.min(cuS, 22), 26),
+        hslToHex(prH, Math.min(prS * 0.18, 20), 7),
+        hslToHex(prH, Math.min(prS * 0.28, 26), 12),
+      ];
+    case 'surface':
+      return [
+        hslToHex(bgH, bgS, bgL + 2),
+        hslToHex(bgH, bgS, bgL + 5),
+        hslToHex(bgH, bgS, bgL + 8),
+        hslToHex(bgH, bgS, bgL + 12),
+        hslToHex(prH, Math.min(prS * 0.15, 18), bgL + 4),
+        hslToHex(prH, Math.min(prS * 0.25, 22), bgL + 8),
+        hslToHex(frH, Math.min(frS * 0.15, 18), bgL + 4),
+        hslToHex(frH, Math.min(frS * 0.22, 20), bgL + 8),
+      ];
+    case 'text':
+      return [
+        hslToHex(0, 0, 98),
+        hslToHex(0, 0, 93),
+        hslToHex(30, 8, 92),
+        hslToHex(bgH, 15, 90),
+        hslToHex(prH, 25, 88),
+        hslToHex(prH, 18, 82),
+        hslToHex(0, 0, 78),
+        hslToHex(0, 0, 65),
+      ];
+    case 'border':
+      return [
+        hslToHex(bgH, bgS, bgL + 8),
+        hslToHex(bgH, bgS, bgL + 13),
+        hslToHex(bgH, bgS, bgL + 18),
+        hslToHex(bgH, bgS, bgL + 24),
+        hslToHex(prH, prS * 0.28, bgL + 10),
+        hslToHex(prH, prS * 0.4, bgL + 16),
+        hslToHex(frH, frS * 0.28, bgL + 10),
+        hslToHex(frH, frS * 0.4, bgL + 16),
+      ];
+    case 'primary':
+      return [
+        hslToHex(cuH, cuS, cuL),
+        hslToHex((cuH + 30) % 360, cuS, cuL),
+        hslToHex((cuH + 60) % 360, cuS, cuL),
+        hslToHex((cuH + 120) % 360, cuS, cuL),
+        hslToHex((cuH + 180) % 360, cuS, cuL),
+        hslToHex((cuH + 240) % 360, cuS, cuL),
+        hslToHex((cuH + 300) % 360, cuS, cuL),
+        hslToHex(cuH, Math.min(cuS + 15, 100), Math.min(cuL + 10, 95)),
+      ];
+    case 'front':
+      return [
+        hslToHex(prH, prS, prL),
+        hslToHex((prH + 30) % 360, prS, prL),
+        hslToHex((prH + 60) % 360, prS, prL),
+        hslToHex((prH + 90) % 360, prS, prL),
+        hslToHex((prH - 30 + 360) % 360, prS, prL),
+        hslToHex((prH - 60 + 360) % 360, prS, prL),
+        hslToHex((prH + 180) % 360, prS, prL),
+        hslToHex(cuH, Math.min(cuS + 12, 100), Math.min(cuL + 12, 95)),
+      ];
+    default:
+      return [];
+  }
+}
+
+type ColorPickerFieldProps = {
+  colorKey: keyof SolaraCustomColors;
+  label: string;
+  hint: string;
+  value: string;
+  customColors: SolaraCustomColors;
+  onChange: (v: string) => void;
+};
+
+function ColorPickerField({ colorKey, label, hint, value, customColors, onChange }: ColorPickerFieldProps) {
+  const [open, setOpen] = useState(false);
+  const [hexInput, setHexInput] = useState(value);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => { setHexInput(value); }, [value]);
+
+  useEffect(() => {
+    if (!open) return;
+    function onMouse(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') setOpen(false);
+    }
+    document.addEventListener('mousedown', onMouse);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onMouse);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [open]);
+
+  const presets = useMemo(() => computeColorPresets(colorKey, customColors), [colorKey, customColors]);
+
+  function handleHexInput(raw: string) {
+    const normalized = raw.startsWith('#') ? raw : `#${raw}`;
+    setHexInput(normalized);
+    if (/^#[0-9a-fA-F]{6}$/.test(normalized)) {
+      onChange(normalized.toLowerCase());
+    }
+  }
+
+  function applyPreset(preset: string) {
+    onChange(preset);
+    setHexInput(preset);
+  }
+
+  return (
+    <div className="flex flex-col gap-1.5">
+      <div>
+        <p className="text-xs font-semibold text-text">{label}</p>
+        <p className="text-[10px] text-subtle mt-0.5">{hint}</p>
+      </div>
+      <div ref={ref} className="relative">
+        <button
+          type="button"
+          onClick={() => setOpen((p) => !p)}
+          aria-label={`Edit ${label} color`}
+          aria-expanded={open}
+          aria-haspopup="dialog"
+          className="flex items-center gap-2 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+        >
+          <span
+            className="h-10 w-10 flex-none rounded-lg border border-border-strong shadow-sm transition-transform hover:scale-105"
+            style={{ backgroundColor: value }}
+          />
+          <span className="text-[11px] font-mono text-muted">{value}</span>
+        </button>
+
+        {open && (
+          <div
+            role="dialog"
+            aria-label={`${label} color picker`}
+            className="absolute left-0 top-full mt-1.5 z-50 w-56 rounded-xl border-2 border-border-strong bg-surface p-3 shadow-card-float animate-slide-up"
+          >
+            {/* Native color picker overlaid on a preview swatch */}
+            <div className="relative h-10 w-full overflow-hidden rounded-lg border border-border mb-2.5 cursor-pointer group">
+              <div className="absolute inset-0" style={{ backgroundColor: value }} />
+              <span
+                className="absolute inset-0 flex items-center justify-center text-[10px] font-bold tracking-wide opacity-0 group-hover:opacity-100 transition-opacity select-none"
+                style={{ color: isLightHex(value) ? '#00000088' : '#ffffff99' }}
+              >
+                open picker
+              </span>
+              <input
+                type="color"
+                value={value}
+                onChange={(e) => { onChange(e.target.value); setHexInput(e.target.value); }}
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                aria-label={`${label} native color picker`}
+              />
+            </div>
+
+            {/* Hex input */}
+            <input
+              type="text"
+              value={hexInput}
+              onChange={(e) => handleHexInput(e.target.value)}
+              onBlur={() => setHexInput(value)}
+              className="input h-8 w-full text-xs font-mono mb-3"
+              maxLength={7}
+              placeholder="#000000"
+              spellCheck={false}
+              aria-label={`${label} hex value`}
+            />
+
+            {/* Smart preset swatches */}
+            <div>
+              <p className="text-[9px] font-black uppercase tracking-widest text-muted mb-1.5">Suggestions</p>
+              <div className="grid grid-cols-8 gap-1">
+                {presets.map((preset, i) => (
+                  <button
+                    key={`${preset}-${i}`}
+                    type="button"
+                    onClick={() => applyPreset(preset)}
+                    title={preset}
+                    aria-label={`Set ${label} to ${preset}`}
+                    className={`h-5 w-full rounded transition-transform hover:scale-125 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary ${
+                      preset === value ? 'scale-110 ring-1 ring-primary' : ''
+                    }`}
+                    style={{ backgroundColor: preset }}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
