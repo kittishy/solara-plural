@@ -430,8 +430,8 @@ export default function FrontHistoryClient({
               <circle cx="28" cy="28" r="2" fill="#f9a8d4" />
             </svg>
           </div>
-          <p className="text-text font-semibold text-lg tracking-tight">Nothing here yet</p>
-          <p className="text-muted text-base mt-2 leading-relaxed">
+          <p className="text-text font-black text-base tracking-tight">Nothing here yet</p>
+          <p className="text-muted text-sm mt-2 leading-relaxed">
             Your front history will live here —{' '}
             <span className="text-primary/80">cozy and organized.</span>
           </p>

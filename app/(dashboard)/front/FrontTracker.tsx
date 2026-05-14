@@ -186,10 +186,18 @@ export default function FrontTracker({ members, activeFront }: Props) {
       )}
 
       {members.length === 0 ? (
-        <section className="card p-5">
-          <p className="rounded-xl border border-border/50 bg-surface-alt p-4 text-base text-muted">
+        <section
+          className="relative overflow-hidden animate-fade-in"
+          style={{
+            background: 'rgb(var(--theme-surface-rgb))',
+            borderLeft: '3px solid rgb(var(--theme-border-strong-rgb))',
+            padding: '1.25rem',
+          }}
+        >
+          <span className="pointer-events-none absolute top-0 right-0 block w-3 h-3 border-t-2 border-r-2 border-border-strong/50" aria-hidden="true" />
+          <p className="text-sm text-muted">
             {t('front.noMembersYet')}{' '}
-            <Link href="/members/new" className="font-medium text-primary hover:underline">
+            <Link href="/members/new" className="font-black text-primary link-glow">
               {t('front.addOneFirst')}
             </Link>
           </p>

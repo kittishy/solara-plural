@@ -92,10 +92,10 @@ export default function NotesClient({ initialNotes }: { initialNotes: NoteListIt
               key={value}
               type="button"
               onClick={() => { setActiveFilter(value); setVisibleCount(INITIAL_VISIBLE_NOTES); }}
-              className={`shrink-0 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
+              className={`shrink-0 rounded-full border px-3 py-1.5 text-xs font-medium transition-all duration-150 active:scale-95 ${
                 activeFilter === value
                   ? 'bg-primary/15 text-primary border-primary/40'
-                  : 'border-border/60 text-muted hover:text-text'
+                  : 'border-border/60 text-muted hover:text-text hover:border-border-strong/60'
               }`}
             >
               {label}
@@ -137,6 +137,7 @@ export default function NotesClient({ initialNotes }: { initialNotes: NoteListIt
                   href={`/notes/${note.id}`}
                   className="group flex gap-0 rounded-xl overflow-hidden border border-border/70 transition-all duration-150
                     hover:border-primary/40 hover:-translate-y-px hover:shadow-[0_4px_20px_rgba(0,0,0,0.5)]
+                    active:scale-[0.99] active:translate-y-0 active:shadow-none
                     focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
                   style={{
                     background: 'linear-gradient(160deg, rgb(var(--theme-surface-alt-rgb) / 0.4) 0%, var(--theme-surface) 60%)',
