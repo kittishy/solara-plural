@@ -169,14 +169,14 @@ export default function LoginPage() {
           {error && (
             <p
               role="alert"
+              className="text-sm animate-slide-up"
               style={{
-                fontSize: '0.8125rem',
-                background: 'rgb(var(--theme-primary-rgb) / 0.08)',
-                border: '1px solid rgb(var(--theme-primary-rgb) / 0.25)',
-                borderLeft: '3px solid rgb(var(--theme-primary-rgb))',
-                color: 'rgb(var(--theme-primary-glow-rgb))',
+                background: 'color-mix(in srgb, #fca5a5 8%, transparent)',
+                border: '1px solid color-mix(in srgb, #fca5a5 30%, transparent)',
+                borderLeft: '3px solid #fca5a5',
+                color: '#fca5a5',
                 padding: '0.5rem 0.75rem',
-                borderRadius: '0 0.25rem 0.25rem 0',
+                borderRadius: '0 0.375rem 0.375rem 0',
               }}
             >
               {error}

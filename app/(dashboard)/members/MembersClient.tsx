@@ -513,23 +513,25 @@ export default function MembersClient({
 
   if (isLoading) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-6 animate-fade-in">
         <div className="flex items-center justify-between">
           <div className="space-y-2">
-            <div className="h-8 w-32 animate-pulse rounded-lg bg-surface-alt" />
-            <div className="h-4 w-24 animate-pulse rounded-lg bg-surface-alt" />
+            <div className="skeleton h-8 w-36" />
+            <div className="skeleton h-3.5 w-24" />
           </div>
+          <div className="skeleton h-10 w-28" style={{ clipPath: 'polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)' }} />
         </div>
         <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
           {[1, 2, 3, 4, 5, 6].map((i) => (
             <div
               key={i}
-              className="rounded-xl overflow-hidden border border-border/40"
+              className="overflow-hidden border border-border/40"
+              style={{ borderRadius: '10px' }}
             >
-              <div className="h-[108px] animate-pulse bg-surface-alt/60" />
+              <div className="skeleton h-[108px] rounded-none" />
               <div className="bg-surface p-3 space-y-2">
-                <div className="h-3.5 w-3/4 animate-pulse rounded bg-surface-alt" />
-                <div className="h-3 w-1/2 animate-pulse rounded bg-surface-alt" />
+                <div className="skeleton h-3.5 w-3/4" />
+                <div className="skeleton h-3 w-1/2" />
               </div>
             </div>
           ))}

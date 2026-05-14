@@ -251,9 +251,13 @@ export function MobileNav({ accountType = 'system' }: { accountType?: 'system' |
                 } : undefined}
               >
                 {current && (
-                  <span className="absolute top-0 inset-x-0 h-0.5 bg-primary" aria-hidden="true" />
+                  <span
+                    className="absolute top-0 left-1/2 h-0.5 w-8 -translate-x-1/2 bg-primary rounded-full"
+                    style={{ boxShadow: '0 0 8px rgb(var(--theme-primary-rgb) / 0.75)' }}
+                    aria-hidden="true"
+                  />
                 )}
-                <item.Icon size={current ? 22 : 20} />
+                <item.Icon size={20} />
                 <span className="leading-none">{t(item.labelKey)}</span>
               </Link>
             );
@@ -275,9 +279,13 @@ export function MobileNav({ accountType = 'system' }: { accountType?: 'system' |
             } : undefined}
           >
             {(menuIsActive || menuOpen) && (
-              <span className="absolute top-0 inset-x-0 h-0.5 bg-primary" aria-hidden="true" />
+              <span
+                className="absolute top-0 left-1/2 h-0.5 w-8 -translate-x-1/2 bg-primary rounded-full"
+                style={{ boxShadow: '0 0 8px rgb(var(--theme-primary-rgb) / 0.75)' }}
+                aria-hidden="true"
+              />
             )}
-            <IconMenu size={(menuIsActive || menuOpen) ? 22 : 20} />
+            <IconMenu size={20} />
             <span className="leading-none">{t('nav.more')}</span>
           </button>
         </div>

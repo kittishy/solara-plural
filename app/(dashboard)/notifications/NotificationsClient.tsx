@@ -128,7 +128,7 @@ export default function NotificationsClient() {
       {isLoading && (
         <div className="rounded-xl overflow-hidden border border-border/40">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="h-16 animate-pulse bg-surface-alt/60 border-b border-border/40 last:border-0" />
+            <div key={i} className="skeleton h-16 rounded-none border-b border-border/30 last:border-0" />
           ))}
         </div>
       )}

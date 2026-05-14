@@ -597,13 +597,13 @@ export default function PartnersClient() {
       <div className="animate-fade-in space-y-5">
         <div className="flex items-center justify-between">
           <div className="space-y-2">
-            <div className="h-8 w-28 animate-pulse rounded-lg bg-surface-alt" />
-            <div className="h-4 w-20 animate-pulse rounded-lg bg-surface-alt" />
+            <div className="skeleton h-8 w-28" />
+            <div className="skeleton h-3.5 w-20" />
           </div>
         </div>
         <div className="rounded-xl overflow-hidden border border-border/40">
           {[1, 2].map((i) => (
-            <div key={i} className="h-[80px] animate-pulse bg-surface-alt/60 border-b border-border/40 last:border-0" />
+            <div key={i} className="skeleton h-[80px] rounded-none border-b border-border/30 last:border-0" />
           ))}
         </div>
       </div>

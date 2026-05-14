@@ -134,14 +134,17 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
       {/* Back nav */}
       <Link
         href="/members"
-        className="inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-text"
+        className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-muted transition-colors hover:text-text link-glow"
       >
         <IconChevronLeft />
         Members
       </Link>
 
       {/* Profile header */}
-      <div className="rounded-xl overflow-hidden border border-border/40">
+      <div
+        className="relative overflow-hidden"
+        style={{ border: '1px solid rgb(var(--theme-border-rgb))', borderRadius: '10px' }}
+      >
         {/* Banner */}
         <div
           className="relative flex flex-col items-center pt-8 pb-6 px-5"
@@ -152,9 +155,10 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
           {/* Edit button overlay */}
           <Link
             href={`/members/${member.id}/edit`}
-            className="absolute top-3 right-3 inline-flex items-center gap-1.5 min-h-[36px] rounded-lg
-              border border-white/20 bg-black/30 backdrop-blur-sm px-3 py-1.5 text-xs font-medium text-white/90
-              transition-colors hover:bg-black/50 hover:border-white/40"
+            className="absolute top-3 right-3 inline-flex items-center gap-1.5 min-h-[36px]
+              border border-white/20 bg-black/50 px-3 py-1.5 text-xs font-black uppercase tracking-wider text-white/90
+              transition-all duration-150 hover:bg-black/70 hover:border-white/40 active:scale-95"
+            style={{ clipPath: 'polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%)' }}
             aria-label={`Edit ${member.name}`}
           >
             <IconEdit />
@@ -194,36 +198,55 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
 
           {/* Fronting badge */}
           {isFronting && (
-            <div className="mt-3 flex items-center gap-1.5 bg-black/30 backdrop-blur-sm rounded-full px-3 py-1 border border-white/20">
-              <span className="relative flex h-2 w-2 flex-shrink-0" aria-hidden="true">
-                <span className="absolute inline-flex h-full w-full rounded-full bg-front opacity-60 animate-pulse" />
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-front" />
+            <div className="mt-3 flex items-center gap-2 bg-black/50 px-3 py-1 border border-front/30"
+              style={{ clipPath: 'polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%)' }}
+            >
+              <span className="relative flex h-3 w-3 flex-shrink-0" aria-hidden="true">
+                <span className="animate-pulse-ring-outer absolute inline-flex h-full w-full rounded-full bg-front" />
+                <span className="animate-pulse-ring absolute inline-flex h-full w-full rounded-full bg-front opacity-60" />
+                <span className="relative inline-flex h-3 w-3 rounded-full bg-front" />
               </span>
-              <span className="text-xs font-semibold text-front">Currently fronting</span>
+              <span className="text-[10px] font-black uppercase tracking-widest text-front">Currently fronting</span>
             </div>
           )}
         </div>
 
         {/* Name / pronouns / role / tags — below the banner on surface */}
-        <div className="bg-surface px-5 py-4 space-y-2">
+        <div className="bg-surface px-5 py-4 space-y-2.5"
+          style={{ borderTop: `2px solid ${accentColor}` }}
+        >
           <div>
-            <h1 className="text-xl font-bold text-text leading-snug">{member.name}</h1>
+            <h1 className="text-2xl font-black text-text leading-none tracking-tight">{member.name}</h1>
             {member.pronouns && (
-              <p className="text-muted text-sm mt-0.5">{member.pronouns}</p>
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted mt-1">{member.pronouns}</p>
             )}
             {member.role && (
-              <span className="mt-2 inline-block text-xs bg-primary/15 text-primary px-2.5 py-1 rounded-full">
+              <span
+                className="mt-2 inline-block text-[10px] font-black uppercase tracking-widest px-2.5 py-1"
+                style={{
+                  background: `color-mix(in srgb, ${accentColor} 15%, transparent)`,
+                  border: `1px solid color-mix(in srgb, ${accentColor} 35%, transparent)`,
+                  color: accentColor,
+                  borderRadius: '4px',
+                }}
+              >
                 {member.role}
               </span>
             )}
           </div>
 
           {tags.length > 0 && (
-            <div className="flex flex-wrap gap-1.5 pt-1">
+            <div className="flex flex-wrap gap-1.5">
               {tags.map((tag) => (
                 <span
                   key={tag}
-                  className="text-xs bg-surface-alt text-muted px-2.5 py-1 rounded-full border border-border/40"
+                  className="text-[10px] font-black uppercase tracking-wider px-2.5 py-1"
+                  style={{
+                    background: `color-mix(in srgb, ${accentColor} 12%, transparent)`,
+                    border: `1px solid color-mix(in srgb, ${accentColor} 30%, transparent)`,
+                    color: accentColor,
+                    borderRadius: '9999px',
+                  }}
                 >
                   {tag}
                 </span>
@@ -235,23 +258,55 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
 
       {/* About */}
       {member.description && (
-        <div className="rounded-xl border border-border/40 bg-surface px-5 py-4">
-          <h2 className="text-xs font-semibold text-muted uppercase tracking-wider mb-2">About</h2>
+        <div
+          className="relative overflow-hidden px-5 py-4"
+          style={{
+            background: 'rgb(var(--theme-surface-rgb))',
+            borderLeft: `3px solid ${accentColor}`,
+            border: '1px solid rgb(var(--theme-border-rgb))',
+            borderLeftWidth: '3px',
+            borderLeftColor: accentColor,
+            borderRadius: '10px',
+          }}
+        >
+          <span className="pointer-events-none absolute top-0 right-0 block w-2.5 h-2.5 border-t border-r border-border-strong/50" aria-hidden="true" />
+          <h2 className="section-header mb-3">About</h2>
           <p className="text-text text-sm leading-relaxed whitespace-pre-wrap">{member.description}</p>
         </div>
       )}
 
       {/* Private notes */}
       {member.notes && (
-        <div className="rounded-xl border border-border/40 bg-surface px-5 py-4">
-          <h2 className="text-xs font-semibold text-muted uppercase tracking-wider mb-2">Private notes</h2>
+        <div
+          className="relative overflow-hidden px-5 py-4"
+          style={{
+            background: 'rgb(var(--theme-surface-rgb))',
+            border: '1px solid rgb(var(--theme-border-rgb))',
+            borderLeftWidth: '3px',
+            borderLeftColor: 'rgb(var(--theme-border-strong-rgb))',
+            borderRadius: '10px',
+          }}
+        >
+          <span className="pointer-events-none absolute top-0 right-0 block w-2.5 h-2.5 border-t border-r border-border-strong/50" aria-hidden="true" />
+          <h2 className="section-header mb-3">Private notes</h2>
           <p className="text-text text-sm leading-relaxed whitespace-pre-wrap">{member.notes}</p>
         </div>
       )}
 
       {customDetails.length > 0 && (
-        <section className="rounded-xl border border-border/40 bg-surface px-5 py-4" aria-labelledby="member-details-heading">
-          <h2 id="member-details-heading" className="text-xs font-semibold text-muted uppercase tracking-wider mb-3">
+        <section
+          className="relative overflow-hidden px-5 py-4"
+          style={{
+            background: 'rgb(var(--theme-surface-rgb))',
+            border: '1px solid rgb(var(--theme-border-rgb))',
+            borderLeftWidth: '3px',
+            borderLeftColor: accentColor,
+            borderRadius: '10px',
+          }}
+          aria-labelledby="member-details-heading"
+        >
+          <span className="pointer-events-none absolute top-0 right-0 block w-2.5 h-2.5 border-t border-r border-border-strong/50" aria-hidden="true" />
+          <h2 id="member-details-heading" className="section-header mb-3">
             Details
           </h2>
           <dl className="grid gap-3 sm:grid-cols-2">
@@ -269,21 +324,26 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
 
       {/* Front history */}
       <div>
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-base font-semibold text-text">Front history</h2>
+        <div className="flex items-center gap-2 mb-3">
+          <span className="section-header flex-1">Front history</span>
           {frontHistory.length === 20 && (
-            <span className="text-subtle text-xs">Last 20 sessions</span>
+            <span className="text-[10px] font-black uppercase tracking-widest text-subtle">Last 20</span>
           )}
         </div>
 
         {/* Front stats row */}
         {completedSessions.length > 0 && (
           <div
-            className="flex items-center gap-1.5 text-xs font-medium mb-3 px-3 py-2 rounded-lg bg-surface-alt/50 border border-border/30 w-fit"
-            style={{ color: accentColor }}
+            className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest mb-3 px-3 py-2 w-fit"
+            style={{
+              color: accentColor,
+              background: `color-mix(in srgb, ${accentColor} 10%, transparent)`,
+              border: `1px solid color-mix(in srgb, ${accentColor} 25%, transparent)`,
+              borderRadius: '4px',
+            }}
           >
             <span>{completedSessions.length} {completedSessions.length === 1 ? 'session' : 'sessions'}</span>
-            <span className="text-border">·</span>
+            <span style={{ color: 'rgb(var(--theme-border-strong-rgb))' }}>·</span>
             <span>{frontTotalLabel} total</span>
           </div>
         )}
@@ -329,14 +389,21 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
 
                     {isLive ? (
                       <div className="flex items-center gap-1.5 flex-shrink-0" aria-label="Currently fronting">
-                        <span className="relative inline-flex h-2 w-2 flex-shrink-0" aria-hidden="true">
-                          <span className="absolute inline-flex h-full w-full rounded-full bg-front opacity-60 animate-pulse" />
-                          <span className="relative inline-flex h-2 w-2 rounded-full bg-front" />
+                        <span className="relative flex h-2.5 w-2.5 flex-shrink-0" aria-hidden="true">
+                          <span className="animate-pulse-ring absolute inline-flex h-full w-full rounded-full bg-front opacity-60" />
+                          <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-front" />
                         </span>
-                        <span className="text-xs font-semibold text-front">Now</span>
+                        <span className="text-[10px] font-black uppercase tracking-widest text-front">Now</span>
                       </div>
                     ) : (
-                      <span className="text-xs text-muted bg-surface-alt rounded-full px-2.5 py-1 flex-shrink-0 border border-border/40">
+                      <span
+                        className="text-[10px] font-black uppercase tracking-wider text-muted flex-shrink-0 px-2 py-0.5"
+                        style={{
+                          background: 'rgb(var(--theme-surface-alt-rgb))',
+                          border: '1px solid rgb(var(--theme-border-rgb))',
+                          borderRadius: '4px',
+                        }}
+                      >
                         {formatDuration(start, end!)}
                       </span>
                     )}
@@ -349,7 +416,7 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
       </div>
 
       {/* Meta */}
-      <div className="rounded-xl border border-border/40 bg-surface px-5 py-3 text-xs text-subtle space-y-1">
+      <div className="px-1 text-[10px] font-black uppercase tracking-widest text-subtle space-y-1">
         <p>Added {new Date(member.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
         {member.updatedAt > member.createdAt && (
           <p>Last updated {new Date(member.updatedAt).toLocaleDateString()}</p>

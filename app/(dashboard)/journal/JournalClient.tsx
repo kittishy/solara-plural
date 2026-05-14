@@ -81,6 +81,7 @@ export default function JournalClient({ initialEntries }: { initialEntries: Jour
                 href={`/journal/${entry.id}`}
                 className="group flex gap-0 rounded-xl overflow-hidden border border-border/70 transition-all duration-150
                   hover:border-primary/40 hover:-translate-y-px hover:shadow-[0_4px_20px_rgba(0,0,0,0.5)]
+                  active:scale-[0.99] active:translate-y-0 active:shadow-none
                   focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
                 style={{
                   background: 'linear-gradient(160deg, rgb(var(--theme-surface-alt-rgb) / 0.4) 0%, var(--theme-surface) 60%)',

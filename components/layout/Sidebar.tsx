@@ -298,7 +298,7 @@ export function Sidebar({ systemName, accountType = 'system' }: SidebarProps) {
                 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 ${
                 isActive
                   ? 'bg-primary text-bg shadow-glow'
-                  : 'text-muted hover:text-text'
+                  : 'text-muted hover:text-text hover:bg-surface-alt'
               }`}
               style={isActive ? {
                 clipPath: 'polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%)',
