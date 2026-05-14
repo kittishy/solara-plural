@@ -1,12 +1,19 @@
 import type { Metadata } from 'next';
-import { Nunito } from 'next/font/google';
+import { Nunito, Barlow_Condensed } from 'next/font/google';
 import { LanguageProvider } from '@/components/providers/LanguageProvider';
 import './globals.css';
 
 const nunito = Nunito({
   subsets: ['latin'],
-  weight: ['400', '500', '600', '700'],
+  weight: ['400', '500', '600', '700', '800', '900'],
   variable: '--font-nunito',
+  display: 'swap',
+});
+
+const barlowCondensed = Barlow_Condensed({
+  subsets: ['latin'],
+  weight: ['600', '700', '800', '900'],
+  variable: '--font-display',
   display: 'swap',
 });
 
@@ -22,7 +29,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={nunito.variable} suppressHydrationWarning>
+    <html lang="en" className={`${nunito.variable} ${barlowCondensed.variable}`} suppressHydrationWarning>
       <body>
         <script
           dangerouslySetInnerHTML={{
@@ -31,7 +38,11 @@ export default function RootLayout({
                 try {
                   var key = 'solara.theme';
                   var theme = localStorage.getItem(key);
-                  if (theme) document.documentElement.setAttribute('data-solara-theme', theme);
+                  if (theme === 'dark') {
+                    document.documentElement.setAttribute('data-solara-theme', 'dark');
+                  } else {
+                    document.documentElement.removeAttribute('data-solara-theme');
+                  }
                   var language = localStorage.getItem('solara.language');
                   var pathname = window.location.pathname;
                   var parts = pathname.split('/').filter(Boolean);

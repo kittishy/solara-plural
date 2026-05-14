@@ -3,6 +3,9 @@
  * Keeping these here avoids duplication between Sidebar and MobileNav.
  */
 
-/** Repeating scanline overlay — gives panels the ZZZ game-HUD texture. */
+/**
+ * Diagonal stripe texture overlay — ZZZ card background pattern.
+ * Used on nav surfaces that are always dark (#131416).
+ */
 export const SCANLINE_BG =
-  'repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,0,0,0.07) 3px, rgba(0,0,0,0.07) 4px)';
+  'repeating-linear-gradient(-45deg, rgba(255,255,255,0.025) 0px, rgba(255,255,255,0.025) 1px, transparent 1px, transparent 8px)';
