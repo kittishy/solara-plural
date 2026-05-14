@@ -2,9 +2,10 @@ import { createId } from '@paralleldrive/cuid2';
 import { and, eq, or } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { db } from '@/lib/db';
-import { systemBlocks, systemFriendRequests, systemFriendships } from '@/lib/db/schema';
+import { systemBlocks, systemFriendRequests, systemFriendships, systems } from '@/lib/db/schema';
 import { err, ok, requireAuth, parseJsonRecord } from '@/lib/api/helpers';
 import { canonicalFriendPair } from '@/lib/friends';
+import { createNotification } from '@/lib/notifications/create-notification';
 
 type Params = { params: Promise<{ id: string }> };
 type RequestAction = 'accept' | 'decline' | 'cancel';
@@ -91,6 +92,35 @@ export async function POST(request: Request, { params }: Params) {
       systemBId: pair.systemBId,
       createdAt: now,
     }).onConflictDoNothing();
+  }
+
+  // Notify relevant parties about the outcome
+  const responderProfile = await db.query.systems.findFirst({
+    columns: { name: true },
+    where: eq(systems.id, auth.systemId),
+  });
+
+  if (action === 'accept') {
+    // Notify the original sender that their request was accepted
+    await createNotification({
+      recipientSystemId: friendRequest.senderSystemId,
+      actorSystemId: auth.systemId,
+      type: 'friend_request_accepted',
+      title: 'Friend request accepted',
+      body: `${responderProfile?.name ?? 'Someone'} accepted your friend request. You are now connected!`,
+      data: { friendSystemId: auth.systemId },
+      push: { url: '/friends' },
+    });
+  } else if (action === 'decline') {
+    // Notify the original sender that their request was declined (silent, no push)
+    await createNotification({
+      recipientSystemId: friendRequest.senderSystemId,
+      actorSystemId: auth.systemId,
+      type: 'friend_request_declined',
+      title: 'Friend request declined',
+      body: `${responderProfile?.name ?? 'Someone'} declined your friend request.`,
+      data: { },
+    });
   }
 
   revalidatePath('/friends');

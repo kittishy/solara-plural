@@ -2,9 +2,10 @@ import { createId } from '@paralleldrive/cuid2';
 import { and, eq } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { db } from '@/lib/db';
-import { systemPartnerRequests, systemPartnerships } from '@/lib/db/schema';
+import { systemPartnerRequests, systemPartnerships, systems } from '@/lib/db/schema';
 import { err, ok, parseJsonRecord, requireAuth } from '@/lib/api/helpers';
 import { canonicalFriendPair } from '@/lib/friends';
+import { createNotification } from '@/lib/notifications/create-notification';
 
 type Params = { params: Promise<{ id: string }> };
 type RequestAction = 'accept' | 'decline' | 'cancel';
@@ -61,6 +62,32 @@ export async function POST(request: Request, { params }: Params) {
       systemBId: pair.systemBId,
       createdAt: now,
     }).onConflictDoNothing();
+  }
+
+  const responderProfile = await db.query.systems.findFirst({
+    columns: { name: true },
+    where: eq(systems.id, auth.systemId),
+  });
+
+  if (action === 'accept') {
+    await createNotification({
+      recipientSystemId: partnerRequest.senderSystemId,
+      actorSystemId: auth.systemId,
+      type: 'partner_request_accepted',
+      title: 'Partner request accepted',
+      body: `${responderProfile?.name ?? 'Someone'} accepted your partner request. You are now partners!`,
+      data: { partnerSystemId: auth.systemId },
+      push: { url: '/partners' },
+    });
+  } else if (action === 'decline') {
+    await createNotification({
+      recipientSystemId: partnerRequest.senderSystemId,
+      actorSystemId: auth.systemId,
+      type: 'partner_request_declined',
+      title: 'Partner request declined',
+      body: `${responderProfile?.name ?? 'Someone'} declined your partner request.`,
+      data: { },
+    });
   }
 
   revalidatePath('/partners');
