@@ -15,13 +15,17 @@ export default async function DashboardLayout({
   const accountType = await getAccountType();
 
   return (
-    <div className="min-h-dvh bg-bg">
+    <div className="min-h-dvh" style={{ background: 'var(--theme-bg)' }}>
       {/* Accessibility: skip to main content */}
       <a
         href="#main-content"
         className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-50
-          focus:px-4 focus:py-2 focus:bg-surface focus:text-primary focus:rounded-xl
-          focus:ring-2 focus:ring-primary focus:shadow-card"
+          focus:px-4 focus:py-2 focus:rounded-xl focus:ring-2"
+        style={{
+          background: 'var(--theme-surface)',
+          color: 'var(--theme-primary)',
+          outline: '2px solid var(--theme-primary)',
+        }}
       >
         <Trans k="nav.skip" />
       </a>
@@ -29,8 +33,8 @@ export default async function DashboardLayout({
       <Sidebar systemName={systemName} accountType={accountType} />
 
       <main id="main-content" className="relative flex-1 md:pt-14 pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-0 min-h-dvh">
-        {/* Ultra-subtle aurora presence — static, no animation, pointer-events none */}
-        <div className="aurora-bg-subtle pointer-events-none fixed inset-0 z-0" aria-hidden="true" />
+        {/* Static background — no aurora */}
+        <div className="pointer-events-none fixed inset-0 z-0" style={{ background: 'var(--theme-bg)' }} aria-hidden="true" />
         <DashboardClientProviders>
           <div className="relative z-10 max-w-4xl mx-auto px-4 py-5 md:px-8 md:py-8">
             {children}

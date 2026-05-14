@@ -112,7 +112,8 @@ function BottomSheet({
         role="dialog"
         aria-label="Front actions"
         aria-modal="true"
-        className={`fixed bottom-0 inset-x-0 z-50 rounded-t-2xl bg-surface border-t border-border shadow-2xl
+        style={{ background: 'var(--theme-surface)' }}
+        className={`fixed bottom-0 inset-x-0 z-50 rounded-t-2xl border-t border-border shadow-2xl
           pb-[max(1rem,env(safe-area-inset-bottom))] max-h-[85vh] overflow-y-auto
           transition-transform duration-300 ease-out
           ${isOpen ? 'translate-y-0' : 'translate-y-full'}`}
@@ -137,8 +138,9 @@ function BottomSheet({
                 aria-label={`Remove ${member?.name ?? ''} from front`}
                 disabled={busy}
                 onClick={() => void handleAction('remove')}
-                className="flex w-full items-center gap-4 px-6 min-h-[56px] text-error/90 transition-colors
+                className="flex w-full items-center gap-4 px-6 min-h-[56px] transition-colors
                   hover:bg-surface-alt disabled:opacity-50"
+                style={{ color: 'var(--zz-red)' }}
               >
                 {/* Minus icon */}
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -235,18 +237,17 @@ function MemberCard({
   member: MemberItem;
   onOpenSheet: (member: MemberItem) => void;
 }) {
-  const accent = member.color ?? '#c084fc';
-  // front color = CSS var --theme-front (purple in Night Bloom)
-  const frontColor = 'rgb(var(--theme-front-rgb))';
   const isF = member.isFronting;
-  const borderColor = isF ? 'rgb(var(--theme-front-rgb))' : accent;
+  const borderLeft = isF
+    ? '4px solid var(--theme-primary)'
+    : `3px solid ${member.color ?? 'var(--theme-border)'}`;
 
   return (
     <li role="listitem"
       style={{
         filter: isF
-          ? `drop-shadow(0 0 8px rgb(var(--theme-front-rgb) / 0.55)) drop-shadow(0 4px 16px rgba(0,0,0,0.7))`
-          : `drop-shadow(0 0 3px ${accent}) drop-shadow(0 4px 16px rgba(0,0,0,0.6))`,
+          ? `drop-shadow(0 0 8px rgb(var(--theme-primary-rgb) / 0.45)) drop-shadow(0 4px 16px rgba(0,0,0,0.7))`
+          : `drop-shadow(0 0 3px ${member.color ?? 'var(--theme-border)'}) drop-shadow(0 4px 16px rgba(0,0,0,0.6))`,
         transition: 'filter 200ms ease, transform 200ms ease',
       }}
     >
@@ -262,14 +263,14 @@ function MemberCard({
           <div
             className="relative flex items-center justify-center py-8"
             style={{
-              background: `linear-gradient(180deg, ${accent} 0%, color-mix(in srgb, ${accent} 18%, #100c1e) 100%)`,
+              background: `linear-gradient(180deg, ${member.color ?? '#2E3036'} 0%, color-mix(in srgb, ${member.color ?? '#2E3036'} 18%, #100c1e) 100%)`,
             }}
           >
             {/* Fronting badge */}
             {isF && (
               <span
                 className="absolute top-2 left-2 inline-flex items-center gap-1 rounded px-2 py-0.5 text-[9px] font-black uppercase tracking-widest"
-                style={{ backgroundColor: 'rgb(var(--theme-front-rgb))', color: '#09070f' }}
+                style={{ backgroundColor: 'var(--theme-primary)', color: '#09070f' }}
               >
                 <span className="relative flex h-1.5 w-1.5 shrink-0">
                   <span className="animate-ping absolute h-full w-full rounded-full opacity-75" style={{ backgroundColor: '#09070f' }} />
@@ -289,7 +290,7 @@ function MemberCard({
             ) : (
               <span
                 className="flex w-[76px] h-[76px] items-center justify-center rounded-xl text-3xl font-black shadow-[0_4px_24px_rgba(0,0,0,0.7)]"
-                style={{ backgroundColor: 'var(--theme-surface)', color: accent }}
+                style={{ backgroundColor: member.color ?? '#2E3036', color: 'var(--theme-surface)' }}
                 aria-hidden="true"
               >
                 {member.name[0]?.toUpperCase() ?? '?'}
@@ -298,7 +299,7 @@ function MemberCard({
           </div>
 
           {/* Info area */}
-          <div style={{ background: 'var(--theme-surface)', borderTop: `2px solid ${borderColor}` }}
+          <div style={{ background: 'var(--theme-surface)', borderTop: borderLeft }}
             className="px-3 pt-2.5 pb-2"
           >
             <p className="font-black text-text text-sm leading-tight truncate">{member.name}</p>
@@ -326,16 +327,20 @@ function MemberCard({
           onClick={() => onOpenSheet(member)}
           className="w-full flex items-center justify-center gap-1.5 py-2.5 text-[10px] font-black uppercase tracking-widest transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/60"
           style={{
-            background: `color-mix(in srgb, ${borderColor} 12%, var(--theme-surface))`,
-            borderTop: `1px solid color-mix(in srgb, ${borderColor} 30%, transparent)`,
-            color: borderColor,
+            background: isF
+              ? 'rgb(var(--theme-primary-rgb) / 0.1)'
+              : `color-mix(in srgb, ${member.color ?? 'var(--theme-border)'} 10%, var(--theme-surface))`,
+            borderTop: isF
+              ? '1px solid rgb(var(--theme-primary-rgb) / 0.3)'
+              : `1px solid color-mix(in srgb, ${member.color ?? 'var(--theme-border)'} 25%, transparent)`,
+            color: isF ? 'var(--theme-primary)' : (member.color ?? 'var(--theme-muted)'),
           }}
         >
           {isF ? (
             <>
               <span className="relative flex h-1.5 w-1.5 shrink-0">
-                <span className="animate-ping absolute h-full w-full rounded-full opacity-75" style={{ backgroundColor: frontColor }} />
-                <span className="relative h-1.5 w-1.5 rounded-full" style={{ backgroundColor: frontColor }} />
+                <span className="animate-ping absolute h-full w-full rounded-full bg-primary opacity-75" />
+                <span className="relative h-1.5 w-1.5 rounded-full bg-primary" />
               </span>
               In Front
             </>
@@ -371,23 +376,19 @@ function FrontStatusBar({
 
   return (
     <div
-      className="flex items-center justify-between gap-3 rounded-xl px-4 py-3"
-      style={{
-        background: 'rgb(var(--theme-front-soft-rgb) / 0.18)',
-        border: '1px solid rgb(var(--theme-front-rgb) / 0.35)',
-      }}
+      className="flex items-center justify-between gap-3 border border-primary/30 rounded-xl px-4 py-2.5"
+      style={{ background: 'rgb(var(--theme-primary-rgb) / 0.05)' }}
     >
       <div className="flex items-center gap-2.5 min-w-0">
         <span className="relative inline-flex h-2.5 w-2.5 flex-shrink-0" aria-hidden="true">
-          <span className="absolute inline-flex h-full w-full rounded-full bg-front opacity-50 animate-pulse" />
-          <span className="absolute inline-flex h-full w-full animate-pulse-ring rounded-full bg-front" />
-          <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-front shadow-front-glow" />
+          <span className="absolute inline-flex h-full w-full rounded-full bg-primary opacity-50 animate-pulse" />
+          <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-primary" />
         </span>
-        <span className="text-sm font-bold text-front tracking-wide">
+        <span className="text-sm font-bold text-primary tracking-wide">
           {count === 1 ? '1 IN FRONT' : `${count} IN FRONT`}
         </span>
         <span className="text-subtle text-xs" aria-hidden="true">·</span>
-        <span className="text-front/60 text-xs truncate">
+        <span className="text-muted text-xs truncate">
           {formatTimeSince(front.startedAt)}
         </span>
       </div>
@@ -396,8 +397,7 @@ function FrontStatusBar({
         aria-label="End current front session"
         onClick={endFront}
         disabled={ending}
-        className="flex-shrink-0 rounded-lg border border-front/30 px-3 py-1 text-xs font-semibold text-front/80
-          transition-colors hover:border-front/60 hover:text-front disabled:opacity-50"
+        className="btn-ghost flex-shrink-0 text-xs px-3 py-1 min-h-[32px] disabled:opacity-50"
       >
         {ending ? 'Ending…' : 'End front'}
       </button>
@@ -524,7 +524,7 @@ export default function MembersClient({
           {[1, 2, 3, 4, 5, 6].map((i) => (
             <div
               key={i}
-              className="rounded-xl overflow-hidden border border-border/40"
+              className="card overflow-hidden"
             >
               <div className="h-[108px] animate-pulse bg-surface-alt/60" />
               <div className="bg-surface p-3 space-y-2">
@@ -544,7 +544,12 @@ export default function MembersClient({
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="page-title">Members</h1>
+            <h1
+              className="text-3xl font-black text-text"
+              style={{ fontFamily: 'var(--font-display)', textTransform: 'uppercase', letterSpacing: '0.08em' }}
+            >
+              Members
+            </h1>
             <p className="text-muted text-xs font-bold uppercase tracking-widest mt-1">{subtitle}</p>
           </div>
           <Link href="/members/new" className="btn-primary gap-1.5">
@@ -600,10 +605,7 @@ export default function MembersClient({
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search members..."
             aria-label="Search members by name, pronouns, role, or tags"
-            className="w-full bg-surface border border-border rounded-xl pl-10 pr-10 py-2.5
-              text-text placeholder:text-subtle text-sm
-              focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/30
-              transition-all duration-150"
+            className="input pl-10 pr-10"
           />
           {isFiltering && (
             <button
@@ -626,7 +628,7 @@ export default function MembersClient({
                 className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 shadow-glow mb-4"
                 aria-hidden="true"
               >
-                <span className="text-3xl">💜</span>
+                <span className="text-3xl">+</span>
               </div>
               <p className="text-text font-semibold">No members yet</p>
               <p className="text-muted text-sm mt-2 mb-6">
@@ -642,7 +644,7 @@ export default function MembersClient({
             <p className="text-muted text-sm">
               No members found for{' '}
               <span className="text-text font-medium">&quot;{query.trim()}&quot;</span>
-              {' '}— try a different name 💜
+              {' '}— try a different name
             </p>
           </div>
         ) : (

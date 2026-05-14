@@ -14,7 +14,6 @@ import {
   type SolaraThemeId,
 } from '@/lib/theme';
 import { localizePathname, stripLanguageFromPathname } from '@/lib/i18n';
-import { SCANLINE_BG } from '@/lib/styles';
 
 type IconProps = { size?: number };
 
@@ -122,9 +121,6 @@ const navItems = [
   { href: '/settings', labelKey: 'nav.settings', Icon: IconSettings, systemOnly: false },
 ] as const;
 
-const SIDEBAR_SYMBOLS = ['☀️', '🌙', '⭐', '🌸', '💜', '✨', '🪷', '🌿', '🫧', '🧭'] as const;
-const SIDEBAR_SYMBOL_STORAGE = 'solara.sidebar.symbol';
-
 interface SidebarProps {
   systemName?: string;
   accountType?: 'system' | 'singlet';
@@ -135,21 +131,11 @@ export function Sidebar({ systemName, accountType = 'system' }: SidebarProps) {
   const activePathname = stripLanguageFromPathname(pathname);
   const { language, t } = useLanguage();
   const [menuOpen, setMenuOpen] = useState(false);
-  const [sidebarSymbol, setSidebarSymbol] = useState<string>('☀️');
   const [selectedTheme, setSelectedTheme] = useState<SolaraThemeId>(DEFAULT_SOLARA_THEME);
   const brandMenuRef = useRef<HTMLDivElement | null>(null);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
 
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem(SIDEBAR_SYMBOL_STORAGE);
-      if (stored && SIDEBAR_SYMBOLS.includes(stored as (typeof SIDEBAR_SYMBOLS)[number])) {
-        setSidebarSymbol(stored);
-      }
-    } catch {
-      // Local storage is optional.
-    }
-
     const theme = readStoredSolaraTheme();
     setSelectedTheme(theme);
     applySolaraTheme(theme);
@@ -178,22 +164,12 @@ export function Sidebar({ systemName, accountType = 'system' }: SidebarProps) {
     };
   }, [menuOpen]);
 
-  function setSymbol(symbol: string) {
-    setSidebarSymbol(symbol);
-    try {
-      localStorage.setItem(SIDEBAR_SYMBOL_STORAGE, symbol);
-    } catch {
-      // Local storage is optional.
-    }
-  }
-
   function setTheme(themeId: SolaraThemeId) {
     setSelectedTheme(themeId);
     applySolaraTheme(themeId);
     persistSolaraTheme(themeId);
   }
 
-  // Settings is pulled out of the center nav into the right action area.
   const centerNavItems = navItems.filter(
     (item) => item.href !== '/settings' && (accountType === 'system' || !item.systemOnly),
   );
@@ -204,12 +180,10 @@ export function Sidebar({ systemName, accountType = 'system' }: SidebarProps) {
 
   return (
     <header
-      className="hidden md:flex fixed top-0 left-0 right-0 z-20 h-14 items-center border-b-2 border-border-strong"
+      className="hidden md:flex fixed top-0 left-0 right-0 z-20 h-14 items-center"
       style={{
-        background: 'var(--theme-surface)',
-        backgroundImage: SCANLINE_BG,
-        boxShadow:
-          '0 2px 0 rgb(var(--theme-primary-rgb) / 0.25), inset 0 -1px 0 rgb(var(--theme-border-strong-rgb))',
+        background: '#131416',
+        borderBottom: '1px solid #2E3036',
       }}
     >
       {/* LEFT: brand button + dropdown */}
@@ -220,16 +194,56 @@ export function Sidebar({ systemName, accountType = 'system' }: SidebarProps) {
           onClick={() => setMenuOpen((prev) => !prev)}
           aria-expanded={menuOpen}
           aria-haspopup="menu"
-          className="flex h-14 items-center gap-2.5 px-4 transition-colors duration-150 hover:bg-surface-alt focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/60"
+          className="flex h-14 items-center gap-3 px-5 transition-colors duration-150 hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset"
         >
-          <span className="text-lg drop-shadow-[0_0_10px_rgba(244,114,182,0.5)]">{sidebarSymbol}</span>
+          {/* ZZZ-style icon mark */}
+          <span
+            className="flex h-7 w-7 items-center justify-center flex-shrink-0"
+            style={{
+              background: 'var(--theme-primary)',
+              borderRadius: '6px',
+            }}
+            aria-hidden="true"
+          >
+            <span
+              style={{
+                color: '#131416',
+                fontFamily: 'var(--font-display), var(--font-nunito), sans-serif',
+                fontWeight: 900,
+                fontSize: '0.8rem',
+                letterSpacing: '-0.03em',
+                lineHeight: 1,
+              }}
+            >
+              S
+            </span>
+          </span>
           <div className="min-w-0">
-            <p className="text-lg font-black tracking-tight leading-none text-text">
-              <span className="text-primary text-xs font-black mr-1">{'// '}</span>
-              SOLARA<span className="text-primary">.</span>
+            <p
+              style={{
+                color: '#F5F5F5',
+                fontFamily: 'var(--font-display), var(--font-nunito), sans-serif',
+                fontWeight: 700,
+                fontSize: '0.875rem',
+                letterSpacing: '0.08em',
+                textTransform: 'uppercase',
+                lineHeight: 1,
+              }}
+            >
+              SOLARA
             </p>
             {systemName && (
-              <p className="max-w-[120px] truncate text-[9px] font-black uppercase tracking-[0.2em] text-muted mt-0.5">
+              <p
+                className="max-w-[120px] truncate mt-0.5"
+                style={{
+                  color: '#8A8D96',
+                  fontFamily: 'var(--font-display), var(--font-nunito), sans-serif',
+                  fontSize: '0.625rem',
+                  fontWeight: 700,
+                  letterSpacing: '0.15em',
+                  textTransform: 'uppercase',
+                }}
+              >
                 {systemName}
               </p>
             )}
@@ -240,60 +254,71 @@ export function Sidebar({ systemName, accountType = 'system' }: SidebarProps) {
           <div
             role="menu"
             aria-label={t('nav.systemMenu')}
-            className="absolute left-0 top-full mt-1 z-30 w-64 space-y-4 border-2 border-border-strong bg-surface p-3 shadow-card-float animate-slide-up"
+            className="absolute left-0 top-full mt-1 z-30 w-56 animate-slide-up"
             style={{
-              backgroundImage: SCANLINE_BG,
-              clipPath: 'polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 0 100%)',
+              background: '#1C1E22',
+              border: '1px solid #2E3036',
+              borderRadius: '14px',
+              padding: '0.75rem',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
             }}
           >
-            {/* Corner ornament */}
-            <span className="pointer-events-none absolute top-0 right-0 block w-3 h-3 border-t-2 border-r-2 border-primary" aria-hidden="true" />
-
-            <div>
-              <p className="mb-2 text-[10px] font-black uppercase tracking-widest text-muted">{t('nav.sidebarSymbol')}</p>
-              <div className="flex flex-wrap gap-2">
-                {SIDEBAR_SYMBOLS.map((symbol) => (
-                  <button
-                    key={symbol}
-                    type="button"
-                    onClick={() => setSymbol(symbol)}
-                    className={`h-9 w-9 border text-lg transition-all duration-150 rounded-none ${
-                      sidebarSymbol === symbol
-                        ? 'scale-110 border-primary bg-primary/20'
-                        : 'border-border bg-surface-alt hover:bg-surface-alt hover:border-border-strong'
-                    }`}
-                    aria-label={`Use ${symbol} as sidebar symbol`}
-                    aria-pressed={sidebarSymbol === symbol}
-                  >
-                    {symbol}
-                  </button>
-                ))}
-              </div>
+            {/* Theme label */}
+            <p
+              className="mb-2 px-1"
+              style={{
+                color: '#5C606A',
+                fontFamily: 'var(--font-display), var(--font-nunito), sans-serif',
+                fontSize: '0.625rem',
+                fontWeight: 700,
+                letterSpacing: '0.15em',
+                textTransform: 'uppercase',
+              }}
+            >
+              {t('nav.themePreset')}
+            </p>
+            <div className="flex gap-2">
+              {SOLARA_THEMES.map((theme) => (
+                <button
+                  key={theme.id}
+                  type="button"
+                  onClick={() => setTheme(theme.id)}
+                  aria-pressed={selectedTheme === theme.id}
+                  style={{
+                    background: selectedTheme === theme.id ? 'var(--theme-primary)' : '#22252A',
+                    color: selectedTheme === theme.id ? '#131416' : '#8A8D96',
+                    borderRadius: '10px',
+                    border: `2px solid ${selectedTheme === theme.id ? 'var(--theme-primary)' : '#2E3036'}`,
+                    padding: '8px 16px',
+                    fontFamily: 'var(--font-display), var(--font-nunito), sans-serif',
+                    fontWeight: 700,
+                    letterSpacing: '0.1em',
+                    textTransform: 'uppercase',
+                    fontSize: '0.75rem',
+                    flex: 1,
+                    cursor: 'pointer',
+                    transition: 'all 150ms ease',
+                  }}
+                >
+                  {theme.label}
+                </button>
+              ))}
             </div>
 
-            <div>
-              <p className="mb-2 px-1 text-[10px] font-black uppercase tracking-widest text-muted">{t('nav.themePreset')}</p>
-              <div className="space-y-1">
-                {SOLARA_THEMES.map((theme) => (
-                  <button
-                    key={theme.id}
-                    type="button"
-                    onClick={() => setTheme(theme.id)}
-                    className={`w-full border px-2 py-1.5 text-left transition-colors rounded-none ${
-                      selectedTheme === theme.id
-                        ? 'border-primary bg-primary text-bg'
-                        : 'border-border bg-surface-alt text-muted hover:border-border-strong hover:text-text'
-                    }`}
-                    aria-pressed={selectedTheme === theme.id}
-                  >
-                    <span className="block text-xs font-black">{theme.label}</span>
-                    <span className="block text-[10px] opacity-70">{theme.description}</span>
-                  </button>
-                ))}
-              </div>
+            <div style={{ borderTop: '1px solid #2E3036', margin: '0.75rem -0.75rem 0', padding: '0.5rem 0.75rem 0' }}>
               <Link
                 href={`${localizePathname('/settings', language)}#appearance`}
-                className="mt-2 block px-2 py-1.5 text-[10px] font-bold uppercase tracking-wide text-muted transition-colors hover:bg-surface-alt hover:text-text"
+                style={{
+                  display: 'block',
+                  color: '#5C606A',
+                  fontFamily: 'var(--font-display), var(--font-nunito), sans-serif',
+                  fontSize: '0.625rem',
+                  fontWeight: 700,
+                  letterSpacing: '0.12em',
+                  textTransform: 'uppercase',
+                  padding: '0.35rem 0.25rem',
+                  transition: 'color 150ms ease',
+                }}
                 onClick={() => setMenuOpen(false)}
               >
                 {t('nav.appearanceSettings')}
@@ -304,10 +329,10 @@ export function Sidebar({ systemName, accountType = 'system' }: SidebarProps) {
       </div>
 
       {/* Divider */}
-      <div className="mx-3 h-6 w-px flex-shrink-0 bg-border-strong" aria-hidden="true" />
+      <div className="mx-3 h-5 w-px flex-shrink-0" style={{ background: '#2E3036' }} aria-hidden="true" />
 
       {/* CENTER: nav items */}
-      <nav className="flex flex-1 items-center gap-1 overflow-x-auto" aria-label={t('nav.primary')}>
+      <nav className="flex flex-1 items-center gap-0.5 overflow-x-auto" aria-label={t('nav.primary')}>
         {centerNavItems.map((item) => {
           const isActive =
             item.href === '/'
@@ -320,32 +345,34 @@ export function Sidebar({ systemName, accountType = 'system' }: SidebarProps) {
               href={localizePathname(item.href, language)}
               prefetch={true}
               aria-current={isActive ? 'page' : undefined}
-              className={`relative flex flex-shrink-0 items-center gap-1.5 px-3 py-1.5 text-[11px] font-black uppercase tracking-widest transition-all duration-150
-                focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 ${
-                isActive
-                  ? 'bg-primary text-bg shadow-glow'
-                  : 'text-muted hover:text-text'
-              }`}
-              style={isActive ? {
-                clipPath: 'polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%)',
-              } : undefined}
+              className="relative flex flex-shrink-0 items-center gap-1.5 px-3 h-9 transition-all duration-150 focus-visible:outline-none focus-visible:ring-2"
+              style={{
+                background: isActive ? 'var(--theme-primary)' : 'transparent',
+                color: isActive ? '#131416' : '#8A8D96',
+                borderRadius: '8px',
+                fontSize: '0.625rem',
+                fontFamily: 'var(--font-display), var(--font-nunito), sans-serif',
+                fontWeight: 700,
+                letterSpacing: '0.12em',
+                textTransform: 'uppercase',
+              }}
+              onMouseEnter={(e) => {
+                if (!isActive) (e.currentTarget as HTMLElement).style.color = '#F5F5F5';
+              }}
+              onMouseLeave={(e) => {
+                if (!isActive) (e.currentTarget as HTMLElement).style.color = '#8A8D96';
+              }}
             >
               <span className="flex-shrink-0">
                 <item.Icon size={15} />
               </span>
               {t(item.labelKey)}
-              {isActive && (
-                <span
-                  className="absolute -bottom-[9px] left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-primary shadow-glow"
-                  aria-hidden="true"
-                />
-              )}
             </Link>
           );
         })}
       </nav>
 
-      {/* RIGHT: Settings (only when visible for this accountType) + Logout */}
+      {/* RIGHT: Settings + Logout */}
       <div className="flex flex-shrink-0 items-center gap-1 px-3">
         {settingsItem && (
           <Link
@@ -353,15 +380,18 @@ export function Sidebar({ systemName, accountType = 'system' }: SidebarProps) {
             prefetch={true}
             aria-current={isSettingsActive ? 'page' : undefined}
             aria-label={t(settingsItem.labelKey)}
-            className={`flex h-9 w-9 items-center justify-center transition-all duration-150
-              focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 ${
-              isSettingsActive
-                ? 'bg-primary text-bg shadow-glow'
-                : 'text-muted hover:text-text hover:bg-surface-alt'
-            }`}
-            style={isSettingsActive ? {
-              clipPath: 'polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%)',
-            } : undefined}
+            className="flex h-9 w-9 items-center justify-center transition-all duration-150 focus-visible:outline-none focus-visible:ring-2"
+            style={{
+              background: isSettingsActive ? 'var(--theme-primary)' : 'transparent',
+              color: isSettingsActive ? '#131416' : '#8A8D96',
+              borderRadius: '8px',
+            }}
+            onMouseEnter={(e) => {
+              if (!isSettingsActive) (e.currentTarget as HTMLElement).style.color = '#F5F5F5';
+            }}
+            onMouseLeave={(e) => {
+              if (!isSettingsActive) (e.currentTarget as HTMLElement).style.color = '#8A8D96';
+            }}
           >
             <IconSettings size={17} />
           </Link>
@@ -371,7 +401,10 @@ export function Sidebar({ systemName, accountType = 'system' }: SidebarProps) {
           type="button"
           onClick={() => signOut({ callbackUrl: localizePathname('/login', language) })}
           aria-label={t('nav.signOut')}
-          className="flex h-9 w-9 items-center justify-center text-error/60 transition-all duration-150 hover:bg-error/10 hover:text-error focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-error/60"
+          className="flex h-9 w-9 items-center justify-center transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff5a6a]/60"
+          style={{ color: 'rgba(255,90,106,0.6)', borderRadius: '8px' }}
+          onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = '#ff5a6a'; (e.currentTarget as HTMLElement).style.background = 'rgba(255,90,106,0.08)'; }}
+          onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = 'rgba(255,90,106,0.6)'; (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
         >
           <IconLogout size={17} />
         </button>
