@@ -18,6 +18,7 @@ export default async function NotePage({ params }: { params: { id: string } }) {
       id: true,
       title: true,
       content: true,
+      category: true,
       isPrivate: true,
       updatedAt: true,
     },
@@ -25,5 +26,5 @@ export default async function NotePage({ params }: { params: { id: string } }) {
   });
 
   if (!note) notFound();
-  return <NoteEditor note={{ ...note, isPrivate: note.isPrivate === 1 }} />;
+  return <NoteEditor note={{ ...note, isPrivate: note.isPrivate === 1, category: note.category ?? null }} />;
 }

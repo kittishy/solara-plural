@@ -1,6 +1,6 @@
 import { db } from '@/lib/db';
 import { customFields, frontEntries, memberFieldValues, members } from '@/lib/db/schema';
-import { eq, and, asc, desc, like } from 'drizzle-orm';
+import { eq, and, asc, desc, like, isNull } from 'drizzle-orm';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import DynamicAvatarImage from '@/components/ui/DynamicAvatarImage';
@@ -40,7 +40,7 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
   const systemId = await requireSystemId();
   const { id } = await params;
 
-  const [member, frontHistory, profileFields, customValueRows] = await Promise.all([
+  const [member, frontHistory, isFrontingEntry, profileFields, customValueRows] = await Promise.all([
     db.query.members.findFirst({
       columns: {
         id: true,
@@ -70,7 +70,15 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
         like(frontEntries.memberIds, `%"${id}"%`)
       ),
       orderBy: [desc(frontEntries.startedAt)],
-      limit: 10,
+      limit: 20,
+    }),
+    db.query.frontEntries.findFirst({
+      columns: { id: true },
+      where: and(
+        eq(frontEntries.systemId, systemId),
+        isNull(frontEntries.endedAt),
+        like(frontEntries.memberIds, `%"${id}"%`)
+      ),
     }),
     db.query.customFields.findMany({
       where: eq(customFields.systemId, systemId),
@@ -92,7 +100,21 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
 
   const tags = member.tags ? JSON.parse(member.tags) as string[] : [];
   const accentColor = member.color ?? '#a78bfa';
+  const isFronting = Boolean(isFrontingEntry);
   const valuesByFieldId = new Map(customValueRows.map((row) => [row.fieldId, row.value]));
+
+  const completedSessions = frontHistory.filter((e) => e.endedAt);
+  const frontTotalMs = completedSessions.reduce((sum, e) => {
+    const ms = new Date(e.endedAt!).getTime() - new Date(e.startedAt).getTime();
+    return sum + Math.max(0, ms);
+  }, 0);
+  const frontTotalMins = Math.floor(frontTotalMs / 60000);
+  const frontTotalLabel = frontTotalMins < 60
+    ? `${frontTotalMins}m`
+    : frontTotalMins % 60 === 0
+      ? `${Math.floor(frontTotalMins / 60)}h`
+      : `${Math.floor(frontTotalMins / 60)}h ${frontTotalMins % 60}m`;
+
   const customDetails = profileFields
     .map((field) => {
       const value = valuesByFieldId.get(field.id);
@@ -119,31 +141,72 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
       </Link>
 
       {/* Profile header */}
-      <div
-        className="rounded-xl overflow-hidden border border-border/40 bg-surface"
-        style={{ borderLeft: `4px solid ${accentColor}` }}
-      >
-        <div className="flex items-center gap-4 px-5 py-5">
-          {/* Avatar */}
+      <div className="rounded-xl overflow-hidden border border-border/40">
+        {/* Banner */}
+        <div
+          className="relative flex flex-col items-center pt-8 pb-6 px-5"
+          style={{
+            background: `linear-gradient(160deg, ${accentColor} 0%, color-mix(in srgb, ${accentColor} 20%, #09070f) 100%)`,
+          }}
+        >
+          {/* Edit button overlay */}
+          <Link
+            href={`/members/${member.id}/edit`}
+            className="absolute top-3 right-3 inline-flex items-center gap-1.5 min-h-[36px] rounded-lg
+              border border-white/20 bg-black/30 backdrop-blur-sm px-3 py-1.5 text-xs font-medium text-white/90
+              transition-colors hover:bg-black/50 hover:border-white/40"
+            aria-label={`Edit ${member.name}`}
+          >
+            <IconEdit />
+            Edit
+          </Link>
+
+          {/* Polaroid avatar */}
           <div
-            className="w-20 h-20 rounded-xl flex-shrink-0 overflow-hidden flex items-center justify-center
-              text-3xl font-bold text-bg shadow-sm"
-            style={!member.avatarUrl ? { backgroundColor: accentColor } : undefined}
+            className="rounded-xl shadow-[0_8px_32px_rgba(0,0,0,0.5)] flex-shrink-0 overflow-hidden"
+            style={{
+              padding: '6px 6px 18px 6px',
+              backgroundColor: 'rgba(255,255,255,0.96)',
+              width: 132,
+              height: 156,
+            }}
             aria-hidden="true"
           >
-            {member.avatarUrl ? (
-              <DynamicAvatarImage
-                src={member.avatarUrl}
-                alt=""
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              member.name[0].toUpperCase()
-            )}
+            <div
+              className="w-full rounded-lg overflow-hidden flex items-center justify-center text-4xl font-bold"
+              style={{
+                height: 120,
+                backgroundColor: !member.avatarUrl ? accentColor : undefined,
+                color: '#09070f',
+              }}
+            >
+              {member.avatarUrl ? (
+                <DynamicAvatarImage
+                  src={member.avatarUrl}
+                  alt=""
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                member.name[0].toUpperCase()
+              )}
+            </div>
           </div>
 
-          {/* Info */}
-          <div className="flex-1 min-w-0">
+          {/* Fronting badge */}
+          {isFronting && (
+            <div className="mt-3 flex items-center gap-1.5 bg-black/30 backdrop-blur-sm rounded-full px-3 py-1 border border-white/20">
+              <span className="relative flex h-2 w-2 flex-shrink-0" aria-hidden="true">
+                <span className="absolute inline-flex h-full w-full rounded-full bg-front opacity-60 animate-pulse" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-front" />
+              </span>
+              <span className="text-xs font-semibold text-front">Currently fronting</span>
+            </div>
+          )}
+        </div>
+
+        {/* Name / pronouns / role / tags — below the banner on surface */}
+        <div className="bg-surface px-5 py-4 space-y-2">
+          <div>
             <h1 className="text-xl font-bold text-text leading-snug">{member.name}</h1>
             {member.pronouns && (
               <p className="text-muted text-sm mt-0.5">{member.pronouns}</p>
@@ -155,31 +218,19 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
             )}
           </div>
 
-          {/* Edit */}
-          <Link
-            href={`/members/${member.id}/edit`}
-            className="flex-shrink-0 inline-flex items-center gap-1.5 min-h-[40px] rounded-lg
-              border border-border/60 bg-surface-alt px-4 py-2 text-sm font-medium text-muted
-              transition-colors hover:border-primary/40 hover:text-text"
-          >
-            <IconEdit />
-            Edit
-          </Link>
+          {tags.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 pt-1">
+              {tags.map((tag) => (
+                <span
+                  key={tag}
+                  className="text-xs bg-surface-alt text-muted px-2.5 py-1 rounded-full border border-border/40"
+                >
+                  {tag}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
-
-        {/* Tags */}
-        {tags.length > 0 && (
-          <div className="flex flex-wrap gap-1.5 px-5 py-3 border-t border-border/40 bg-surface-alt/30">
-            {tags.map((tag) => (
-              <span
-                key={tag}
-                className="text-xs bg-surface-alt text-muted px-2.5 py-1 rounded-full border border-border/40"
-              >
-                {tag}
-              </span>
-            ))}
-          </div>
-        )}
       </div>
 
       {/* About */}
@@ -220,10 +271,22 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
       <div>
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-base font-semibold text-text">Front history</h2>
-          {frontHistory.length === 10 && (
-            <span className="text-subtle text-xs">Last 10 sessions</span>
+          {frontHistory.length === 20 && (
+            <span className="text-subtle text-xs">Last 20 sessions</span>
           )}
         </div>
+
+        {/* Front stats row */}
+        {completedSessions.length > 0 && (
+          <div
+            className="flex items-center gap-1.5 text-xs font-medium mb-3 px-3 py-2 rounded-lg bg-surface-alt/50 border border-border/30 w-fit"
+            style={{ color: accentColor }}
+          >
+            <span>{completedSessions.length} {completedSessions.length === 1 ? 'session' : 'sessions'}</span>
+            <span className="text-border">·</span>
+            <span>{frontTotalLabel} total</span>
+          </div>
+        )}
 
         {frontHistory.length === 0 ? (
           <div className="rounded-xl border border-border/40 bg-surface px-5 py-8 text-center">

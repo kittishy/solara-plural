@@ -13,7 +13,25 @@ type NoteListItem = {
   id: string;
   title: string | null;
   content: string;
+  category: string | null;
   updatedAt: Date | string;
+};
+
+type FilterValue = 'all' | 'note' | 'memory' | 'reminder' | 'important';
+
+const FILTER_TABS: { value: FilterValue; label: string }[] = [
+  { value: 'all', label: 'All' },
+  { value: 'note', label: '📝 Note' },
+  { value: 'memory', label: '🌸 Memory' },
+  { value: 'reminder', label: '⏰ Reminder' },
+  { value: 'important', label: '⚡ Important' },
+];
+
+const CATEGORY_COLORS: Record<string, string> = {
+  note: 'bg-primary',
+  memory: 'bg-front',
+  reminder: 'bg-warning',
+  important: 'bg-error',
 };
 
 function IconEdit() {
@@ -38,17 +56,22 @@ function IconChevronRight() {
 
 export default function NotesClient({ initialNotes }: { initialNotes: NoteListItem[] }) {
   const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE_NOTES);
+  const [activeFilter, setActiveFilter] = useState<FilterValue>('all');
   const { data: notes = initialNotes } = useSWR<NoteListItem[]>(
     swrKeys.notes,
     apiFetcher,
     { fallbackData: initialNotes, revalidateOnMount: false }
   );
-  const visibleNotes = notes.slice(0, visibleCount);
-  const hasMoreNotes = visibleCount < notes.length;
+
+  const filteredNotes = activeFilter === 'all'
+    ? notes
+    : notes.filter((n) => n.category === activeFilter);
+
+  const visibleNotes = filteredNotes.slice(0, visibleCount);
+  const hasMoreNotes = visibleCount < filteredNotes.length;
 
   return (
     <div className="animate-fade-in space-y-5">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="page-title">Notes</h1>
@@ -61,6 +84,25 @@ export default function NotesClient({ initialNotes }: { initialNotes: NoteListIt
           New note
         </Link>
       </div>
+
+      {notes.length > 0 && (
+        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+          {FILTER_TABS.map(({ value, label }) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => { setActiveFilter(value); setVisibleCount(INITIAL_VISIBLE_NOTES); }}
+              className={`shrink-0 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
+                activeFilter === value
+                  ? 'bg-primary/15 text-primary border-primary/40'
+                  : 'border-border/60 text-muted hover:text-text'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
 
       {notes.length === 0 ? (
         <div className="card p-12 text-center animate-fade-in">
@@ -81,6 +123,11 @@ export default function NotesClient({ initialNotes }: { initialNotes: NoteListIt
             </Link>
           </div>
         </div>
+      ) : filteredNotes.length === 0 ? (
+        <div className="card p-10 text-center animate-fade-in">
+          <p className="text-text font-semibold">No {activeFilter} notes yet</p>
+          <p className="text-muted text-sm mt-1">Notes tagged as {activeFilter} will show up here.</p>
+        </div>
       ) : (
         <div className="space-y-4">
           <ul role="list" className="space-y-2">
@@ -95,14 +142,21 @@ export default function NotesClient({ initialNotes }: { initialNotes: NoteListIt
                     background: 'linear-gradient(160deg, rgb(var(--theme-surface-alt-rgb) / 0.4) 0%, var(--theme-surface) 60%)',
                   }}
                 >
-                  {/* Accent bar */}
                   <div className="w-1 shrink-0 bg-primary/60 group-hover:bg-primary transition-colors" />
-                  {/* Content */}
                   <div className="flex flex-1 items-center gap-3 px-4 py-3.5 min-w-0">
                     <div className="flex-1 min-w-0">
-                      <p className="font-black text-text text-sm leading-snug truncate">
-                        {note.title ?? 'Untitled note'}
-                      </p>
+                      <div className="flex items-center gap-2 min-w-0">
+                        {note.category && (
+                          <span
+                            className={`inline-block h-2 w-2 shrink-0 rounded-full ${CATEGORY_COLORS[note.category] ?? 'bg-muted'}`}
+                            title={note.category}
+                            aria-label={note.category}
+                          />
+                        )}
+                        <p className="font-black text-text text-sm leading-snug truncate">
+                          {note.title ?? 'Untitled note'}
+                        </p>
+                      </div>
                       {note.content && (
                         <p className="text-muted text-xs mt-0.5 line-clamp-1 leading-snug">
                           {note.content}
@@ -129,7 +183,7 @@ export default function NotesClient({ initialNotes }: { initialNotes: NoteListIt
               onClick={() => setVisibleCount((c) => c + VISIBLE_NOTES_INCREMENT)}
               className="btn-ghost min-h-[48px] w-full justify-center border border-border/60"
             >
-              Show more notes ({notes.length - visibleNotes.length} remaining)
+              Show more notes ({filteredNotes.length - visibleNotes.length} remaining)
             </button>
           )}
         </div>
