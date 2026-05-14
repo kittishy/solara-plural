@@ -236,7 +236,6 @@ function MemberCard({
   onOpenSheet: (member: MemberItem) => void;
 }) {
   const accent = member.color ?? '#c084fc';
-  // front color = CSS var --theme-front (purple in Night Bloom)
   const frontColor = 'rgb(var(--theme-front-rgb))';
   const isF = member.isFronting;
   const borderColor = isF ? 'rgb(var(--theme-front-rgb))' : accent;
@@ -244,77 +243,78 @@ function MemberCard({
   return (
     <li role="listitem"
       style={{
+        aspectRatio: '3/5',
         filter: isF
-          ? `drop-shadow(0 0 8px rgb(var(--theme-front-rgb) / 0.55)) drop-shadow(0 4px 16px rgba(0,0,0,0.7))`
-          : `drop-shadow(0 0 3px ${accent}) drop-shadow(0 4px 16px rgba(0,0,0,0.6))`,
+          ? `drop-shadow(0 0 10px rgb(var(--theme-front-rgb) / 0.6)) drop-shadow(0 6px 20px rgba(0,0,0,0.8))`
+          : `drop-shadow(0 0 4px ${accent}55) drop-shadow(0 6px 20px rgba(0,0,0,0.7))`,
         transition: 'filter 200ms ease, transform 200ms ease',
       }}
     >
       <div
-        className="card-cut overflow-hidden transition-transform duration-200 hover:-translate-y-0.5 active:scale-[0.97]"
+        className="card-cut overflow-hidden h-full flex flex-col transition-transform duration-200 hover:-translate-y-1 active:scale-[0.97]"
+        style={{ background: 'var(--theme-surface)' }}
       >
-        {/* Portrait zone */}
+        {/* Polaroid photo + caption */}
         <Link
           href={`/members/${member.id}`}
-          className="block focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/60"
+          className="flex-1 min-h-0 flex flex-col focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/60"
           aria-label={`View ${member.name}'s profile`}
         >
-          <div
-            className="relative flex items-center justify-center py-8"
-            style={{
-              background: `linear-gradient(180deg, ${accent} 0%, color-mix(in srgb, ${accent} 18%, #100c1e) 100%)`,
-            }}
-          >
-            {/* Fronting badge */}
-            {isF && (
-              <span
-                className="absolute top-2 left-2 inline-flex items-center gap-1 rounded px-2 py-0.5 text-[9px] font-black uppercase tracking-widest"
-                style={{ backgroundColor: 'rgb(var(--theme-front-rgb))', color: '#09070f' }}
-              >
-                <span className="relative flex h-1.5 w-1.5 shrink-0">
-                  <span className="animate-ping absolute h-full w-full rounded-full opacity-75" style={{ backgroundColor: '#09070f' }} />
-                  <span className="relative h-1.5 w-1.5 rounded-full" style={{ backgroundColor: '#09070f' }} />
+          {/* Photo — fills remaining space, inset creates the polaroid frame */}
+          <div className="flex-1 min-h-0 relative">
+            <div className="absolute inset-x-1.5 top-1.5 bottom-0 overflow-hidden">
+              {/* Fronting badge */}
+              {isF && (
+                <span
+                  className="absolute top-2 left-2 z-10 inline-flex items-center gap-1 rounded px-2 py-0.5 text-[9px] font-black uppercase tracking-widest"
+                  style={{ backgroundColor: 'rgb(var(--theme-front-rgb))', color: '#09070f' }}
+                >
+                  <span className="relative flex h-1.5 w-1.5 shrink-0">
+                    <span className="animate-ping absolute h-full w-full rounded-full opacity-75" style={{ backgroundColor: '#09070f' }} />
+                    <span className="relative h-1.5 w-1.5 rounded-full" style={{ backgroundColor: '#09070f' }} />
+                  </span>
+                  Front
                 </span>
-                Front
-              </span>
-            )}
+              )}
 
-            {/* Avatar */}
-            {member.avatarUrl ? (
-              <DynamicAvatarImage
-                src={member.avatarUrl}
-                alt={member.name}
-                className="w-[76px] h-[76px] rounded-xl object-cover shadow-[0_4px_24px_rgba(0,0,0,0.7)]"
-              />
-            ) : (
-              <span
-                className="flex w-[76px] h-[76px] items-center justify-center rounded-xl text-3xl font-black shadow-[0_4px_24px_rgba(0,0,0,0.7)]"
-                style={{ backgroundColor: 'var(--theme-surface)', color: accent }}
-                aria-hidden="true"
-              >
-                {member.name[0]?.toUpperCase() ?? '?'}
-              </span>
-            )}
+              {member.avatarUrl ? (
+                <DynamicAvatarImage
+                  src={member.avatarUrl}
+                  alt={member.name}
+                  className="absolute inset-0 w-full h-full object-cover"
+                />
+              ) : (
+                <div
+                  className="absolute inset-0 flex items-center justify-center text-5xl font-black"
+                  style={{
+                    background: `linear-gradient(160deg, ${accent} 0%, color-mix(in srgb, ${accent} 25%, #100c1e) 100%)`,
+                    color: 'rgba(255,255,255,0.9)',
+                  }}
+                  aria-hidden="true"
+                >
+                  {member.name[0]?.toUpperCase() ?? '?'}
+                </div>
+              )}
+            </div>
           </div>
 
-          {/* Info area */}
-          <div style={{ background: 'var(--theme-surface)', borderTop: `2px solid ${borderColor}` }}
-            className="px-3 pt-2.5 pb-2"
+          {/* Polaroid caption — fixed height regardless of content */}
+          <div
+            className="flex-none px-3 pt-2 pb-2"
+            style={{ borderTop: `2px solid ${borderColor}`, marginTop: '6px' }}
           >
             <p className="font-black text-text text-sm leading-tight truncate">{member.name}</p>
-            {member.pronouns && (
-              <p className="text-[11px] text-muted truncate mt-0.5">{member.pronouns}</p>
-            )}
-            {member.tags.length > 0 && (
-              <div className="flex flex-wrap gap-1 mt-1.5">
-                {member.tags.slice(0, 2).map((tag) => (
-                  <span key={tag} className="tag">{tag}</span>
-                ))}
-                {member.tags.length > 2 && (
-                  <span className="text-[10px] text-subtle">+{member.tags.length - 2}</span>
-                )}
-              </div>
-            )}
+            <p className="text-[11px] text-muted truncate mt-0.5 min-h-[14px]">
+              {member.pronouns ?? ''}
+            </p>
+            <div className="flex flex-wrap gap-1 mt-1 min-h-[18px]">
+              {member.tags.slice(0, 2).map((tag) => (
+                <span key={tag} className="tag">{tag}</span>
+              ))}
+              {member.tags.length > 2 && (
+                <span className="text-[10px] text-subtle">+{member.tags.length - 2}</span>
+              )}
+            </div>
           </div>
         </Link>
 
@@ -324,7 +324,7 @@ function MemberCard({
           aria-label={`Front actions for ${member.name}`}
           aria-haspopup="dialog"
           onClick={() => onOpenSheet(member)}
-          className="w-full flex items-center justify-center gap-1.5 py-2.5 text-[10px] font-black uppercase tracking-widest transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/60"
+          className="flex-none w-full flex items-center justify-center gap-1.5 py-2.5 text-[10px] font-black uppercase tracking-widest transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/60"
           style={{
             background: `color-mix(in srgb, ${borderColor} 12%, var(--theme-surface))`,
             borderTop: `1px solid color-mix(in srgb, ${borderColor} 30%, transparent)`,

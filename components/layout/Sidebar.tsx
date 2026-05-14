@@ -5,14 +5,6 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { signOut } from 'next-auth/react';
 import { useLanguage } from '@/components/providers/LanguageProvider';
-import {
-  applySolaraTheme,
-  DEFAULT_SOLARA_THEME,
-  persistSolaraTheme,
-  readStoredSolaraTheme,
-  SOLARA_THEMES,
-  type SolaraThemeId,
-} from '@/lib/theme';
 import { localizePathname, stripLanguageFromPathname } from '@/lib/i18n';
 import { SCANLINE_BG } from '@/lib/styles';
 
@@ -136,7 +128,6 @@ export function Sidebar({ systemName, accountType = 'system' }: SidebarProps) {
   const { language, t } = useLanguage();
   const [menuOpen, setMenuOpen] = useState(false);
   const [sidebarSymbol, setSidebarSymbol] = useState<string>('☀️');
-  const [selectedTheme, setSelectedTheme] = useState<SolaraThemeId>(DEFAULT_SOLARA_THEME);
   const brandMenuRef = useRef<HTMLDivElement | null>(null);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
 
@@ -150,9 +141,6 @@ export function Sidebar({ systemName, accountType = 'system' }: SidebarProps) {
       // Local storage is optional.
     }
 
-    const theme = readStoredSolaraTheme();
-    setSelectedTheme(theme);
-    applySolaraTheme(theme);
   }, []);
 
   useEffect(() => {
@@ -185,12 +173,6 @@ export function Sidebar({ systemName, accountType = 'system' }: SidebarProps) {
     } catch {
       // Local storage is optional.
     }
-  }
-
-  function setTheme(themeId: SolaraThemeId) {
-    setSelectedTheme(themeId);
-    applySolaraTheme(themeId);
-    persistSolaraTheme(themeId);
   }
 
   // Settings is pulled out of the center nav into the right action area.
@@ -273,27 +255,9 @@ export function Sidebar({ systemName, accountType = 'system' }: SidebarProps) {
 
             <div>
               <p className="mb-2 px-1 text-[10px] font-black uppercase tracking-widest text-muted">{t('nav.themePreset')}</p>
-              <div className="space-y-1">
-                {SOLARA_THEMES.map((theme) => (
-                  <button
-                    key={theme.id}
-                    type="button"
-                    onClick={() => setTheme(theme.id)}
-                    className={`w-full border px-2 py-1.5 text-left transition-colors rounded-none ${
-                      selectedTheme === theme.id
-                        ? 'border-primary bg-primary text-bg'
-                        : 'border-border bg-surface-alt text-muted hover:border-border-strong hover:text-text'
-                    }`}
-                    aria-pressed={selectedTheme === theme.id}
-                  >
-                    <span className="block text-xs font-black">{theme.label}</span>
-                    <span className="block text-[10px] opacity-70">{theme.description}</span>
-                  </button>
-                ))}
-              </div>
               <Link
                 href={`${localizePathname('/settings', language)}#appearance`}
-                className="mt-2 block px-2 py-1.5 text-[10px] font-bold uppercase tracking-wide text-muted transition-colors hover:bg-surface-alt hover:text-text"
+                className="block px-2 py-1.5 text-[10px] font-bold uppercase tracking-wide text-muted transition-colors hover:bg-surface-alt hover:text-text"
                 onClick={() => setMenuOpen(false)}
               >
                 {t('nav.appearanceSettings')}
