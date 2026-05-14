@@ -20,6 +20,7 @@ import {
   type FriendMemberFieldVisibility,
   type FriendMemberVisibility,
 } from '@/lib/friends';
+import { createNotification } from '@/lib/notifications/create-notification';
 
 export async function GET() {
   const auth = await requireAuth();
@@ -284,6 +285,31 @@ export async function POST(request: Request) {
       createdAt: now,
     }).onConflictDoNothing();
 
+    const senderProfile = await db.query.systems.findFirst({
+      columns: { name: true },
+      where: eq(systems.id, auth.systemId),
+    });
+    await Promise.all([
+      createNotification({
+        recipientSystemId: receiver.id,
+        actorSystemId: auth.systemId,
+        type: 'partner_request_accepted',
+        title: 'Partner request accepted',
+        body: `${senderProfile?.name ?? 'Someone'} accepted your partner request.`,
+        data: { partnerSystemId: auth.systemId },
+        push: { url: '/partners' },
+      }),
+      createNotification({
+        recipientSystemId: auth.systemId,
+        actorSystemId: receiver.id,
+        type: 'partner_request_accepted',
+        title: 'New partner connection',
+        body: `You and ${receiver.name} are now partners.`,
+        data: { partnerSystemId: receiver.id },
+        push: { url: '/partners' },
+      }),
+    ]);
+
     revalidatePath('/partners');
     return ok({ autoAccepted: true, requestId: inversePending.id, partner: { id: receiver.id, name: receiver.name } });
   }
@@ -305,6 +331,23 @@ export async function POST(request: Request) {
     message,
     createdAt: new Date(),
   }).returning({ id: systemPartnerRequests.id, createdAt: systemPartnerRequests.createdAt });
+
+  const senderProfile = await db.query.systems.findFirst({
+    columns: { name: true },
+    where: eq(systems.id, auth.systemId),
+  });
+
+  await createNotification({
+    recipientSystemId: receiver.id,
+    actorSystemId: auth.systemId,
+    type: 'partner_request_received',
+    title: 'New partner request',
+    body: message
+      ? `${senderProfile?.name ?? 'Someone'} wants to be your partner: "${message}"`
+      : `${senderProfile?.name ?? 'Someone'} sent you a partner request.`,
+    data: { requestId: created[0]?.id ?? '' },
+    push: { url: '/partners' },
+  });
 
   revalidatePath('/partners');
 

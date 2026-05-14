@@ -19,6 +19,7 @@ import {
   type FriendMemberFieldVisibility,
   type FriendMemberVisibility,
 } from '@/lib/friends';
+import { createNotification } from '@/lib/notifications/create-notification';
 
 function mapRequestPayload(body: Record<string, unknown>): { email: string; message: string | null } {
   const email = typeof body.email === 'string' ? normalizeEmail(body.email) : '';
@@ -438,6 +439,32 @@ export async function POST(request: Request) {
       })
       .onConflictDoNothing();
 
+    // Notify both parties that they are now connected
+    const sender = await db.query.systems.findFirst({
+      columns: { name: true },
+      where: eq(systems.id, auth.systemId),
+    });
+    await Promise.all([
+      createNotification({
+        recipientSystemId: receiver.id,
+        actorSystemId: auth.systemId,
+        type: 'friend_request_accepted',
+        title: 'New friend connection',
+        body: `${sender?.name ?? 'Someone'} accepted your friend request.`,
+        data: { friendSystemId: auth.systemId },
+        push: { url: '/friends' },
+      }),
+      createNotification({
+        recipientSystemId: auth.systemId,
+        actorSystemId: receiver.id,
+        type: 'friend_request_accepted',
+        title: 'New friend connection',
+        body: `You and ${receiver.name} are now connected as friends.`,
+        data: { friendSystemId: receiver.id },
+        push: { url: '/friends' },
+      }),
+    ]);
+
     revalidatePath('/friends');
     revalidatePath('/');
 
@@ -479,6 +506,23 @@ export async function POST(request: Request) {
       id: systemFriendRequests.id,
       createdAt: systemFriendRequests.createdAt,
     });
+
+  const senderProfile = await db.query.systems.findFirst({
+    columns: { name: true },
+    where: eq(systems.id, auth.systemId),
+  });
+
+  await createNotification({
+    recipientSystemId: receiver.id,
+    actorSystemId: auth.systemId,
+    type: 'friend_request_received',
+    title: 'New friend request',
+    body: message
+      ? `${senderProfile?.name ?? 'Someone'} wants to connect: "${message}"`
+      : `${senderProfile?.name ?? 'Someone'} sent you a friend request.`,
+    data: { requestId: created[0]?.id ?? '' },
+    push: { url: '/friends' },
+  });
 
   revalidatePath('/friends');
 
