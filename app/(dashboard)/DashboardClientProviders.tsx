@@ -3,16 +3,16 @@
 import { useEffect } from 'react';
 import { SWRConfig } from 'swr';
 import {
+  applyCustomTheme,
   applySolaraAppearance,
-  applySolaraTheme,
+  readStoredCustomTheme,
   readStoredSolaraAppearance,
-  readStoredSolaraTheme,
 } from '@/lib/theme';
 import { NotificationRuntime } from '@/components/notifications/NotificationRuntime';
 
 export function DashboardClientProviders({ children }: { children: React.ReactNode }) {
   useEffect(() => {
-    applySolaraTheme(readStoredSolaraTheme());
+    applyCustomTheme(readStoredCustomTheme());
     applySolaraAppearance(readStoredSolaraAppearance());
   }, []);
 

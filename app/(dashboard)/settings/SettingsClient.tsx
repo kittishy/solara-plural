@@ -7,18 +7,17 @@ import { signOut } from 'next-auth/react';
 import { prepareAvatarDataUrl } from '@/lib/client/avatar-upload';
 import { formatDateTime } from '@/lib/client/format';
 import {
-  applySolaraTheme,
+  applyCustomTheme,
   applySolaraAppearance,
   DEFAULT_SOLARA_APPEARANCE,
-  DEFAULT_SOLARA_THEME,
+  DEFAULT_SOLARA_COLORS,
+  persistCustomTheme,
   persistSolaraAppearance,
-  persistSolaraTheme,
+  readStoredCustomTheme,
   readStoredSolaraAppearance,
-  readStoredSolaraTheme,
   resetSolaraAppearance,
-  SOLARA_THEMES,
   type SolaraAppearance,
-  type SolaraThemeId,
+  type SolaraCustomColors,
 } from '@/lib/theme';
 
 type SettingsSystem = {
@@ -214,7 +213,7 @@ export default function SettingsClient({
   const [accountType, setAccountType] = useState<'system' | 'singlet'>(toAccountType(system?.accountType));
   const [deletionRequestedAt, setDeletionRequestedAt] = useState<Date | string | null>(system?.deletionRequestedAt ?? null);
   const [deletionScheduledFor, setDeletionScheduledFor] = useState<Date | string | null>(system?.deletionScheduledFor ?? null);
-  const [themeId, setThemeId] = useState<SolaraThemeId>(DEFAULT_SOLARA_THEME);
+  const [customColors, setCustomColors] = useState<SolaraCustomColors>(DEFAULT_SOLARA_COLORS);
   const [appearance, setAppearance] = useState<SolaraAppearance>(DEFAULT_SOLARA_APPEARANCE);
   const [uploadingWallpaper, setUploadingWallpaper] = useState(false);
   const [customFields, setCustomFields] = useState<CustomFieldDefinition[]>([]);
@@ -244,11 +243,11 @@ export default function SettingsClient({
   useEffect(() => {
     const saved = readStoredImportOptions();
     if (saved) setImportOptions(saved);
-    const savedTheme = readStoredSolaraTheme();
+    const savedColors = readStoredCustomTheme();
     const savedAppearance = readStoredSolaraAppearance();
-    setThemeId(savedTheme);
+    setCustomColors(savedColors);
     setAppearance(savedAppearance);
-    applySolaraTheme(savedTheme);
+    applyCustomTheme(savedColors);
     applySolaraAppearance(savedAppearance);
   }, []);
 
@@ -531,12 +530,18 @@ export default function SettingsClient({
     }
   }
 
-  function updateTheme(nextTheme: SolaraThemeId) {
-    setThemeId(nextTheme);
-    applySolaraTheme(nextTheme);
-    persistSolaraTheme(nextTheme);
-    const label = SOLARA_THEMES.find((theme) => theme.id === nextTheme)?.label ?? 'Custom';
-    setStatus({ type: 'success', message: `Theme changed to ${label}.` });
+  function updateColor(key: keyof SolaraCustomColors, value: string) {
+    const next = { ...customColors, [key]: value };
+    setCustomColors(next);
+    applyCustomTheme(next);
+    persistCustomTheme(next);
+  }
+
+  function resetThemeToDefaults() {
+    setCustomColors(DEFAULT_SOLARA_COLORS);
+    applyCustomTheme(DEFAULT_SOLARA_COLORS);
+    persistCustomTheme(DEFAULT_SOLARA_COLORS);
+    setStatus({ type: 'success', message: 'Theme reset to defaults.' });
   }
 
   function updateAppearance(nextAppearance: SolaraAppearance) {
@@ -1011,65 +1016,80 @@ export default function SettingsClient({
           Appearance
         </h2>
         <p className="text-muted text-sm mb-4">
-          Pick a base theme, then personalize it with your own accent or wallpaper.
+          Your theme, your colors. Changes apply instantly — the rest is derived automatically.
         </p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {SOLARA_THEMES.map((theme) => (
+
+        {/* ── Color editor ── */}
+        <div className="rounded-xl border border-border-soft bg-surface-alt/35 p-4">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="text-sm font-semibold text-text">Theme colors</h3>
+              <p className="mt-0.5 text-xs text-muted">Shades, tints, and text variants are derived automatically.</p>
+            </div>
             <button
-              key={theme.id}
               type="button"
-              onClick={() => updateTheme(theme.id)}
-              className={`rounded-xl border p-3 text-left transition-colors ${
-                themeId === theme.id
-                  ? 'border-primary/60 bg-primary/10'
-                  : 'border-border bg-surface-alt/40 hover:bg-surface-alt/60'
-              }`}
-              aria-pressed={themeId === theme.id}
+              onClick={resetThemeToDefaults}
+              className="btn-ghost min-h-[36px] border border-border px-3 text-xs"
             >
-              <p className="text-sm font-semibold text-text">{theme.label}</p>
-              <p className="mt-1 text-xs text-muted">{theme.description}</p>
+              Reset
             </button>
-          ))}
+          </div>
+
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+            {(
+              [
+                { key: 'bg', label: 'Background', hint: 'Page backdrop' },
+                { key: 'surface', label: 'Surface', hint: 'Cards & panels' },
+                { key: 'text', label: 'Text', hint: 'Primary text' },
+                { key: 'border', label: 'Border', hint: 'Dividers & outlines' },
+                { key: 'primary', label: 'Primary', hint: 'Buttons & links' },
+                { key: 'front', label: 'Front', hint: 'In-front indicator' },
+              ] as { key: keyof SolaraCustomColors; label: string; hint: string }[]
+            ).map(({ key, label, hint }) => (
+              <div key={key} className="flex flex-col gap-1.5">
+                <div>
+                  <p className="text-xs font-semibold text-text">{label}</p>
+                  <p className="text-[10px] text-subtle mt-0.5">{hint}</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <label className="sr-only" htmlFor={`color-${key}`}>{label} color</label>
+                  <input
+                    id={`color-${key}`}
+                    type="color"
+                    value={customColors[key]}
+                    onChange={(e) => updateColor(key, e.target.value)}
+                    className="h-10 w-10 flex-none cursor-pointer rounded-lg border border-border bg-surface p-0.5"
+                  />
+                  <span className="text-[11px] font-mono text-muted select-all">{customColors[key]}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Live preview swatches */}
+          <div className="mt-4 flex gap-1.5 rounded-lg overflow-hidden h-3" aria-hidden="true">
+            {(['bg', 'surface', 'border', 'text', 'primary', 'front'] as const).map((key) => (
+              <div key={key} className="flex-1 rounded-sm" style={{ backgroundColor: customColors[key] }} />
+            ))}
+          </div>
         </div>
 
-        <div className="mt-5 rounded-xl border border-border-soft bg-surface-alt/35 p-4">
-          <h3 className="text-sm font-semibold text-text">Personal touches</h3>
+        {/* ── Wallpaper & extras ── */}
+        <div className="mt-4 rounded-xl border border-border-soft bg-surface-alt/35 p-4">
+          <h3 className="text-sm font-semibold text-text">Wallpaper & extras</h3>
           <p className="mt-1 text-xs text-muted">
-            These stay on this device and keep a dark overlay so text remains readable.
+            Saved on this device only.
           </p>
 
-          <div className="mt-4 grid gap-4 sm:grid-cols-2">
-            <div>
-              <label htmlFor="appearance-accent" className="label">Accent color</label>
-              <div className="flex min-h-[44px] items-center gap-2">
-                <input
-                  id="appearance-accent"
-                  type="color"
-                  value={appearance.accentColor || '#a78bfa'}
-                  onChange={(event) => updateAppearance({ ...appearance, accentColor: event.target.value })}
-                  className="h-11 w-12 rounded-lg border border-border bg-surface"
-                  aria-label="Accent color"
-                />
-                <button
-                  type="button"
-                  className="btn-ghost min-h-[42px] border border-border px-3 text-sm"
-                  onClick={() => updateAppearance({ ...appearance, accentColor: '' })}
-                >
-                  Use theme color
-                </button>
-              </div>
-            </div>
-
-            <div>
-              <label htmlFor="appearance-wallpaper-url" className="label">Wallpaper URL</label>
-              <input
-                id="appearance-wallpaper-url"
-                className="input"
-                value={appearance.wallpaperUrl.startsWith('data:') ? '' : appearance.wallpaperUrl}
-                onChange={(event) => updateAppearance({ ...appearance, wallpaperUrl: event.target.value.trim() })}
-                placeholder="https://..."
-              />
-            </div>
+          <div className="mt-4">
+            <label htmlFor="appearance-wallpaper-url" className="label">Wallpaper URL</label>
+            <input
+              id="appearance-wallpaper-url"
+              className="input"
+              value={appearance.wallpaperUrl.startsWith('data:') ? '' : appearance.wallpaperUrl}
+              onChange={(event) => updateAppearance({ ...appearance, wallpaperUrl: event.target.value.trim() })}
+              placeholder="https://..."
+            />
           </div>
 
           <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -1086,7 +1106,7 @@ export default function SettingsClient({
               onClick={clearAppearance}
               className="btn-ghost min-h-[40px] border border-border px-3 text-sm"
             >
-              Reset extras
+              Clear wallpaper
             </button>
             <input
               ref={wallpaperUploadRef}
