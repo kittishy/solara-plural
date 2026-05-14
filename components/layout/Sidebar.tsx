@@ -65,12 +65,10 @@ function IconNotes({ size = 18 }: IconProps) {
 function IconFriends({ size = 18 }: IconProps) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M16 11c1.66 0 3-1.79 3-4s-1.34-4-3-4-3 1.79-3 4 1.34 4 3 4Z" />
-      <path d="M8 11c1.66 0 3-1.79 3-4S9.66 3 8 3 5 4.79 5 7s1.34 4 3 4Z" />
-      <path d="M8 13c-3 0-5 1.8-5 4v2h7" />
-      <path d="M16 13c3 0 5 1.8 5 4v2h-7" />
-      <path d="M12 15v6" />
-      <path d="M9 18h6" />
+      <circle cx="8" cy="7" r="3" />
+      <path d="M2 21v-1a6 6 0 0 1 6-6h3" />
+      <line x1="19" y1="10" x2="19" y2="16" />
+      <line x1="16" y1="13" x2="22" y2="13" />
     </svg>
   );
 }
