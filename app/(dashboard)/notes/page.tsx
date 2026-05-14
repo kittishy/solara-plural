@@ -12,6 +12,7 @@ export default async function NotesPage() {
       id: true,
       title: true,
       content: true,
+      category: true,
       updatedAt: true,
     },
     where: eq(systemNotes.systemId, systemId),

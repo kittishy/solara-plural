@@ -90,6 +90,52 @@ export default function FrontHistoryClient({
   const memberMap = useMemo(() => Object.fromEntries(members.map((m) => [m.id, m])), [members]);
   const activeEntry = editingId ? history.find((entry) => entry.id === editingId) : null;
 
+  const stats = useMemo(() => {
+    if (history.length === 0) return null;
+
+    let totalMs = 0;
+    const msPerMember: Record<string, number> = {};
+
+    for (const entry of history) {
+      if (!entry.endedAt) continue;
+      const ms = new Date(entry.endedAt).getTime() - new Date(entry.startedAt).getTime();
+      if (ms <= 0) continue;
+      totalMs += ms;
+      for (const memberId of entry.memberIds) {
+        msPerMember[memberId] = (msPerMember[memberId] ?? 0) + ms;
+      }
+    }
+
+    const completedCount = history.filter((e) => e.endedAt).length;
+    const avgMs = completedCount > 0 ? totalMs / completedCount : 0;
+
+    const formatMs = (ms: number): string => {
+      const totalMins = Math.floor(ms / 60000);
+      if (totalMins < 1) return '0m';
+      const h = Math.floor(totalMins / 60);
+      const m = totalMins % 60;
+      if (h === 0) return `${m}m`;
+      return m > 0 ? `${h}h ${m}m` : `${h}h`;
+    };
+
+    const memberTimes = Object.entries(msPerMember)
+      .map(([id, ms]) => ({ member: memberMap[id], ms }))
+      .filter((item): item is { member: HistoryMember; ms: number } => Boolean(item.member))
+      .sort((a, b) => b.ms - a.ms)
+      .slice(0, 8);
+
+    const maxMs = memberTimes[0]?.ms ?? 1;
+
+    return {
+      totalSessions: history.length,
+      totalTime: formatMs(totalMs),
+      avgTime: formatMs(avgMs),
+      memberTimes,
+      maxMs,
+      formatMs,
+    };
+  }, [history, memberMap]);
+
   function openCreate() {
     setCreating(true);
     setEditingId(null);
@@ -308,6 +354,61 @@ export default function FrontHistoryClient({
               </span>
             )}
           </div>
+        </div>
+      )}
+
+      {/* Stats + visualization */}
+      {stats && (
+        <div className="space-y-4">
+          {/* Stat boxes */}
+          <div className="grid grid-cols-3 gap-3">
+            <div className="card p-4 text-center">
+              <p className="text-2xl font-bold text-text">{stats.totalSessions}</p>
+              <p className="text-xs text-muted mt-1">
+                {stats.totalSessions === 1 ? 'session' : 'sessions'}
+              </p>
+            </div>
+            <div className="card p-4 text-center">
+              <p className="text-2xl font-bold text-text">{stats.totalTime}</p>
+              <p className="text-xs text-muted mt-1">total fronted</p>
+            </div>
+            <div className="card p-4 text-center">
+              <p className="text-2xl font-bold text-text">{stats.avgTime}</p>
+              <p className="text-xs text-muted mt-1">avg session</p>
+            </div>
+          </div>
+
+          {/* Per-member time chart */}
+          {stats.memberTimes.length > 0 && (
+            <div className="card p-5 space-y-4">
+              <h2 className="text-sm font-semibold text-muted uppercase tracking-wider">Time per member</h2>
+              <ul role="list" className="space-y-3">
+                {stats.memberTimes.map(({ member, ms }) => {
+                  const barColor = member.color ?? '#a78bfa';
+                  const widthPct = Math.max(4, Math.round((ms / stats.maxMs) * 100));
+                  return (
+                    <li key={member.id} className="flex items-center gap-3">
+                      <MemberAvatar m={member} size="sm" />
+                      <span className="w-24 flex-shrink-0 text-sm font-medium text-text truncate" title={member.name}>
+                        {member.name}
+                      </span>
+                      <div className="flex-1 min-w-0 flex items-center gap-2">
+                        <div className="flex-1 h-2 rounded-full bg-surface-alt overflow-hidden">
+                          <div
+                            className="h-full rounded-full transition-all duration-500"
+                            style={{ width: `${widthPct}%`, backgroundColor: barColor }}
+                          />
+                        </div>
+                        <span className="flex-shrink-0 text-xs text-muted w-14 text-right tabular-nums">
+                          {stats.formatMs(ms)}
+                        </span>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          )}
         </div>
       )}
 

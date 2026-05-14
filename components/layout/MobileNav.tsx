@@ -61,6 +61,17 @@ function IconFriends({ size = 22 }: IconProps) {
   );
 }
 
+function IconJournal({ size = 22 }: IconProps) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+      <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+      <line x1="9" x2="15" y1="8" y2="8" />
+      <line x1="9" x2="15" y1="12" y2="12" />
+    </svg>
+  );
+}
+
 function IconSettings({ size = 22 }: IconProps) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -106,6 +117,7 @@ const navItemsBase = [
   { href: '/members', labelKey: 'nav.members', Icon: IconMembers, systemOnly: true },
   { href: '/partners', labelKey: 'nav.partners', Icon: IconPartners, systemOnly: false },
   { href: '/notes', labelKey: 'nav.notes', Icon: IconNotes, systemOnly: false },
+  { href: '/journal', labelKey: 'nav.journal', Icon: IconJournal, systemOnly: false },
 ] as const;
 
 const menuItemsBase = [

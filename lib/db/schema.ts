@@ -333,6 +333,7 @@ export const systemNotes = sqliteTable('system_notes', {
   memberId:  text('member_id').references(() => members.id, { onDelete: 'set null' }),
   title:     text('title'),
   content:   text('content').notNull(),
+  category:  text('category'),
   isPrivate: integer('is_private').notNull().default(0),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(strftime('%s', 'now'))`),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull().default(sql`(strftime('%s', 'now'))`),
@@ -342,7 +343,24 @@ export const systemNotes = sqliteTable('system_notes', {
   privateIdx: index('idx_system_notes_is_private').on(t.isPrivate),
 }));
 
+export const systemJournal = sqliteTable('system_journal', {
+  id:                text('id').primaryKey(),
+  systemId:          text('system_id').notNull().references(() => systems.id, { onDelete: 'cascade' }),
+  title:             text('title'),
+  content:           text('content').notNull(),
+  mood:              text('mood'),
+  frontingMemberIds: text('fronting_member_ids'),
+  isPrivate:         integer('is_private').notNull().default(0),
+  createdAt:         integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(strftime('%s', 'now'))`),
+  updatedAt:         integer('updated_at', { mode: 'timestamp' }).notNull().default(sql`(strftime('%s', 'now'))`),
+}, (t) => ({
+  systemIdx:  index('idx_system_journal_system_id').on(t.systemId),
+  createdIdx: index('idx_system_journal_created_at').on(t.createdAt),
+}));
+
 // Inferred Types
+export type SystemJournalEntry = typeof systemJournal.$inferSelect;
+export type NewSystemJournalEntry = typeof systemJournal.$inferInsert;
 export type System = typeof systems.$inferSelect;
 export type NewSystem = typeof systems.$inferInsert;
 export type PasswordResetToken = typeof passwordResetTokens.$inferSelect;

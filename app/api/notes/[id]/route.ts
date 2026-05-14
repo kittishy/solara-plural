@@ -35,6 +35,7 @@ export async function PUT(request: Request, { params }: Params) {
     .set({
       title: typeof body.title === 'string' ? body.title.trim() || null : null,
       content,
+      category: typeof body.category === 'string' ? body.category : null,
       memberId: typeof body.memberId === 'string' ? body.memberId : null,
       isPrivate: typeof body.isPrivate === 'boolean' ? (body.isPrivate ? 1 : 0) : undefined,
       updatedAt: new Date(),
