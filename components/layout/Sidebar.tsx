@@ -184,6 +184,8 @@ export function Sidebar({ systemName, accountType = 'system' }: SidebarProps) {
       style={{
         background: '#131416',
         borderBottom: '1px solid #2E3036',
+        borderBottomLeftRadius: '20px',
+        borderBottomRightRadius: '20px',
       }}
     >
       {/* LEFT: brand button + dropdown */}
@@ -349,7 +351,7 @@ export function Sidebar({ systemName, accountType = 'system' }: SidebarProps) {
               style={{
                 background: isActive ? 'var(--theme-primary)' : 'transparent',
                 color: isActive ? '#131416' : '#8A8D96',
-                borderRadius: '8px',
+                borderRadius: '14px',
                 fontSize: '0.625rem',
                 fontFamily: 'var(--font-display), var(--font-nunito), sans-serif',
                 fontWeight: 700,
@@ -384,7 +386,7 @@ export function Sidebar({ systemName, accountType = 'system' }: SidebarProps) {
             style={{
               background: isSettingsActive ? 'var(--theme-primary)' : 'transparent',
               color: isSettingsActive ? '#131416' : '#8A8D96',
-              borderRadius: '8px',
+              borderRadius: '14px',
             }}
             onMouseEnter={(e) => {
               if (!isSettingsActive) (e.currentTarget as HTMLElement).style.color = '#F5F5F5';
@@ -402,7 +404,7 @@ export function Sidebar({ systemName, accountType = 'system' }: SidebarProps) {
           onClick={() => signOut({ callbackUrl: localizePathname('/login', language) })}
           aria-label={t('nav.signOut')}
           className="flex h-9 w-9 items-center justify-center transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff5a6a]/60"
-          style={{ color: 'rgba(255,90,106,0.6)', borderRadius: '8px' }}
+          style={{ color: 'rgba(255,90,106,0.6)', borderRadius: '14px' }}
           onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = '#ff5a6a'; (e.currentTarget as HTMLElement).style.background = 'rgba(255,90,106,0.08)'; }}
           onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = 'rgba(255,90,106,0.6)'; (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
         >
