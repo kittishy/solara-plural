@@ -1128,7 +1128,7 @@ export default function SettingsClient({
             >
               Clear wallpaper
             </button>
-            {appearance.wallpaperUrl && !appearance.autoAdaptTheme && (
+            {appearance.wallpaperUrl && (
               <button
                 type="button"
                 onClick={() => void adaptThemeToWallpaper(appearance.wallpaperUrl)}
@@ -1193,20 +1193,21 @@ export default function SettingsClient({
               className="h-4 w-4 accent-primary"
               checked={appearance.autoAdaptTheme}
               onChange={(event) => {
-                const next = { ...appearance, autoAdaptTheme: event.target.checked };
-                updateAppearance(next);
-                if (event.target.checked && appearance.wallpaperUrl) {
-                  void adaptThemeToWallpaper(appearance.wallpaperUrl);
-                }
+                updateAppearance({ ...appearance, autoAdaptTheme: event.target.checked });
               }}
             />
             <span>
-              Adapt theme colors to wallpaper
+              Automatically adapt theme to new wallpapers
               {extractingPalette && (
                 <span className="ml-2 text-xs text-muted animate-pulse">extracting…</span>
               )}
             </span>
           </label>
+          {appearance.autoAdaptTheme && (
+            <p className="mt-1 px-1 text-xs text-muted">
+              Colors will be extracted when you set a new wallpaper. Your current theme is preserved until then.
+            </p>
+          )}
         </div>
       </section>
 
