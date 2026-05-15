@@ -262,7 +262,7 @@ function MemberCard({
         >
           {/* Photo — fills remaining space, inset creates the polaroid frame */}
           <div className="flex-1 min-h-0 relative">
-            <div className="absolute inset-x-1.5 top-1.5 bottom-0 overflow-hidden">
+            <div className="absolute inset-0 overflow-hidden">
               {/* Fronting badge */}
               {isF && (
                 <span
