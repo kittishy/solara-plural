@@ -21,6 +21,7 @@
 ## [Unreleased]
 
 ### Added
+- Isolated Expo/React Native Android app in `mobile-app`, with TypeScript, Expo Router tabs, EAS Build profiles, EAS Update setup, Android package `app.solara.plural`, and docs for APK/OTA/repository separation
 - Defensive unit coverage for token encryption, password reset helpers, custom fields, friend visibility helpers, front helpers, and in-memory rate limiting
 - Password reset flow with `/forgot-password`, `/reset-password`, hashed one-time reset tokens, and optional Resend email delivery
 - PWA service worker, production PNG app icons, and installable manifest updates

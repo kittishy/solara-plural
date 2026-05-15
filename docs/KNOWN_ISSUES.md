@@ -37,6 +37,21 @@ What is the issue?
 
 - Browser plugin verification is blocked on this workstation because the Node REPL runtime resolves to Node v22.19.0 and the plugin requires >= v22.22.0. Build and HTTP route checks are being used until Node is updated.
 
+### [ISSUE-015] Android app needs a mobile-safe auth adapter before production writes
+
+**Status:** Open
+**Priority:** High
+**Area:** Mobile | Auth | API
+
+**Description:**
+The new Expo Android app is a real React Native client, but the current Solara backend uses Auth.js cookie sessions designed around the Next.js web app. Native Android should not hardcode cookies or expose server secrets in `EXPO_PUBLIC_*` config.
+
+**Expected Behavior:**
+Mobile login should use a server-owned token/session contract, and API writes for front, members, notes, and settings should be authenticated without leaking secrets.
+
+**Notes / Workaround:**
+`mobile-app/src/services` currently attempts the configured API export endpoint and falls back to bundled preview data if no compatible authenticated response is available. See `mobile-app/docs/MOBILE_BACKEND_TODO.md`.
+
 ### [ISSUE-007] Roadmap status may lag behind implementation
 
 **Status:** Resolved

@@ -667,3 +667,21 @@
 - Added unit coverage for secret requirements, roundtrip encryption, random IVs, tamper rejection, and legacy decrypt.
 
 ---
+
+## [2026-05-15] D037 - Android App Lives In An Isolated Expo Workspace
+
+**Decision:** Add the Android app as an isolated Expo/React Native project in `mobile-app` instead of replacing or merging it into the existing Next.js web app.
+
+**Justification:**
+- The current site remains the canonical Vercel/Turso/Auth.js web application.
+- Expo needs its own package graph, native configuration, EAS profiles, assets, and OTA update setup.
+- Keeping mobile code in a subfolder makes it safe to later split the APK app into a dedicated public GitHub repository with `git subtree split`.
+- React Native screens should consume backend/API contracts through `mobile-app/src/services` and must not import Drizzle, Auth.js server code, or web-only components.
+
+**Implementation:**
+- Created `mobile-app` with Expo SDK 55, TypeScript, Expo Router tabs, `expo-updates`, `expo-dev-client`, and Android package `app.solara.plural`.
+- Configured EAS channels: `development`, `preview`, and `production`.
+- Reused Solara visual tokens and web app icon assets.
+- Added mobile docs for audit, backend/auth TODOs, EAS Update, APK generation, and future repository separation.
+
+---
