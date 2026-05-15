@@ -555,7 +555,6 @@ export default function FriendsClient() {
         };
       });
       setAlert({ type: 'success', message: 'General sharing setting updated.' });
-      await loadFriends();
     } catch (error) {
       setAlert({
         type: 'error',
