@@ -11,6 +11,7 @@ import {
   applySolaraAppearance,
   DEFAULT_SOLARA_APPEARANCE,
   DEFAULT_SOLARA_COLORS,
+  extractPaletteFromWallpaper,
   persistCustomTheme,
   persistSolaraAppearance,
   readStoredCustomTheme,
@@ -216,6 +217,7 @@ export default function SettingsClient({
   const [customColors, setCustomColors] = useState<SolaraCustomColors>(DEFAULT_SOLARA_COLORS);
   const [appearance, setAppearance] = useState<SolaraAppearance>(DEFAULT_SOLARA_APPEARANCE);
   const [uploadingWallpaper, setUploadingWallpaper] = useState(false);
+  const [extractingPalette, setExtractingPalette] = useState(false);
   const [customFields, setCustomFields] = useState<CustomFieldDefinition[]>([]);
   const [customFieldLoading, setCustomFieldLoading] = useState(true);
   const [customFieldSaving, setCustomFieldSaving] = useState(false);
@@ -556,6 +558,23 @@ export default function SettingsClient({
     setStatus({ type: 'success', message: 'Appearance extras reset.' });
   }
 
+  async function adaptThemeToWallpaper(wallpaperUrl: string) {
+    if (!wallpaperUrl || extractingPalette) return;
+    setExtractingPalette(true);
+    setStatus({ type: 'info', message: 'Extracting colors from wallpaper...' });
+    try {
+      const colors = await extractPaletteFromWallpaper(wallpaperUrl);
+      setCustomColors(colors);
+      applyCustomTheme(colors);
+      persistCustomTheme(colors);
+      setStatus({ type: 'success', message: 'Theme adapted to wallpaper.' });
+    } catch {
+      setStatus({ type: 'error', message: 'Could not extract colors from this image.' });
+    } finally {
+      setExtractingPalette(false);
+    }
+  }
+
   async function handleWallpaperFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file || uploadingWallpaper) return;
@@ -571,8 +590,13 @@ export default function SettingsClient({
 
     try {
       const dataUrl = await prepareAvatarDataUrl(file);
-      updateAppearance({ ...appearance, wallpaperUrl: dataUrl });
-      setStatus({ type: 'success', message: 'Wallpaper applied on this device.' });
+      const nextAppearance = { ...appearance, wallpaperUrl: dataUrl };
+      updateAppearance(nextAppearance);
+      if (appearance.autoAdaptTheme) {
+        await adaptThemeToWallpaper(dataUrl);
+      } else {
+        setStatus({ type: 'success', message: 'Wallpaper applied on this device.' });
+      }
     } catch (error) {
       setStatus({
         type: 'error',
@@ -1080,6 +1104,10 @@ export default function SettingsClient({
               className="input"
               value={appearance.wallpaperUrl.startsWith('data:') ? '' : appearance.wallpaperUrl}
               onChange={(event) => updateAppearance({ ...appearance, wallpaperUrl: event.target.value.trim() })}
+              onBlur={(event) => {
+                const url = event.target.value.trim();
+                if (appearance.autoAdaptTheme && url) void adaptThemeToWallpaper(url);
+              }}
               placeholder="https://..."
             />
           </div>
@@ -1088,7 +1116,7 @@ export default function SettingsClient({
             <button
               type="button"
               onClick={() => wallpaperUploadRef.current?.click()}
-              disabled={uploadingWallpaper}
+              disabled={uploadingWallpaper || extractingPalette}
               className="btn-ghost min-h-[40px] border border-border px-3 text-sm"
             >
               {uploadingWallpaper ? 'Preparing...' : 'Upload wallpaper'}
@@ -1100,6 +1128,16 @@ export default function SettingsClient({
             >
               Clear wallpaper
             </button>
+            {appearance.wallpaperUrl && !appearance.autoAdaptTheme && (
+              <button
+                type="button"
+                onClick={() => void adaptThemeToWallpaper(appearance.wallpaperUrl)}
+                disabled={extractingPalette}
+                className="btn-ghost min-h-[40px] border border-border px-3 text-sm"
+              >
+                {extractingPalette ? 'Extracting...' : 'Extract colors'}
+              </button>
+            )}
             <input
               ref={wallpaperUploadRef}
               type="file"
@@ -1147,6 +1185,27 @@ export default function SettingsClient({
               onChange={(event) => updateAppearance({ ...appearance, reduceTexture: event.target.checked })}
             />
             Reduce background texture
+          </label>
+
+          <label className="mt-2 flex min-h-[44px] items-center gap-3 rounded-lg border border-border-soft bg-surface/40 px-3 py-2 text-sm text-text">
+            <input
+              type="checkbox"
+              className="h-4 w-4 accent-primary"
+              checked={appearance.autoAdaptTheme}
+              onChange={(event) => {
+                const next = { ...appearance, autoAdaptTheme: event.target.checked };
+                updateAppearance(next);
+                if (event.target.checked && appearance.wallpaperUrl) {
+                  void adaptThemeToWallpaper(appearance.wallpaperUrl);
+                }
+              }}
+            />
+            <span>
+              Adapt theme colors to wallpaper
+              {extractingPalette && (
+                <span className="ml-2 text-xs text-muted animate-pulse">extracting…</span>
+              )}
+            </span>
           </label>
         </div>
       </section>

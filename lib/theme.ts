@@ -1,6 +1,40 @@
 export const SOLARA_CUSTOM_THEME_KEY = 'solara.customTheme';
 export const SOLARA_APPEARANCE_STORAGE_KEY = 'solara.appearance';
 
+// ─── HSL helpers ──────────────────────────────────────────────────────────────
+
+function hexToHsl(hex: string): [number, number, number] {
+  const [r, g, b] = hexToRgb(hex).map((v) => v / 255) as [number, number, number];
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const l = (max + min) / 2;
+  if (max === min) return [0, 0, l * 100];
+  const d = max - min;
+  const s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+  let h: number;
+  if (max === r) h = ((g - b) / d + (g < b ? 6 : 0)) / 6;
+  else if (max === g) h = ((b - r) / d + 2) / 6;
+  else h = ((r - g) / d + 4) / 6;
+  return [h * 360, s * 100, l * 100];
+}
+
+function hslToHex(h: number, s: number, l: number): string {
+  const sl = s / 100;
+  const ll = l / 100;
+  const a = sl * Math.min(ll, 1 - ll);
+  const f = (n: number) => {
+    const k = (n + h / 30) % 12;
+    const color = ll - a * Math.max(-1, Math.min(k - 3, 9 - k, 1));
+    return Math.round(255 * color).toString(16).padStart(2, '0');
+  };
+  return `#${f(0)}${f(8)}${f(4)}`;
+}
+
+function withLightness(hex: string, targetL: number, maxS = 55): string {
+  const [h, s] = hexToHsl(hex);
+  return hslToHex(h, Math.min(s, maxS), targetL);
+}
+
 export type SolaraCustomColors = {
   bg: string;
   surface: string;
@@ -24,6 +58,7 @@ export type SolaraAppearance = {
   wallpaperDim: number;
   wallpaperBlur: number;
   reduceTexture: boolean;
+  autoAdaptTheme: boolean;
 };
 
 export const DEFAULT_SOLARA_APPEARANCE: SolaraAppearance = {
@@ -31,6 +66,7 @@ export const DEFAULT_SOLARA_APPEARANCE: SolaraAppearance = {
   wallpaperDim: 72,
   wallpaperBlur: 0,
   reduceTexture: false,
+  autoAdaptTheme: false,
 };
 
 // ─── Color math ───────────────────────────────────────────────────────────────
@@ -197,6 +233,7 @@ function sanitizeSolaraAppearance(value: unknown): SolaraAppearance {
     wallpaperDim,
     wallpaperBlur,
     reduceTexture: record.reduceTexture === true,
+    autoAdaptTheme: record.autoAdaptTheme === true,
   };
 }
 
@@ -218,4 +255,27 @@ function cssEscapeUrl(value: string): string {
 
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
+}
+
+// ─── Wallpaper palette extraction ─────────────────────────────────────────────
+
+export async function extractPaletteFromWallpaper(
+  imageUrl: string,
+): Promise<SolaraCustomColors> {
+  const { Vibrant } = await import('node-vibrant/browser');
+  const palette = await Vibrant.from(imageUrl).getPalette();
+
+  const vibrant = palette.Vibrant?.hex ?? DEFAULT_SOLARA_COLORS.primary;
+  const lightVibrant = palette.LightVibrant?.hex ?? vibrant;
+  const darkMuted = palette.DarkMuted?.hex ?? '#1a1030';
+  const darkVibrant = palette.DarkVibrant?.hex ?? darkMuted;
+
+  return {
+    bg: withLightness(darkMuted, 5),
+    surface: withLightness(darkMuted, 9),
+    primary: vibrant,
+    front: lightVibrant,
+    text: '#f2ecff',
+    border: withLightness(darkVibrant, 20),
+  };
 }
