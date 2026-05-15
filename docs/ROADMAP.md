@@ -140,6 +140,19 @@ See IDEAS.md for the full backlog of feature ideas.
 
 ---
 
+## Android App Track
+
+- [x] Create isolated Expo/React Native workspace in `mobile-app`
+- [x] Configure Android package, icons, splash, TypeScript, Expo Router, EAS Build, and EAS Update
+- [x] Recreate primary mobile surfaces: Home, Members, Front, Notes, Settings
+- [x] Keep API/backend access behind `src/services`
+- [ ] Add mobile-safe auth/session API on the web backend
+- [ ] Persist native tokens with Expo SecureStore after the auth adapter exists
+- [ ] Replace bundled preview writes with authenticated API writes
+- [ ] Add Android push notification strategy after the native auth boundary is stable
+
+---
+
 
 ---
 

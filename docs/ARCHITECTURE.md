@@ -273,6 +273,36 @@ Solara should borrow architecture habits, not external implementation code:
 - Plan custom fields, groups/subsystems, and privacy labels as first-class data model extensions.
 - Avoid copying AGPL source code from Sheaf or PluralKit into this codebase without an explicit license decision.
 
+---
+
+## 2026-05-15 Architecture Update: Android App Workspace
+
+Solara now has an isolated Expo/React Native Android workspace at `mobile-app`.
+
+The Next.js web app remains the canonical backend, database, and Vercel deployment. The mobile app is a native client that must interact with Solara through explicit service boundaries in `mobile-app/src/services`.
+
+Mobile structure:
+
+```
+mobile-app/
+├── app/                 # Expo Router tabs and root layout
+├── src/components/      # React Native UI components
+├── src/screens/         # Screen-level composition
+├── src/services/        # API/config/http boundaries
+├── src/hooks/           # Data and update hooks
+├── src/lib/             # Small client utilities
+├── src/types/           # Mobile data contracts
+├── src/constants/       # Theme and bundled preview data
+├── assets/              # Android icons and splash assets
+├── docs/                # Mobile audit and backend TODOs
+├── app.config.ts        # Expo Android/EAS Update config
+└── eas.json             # EAS Build channels and profiles
+```
+
+Current backend limitation:
+
+- Authenticated production writes from native Android need a mobile-safe auth adapter. The current Auth.js cookie session model is web-first, so the mobile app falls back to bundled preview data when `/api/export` is unavailable or unauthenticated.
+
 
 ---
 
