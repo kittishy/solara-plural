@@ -55,3 +55,15 @@ export async function requireAuth(): Promise<
   if (!systemId) return { error: err('Unauthorized', 401) };
   return { systemId };
 }
+
+export async function requireSystemAuth(): Promise<
+  { systemId: string; error?: never } | { systemId?: never; error: NextResponse }
+> {
+  const session = await auth();
+  const systemId = session?.user?.id ?? null;
+  if (!systemId) return { error: err('Unauthorized', 401) };
+  if (session?.user?.accountType === 'singlet') {
+    return { error: err('This feature is only available for system accounts', 403) };
+  }
+  return { systemId };
+}

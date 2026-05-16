@@ -1,13 +1,13 @@
 import { db } from '@/lib/db';
 import { systemChatMessages, systemChatChannels, members } from '@/lib/db/schema';
 import { eq, asc, and } from 'drizzle-orm';
-import { requireAuth, ok, err, parseJsonRecord } from '@/lib/api/helpers';
+import { requireSystemAuth, ok, err, parseJsonRecord } from '@/lib/api/helpers';
 import { createId } from '@paralleldrive/cuid2';
 import { revalidatePath } from 'next/cache';
 
 // GET /api/chat?channelId=... — list last 100 messages for the given channel
 export async function GET(request: Request) {
-  const auth = await requireAuth();
+  const auth = await requireSystemAuth();
   if (auth.error) return auth.error;
 
   const url = new URL(request.url);
@@ -49,7 +49,7 @@ export async function GET(request: Request) {
 
 // POST /api/chat — create a new message in a channel
 export async function POST(request: Request) {
-  const auth = await requireAuth();
+  const auth = await requireSystemAuth();
   if (auth.error) return auth.error;
 
   const parsed = await parseJsonRecord(request);

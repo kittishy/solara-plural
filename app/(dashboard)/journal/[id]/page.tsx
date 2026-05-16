@@ -2,7 +2,7 @@ import { db } from '@/lib/db';
 import { systemJournal, members } from '@/lib/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { notFound } from 'next/navigation';
-import { requireSystemId } from '@/lib/auth/session';
+import { requireSystemAccount } from '@/lib/auth/session';
 import JournalEditor from './JournalEditor';
 
 type MemberPickerItem = {
@@ -13,7 +13,7 @@ type MemberPickerItem = {
 };
 
 export default async function JournalEntryPage({ params }: { params: { id: string } }) {
-  const systemId = await requireSystemId();
+  const systemId = await requireSystemAccount();
 
   const activeMembers = await db.query.members.findMany({
     columns: { id: true, name: true, color: true, avatarUrl: true },
