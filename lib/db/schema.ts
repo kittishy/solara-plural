@@ -358,7 +358,37 @@ export const systemJournal = sqliteTable('system_journal', {
   createdIdx: index('idx_system_journal_created_at').on(t.createdAt),
 }));
 
+// System Chat Channels — Discord-style channels within a system's chat
+export const systemChatChannels = sqliteTable('system_chat_channels', {
+  id:        text('id').primaryKey(),
+  systemId:  text('system_id').notNull().references(() => systems.id, { onDelete: 'cascade' }),
+  name:      text('name').notNull(),
+  sortOrder: integer('sort_order').notNull().default(0),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(strftime('%s', 'now'))`),
+}, (t) => ({
+  systemIdx: index('idx_system_chat_channels_system_id').on(t.systemId),
+  sortIdx:   index('idx_system_chat_channels_sort_order').on(t.sortOrder),
+}));
+
+// System Chat Messages — internal alter chat; member details joined at query time
+export const systemChatMessages = sqliteTable('system_chat_messages', {
+  id:        text('id').primaryKey(),
+  systemId:  text('system_id').notNull().references(() => systems.id, { onDelete: 'cascade' }),
+  channelId: text('channel_id'),  // nullable for legacy rows; new messages always set this
+  memberId:  text('member_id'),   // nullable — which alter sent it; null = anonymous
+  content:   text('content').notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(strftime('%s', 'now'))`),
+}, (t) => ({
+  systemIdx:  index('idx_system_chat_messages_system_id').on(t.systemId),
+  channelIdx: index('idx_system_chat_messages_channel_id').on(t.channelId),
+  createdIdx: index('idx_system_chat_messages_created_at').on(t.createdAt),
+}));
+
 // Inferred Types
+export type SystemChatChannel = typeof systemChatChannels.$inferSelect;
+export type NewSystemChatChannel = typeof systemChatChannels.$inferInsert;
+export type SystemChatMessage = typeof systemChatMessages.$inferSelect;
+export type NewSystemChatMessage = typeof systemChatMessages.$inferInsert;
 export type SystemJournalEntry = typeof systemJournal.$inferSelect;
 export type NewSystemJournalEntry = typeof systemJournal.$inferInsert;
 export type System = typeof systems.$inferSelect;
