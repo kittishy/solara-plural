@@ -117,6 +117,8 @@ type SharingState = {
   members: SharingMember[];
 };
 
+type SharingSnapshot = Record<string, SharingState>;
+
 const ACCOUNT_LABEL: Record<AccountType, string> = {
   system: 'System',
   singlet: 'Singlet',
@@ -156,7 +158,7 @@ export default function FriendsClient() {
     setLoading(true);
 
     try {
-      const res = await fetch('/api/friends');
+      const res = await fetch('/api/friends', { cache: 'no-store' });
       const body = await readJson<FriendsPayload>(res);
 
       if (!body.success) {
@@ -411,7 +413,7 @@ export default function FriendsClient() {
     }));
 
     try {
-      const res = await fetch(`/api/friends/sharing/${friendSystemId}`);
+      const res = await fetch(`/api/friends/sharing/${friendSystemId}`, { cache: 'no-store' });
       const body = await readJson<SharingPayload>(res);
 
       if (!body.success) {
@@ -456,7 +458,13 @@ export default function FriendsClient() {
     nextFieldVisibility: ShareFieldVisibility,
   ) {
     const shareKey = `${friendSystemId}:${memberId}`;
+    const previousSharing = sharingByFriendId;
     setSavingShareKey(shareKey);
+    setSharingByFriendId((prev) => updateSharingMember(prev, friendSystemId, memberId, {
+      visibility: nextVisibility,
+      fieldVisibility: nextFieldVisibility,
+      updatedAt: new Date().toISOString(),
+    }));
 
     try {
       const res = await fetch(`/api/friends/sharing/${friendSystemId}`, {
@@ -472,35 +480,15 @@ export default function FriendsClient() {
 
       if (!body.success) {
         setAlert({ type: 'error', message: body.error ?? 'Could not update sharing visibility.' });
+        setSharingByFriendId(previousSharing);
         setSavingShareKey(null);
         return;
       }
 
-      setSharingByFriendId((prev) => {
-        const current = prev[friendSystemId];
-        if (!current) return prev;
-
-        return {
-          ...prev,
-          [friendSystemId]: {
-            ...current,
-            members: current.members.map((member) =>
-              member.id === memberId
-                ? {
-                    ...member,
-                    visibility: nextVisibility,
-                    fieldVisibility: nextFieldVisibility,
-                    updatedAt: new Date().toISOString(),
-                  }
-                : member,
-            ),
-          },
-        };
-      });
-
       setAlert({ type: 'success', message: 'Sharing visibility updated.' });
     } catch {
       setAlert({ type: 'error', message: 'Could not update sharing visibility.' });
+      setSharingByFriendId(previousSharing);
     } finally {
       setSavingShareKey(null);
     }
@@ -521,41 +509,39 @@ export default function FriendsClient() {
     const members = sharingByFriendId[friendSystemId]?.members ?? [];
     if (!members.length || savingShareKey) return;
 
+    const previousSharing = sharingByFriendId;
+    const nextUpdatedAt = new Date().toISOString();
+    const updates = members.map((member) => ({
+      memberId: member.id,
+      fieldVisibility: defaultFieldVisibilityForLevel(visibility),
+    }));
+
     setSavingShareKey(`${friendSystemId}:all`);
+    setSharingByFriendId((prev) => updateAllSharingMembers(prev, friendSystemId, updates.map((update) => ({
+      memberId: update.memberId,
+      visibility,
+      fieldVisibility: update.fieldVisibility,
+      updatedAt: nextUpdatedAt,
+    }))));
+
     try {
-      for (const member of members) {
-        const nextFieldVisibility = defaultFieldVisibilityForLevel(visibility);
+      await Promise.all(updates.map(async (update) => {
         const res = await fetch(`/api/friends/sharing/${friendSystemId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            memberId: member.id,
+            memberId: update.memberId,
             visibility,
-            fieldVisibility: nextFieldVisibility,
+            fieldVisibility: update.fieldVisibility,
           }),
         });
         const body = await readJson<unknown>(res);
         if (!body.success) throw new Error(body.error ?? 'Could not update sharing visibility.');
-      }
+      }));
 
-      setSharingByFriendId((prev) => {
-        const current = prev[friendSystemId];
-        if (!current) return prev;
-        return {
-          ...prev,
-          [friendSystemId]: {
-            ...current,
-            members: current.members.map((member) => ({
-              ...member,
-              visibility,
-              fieldVisibility: defaultFieldVisibilityForLevel(visibility),
-              updatedAt: new Date().toISOString(),
-            })),
-          },
-        };
-      });
       setAlert({ type: 'success', message: 'General sharing setting updated.' });
     } catch (error) {
+      setSharingByFriendId(previousSharing);
       setAlert({
         type: 'error',
         message: error instanceof Error ? error.message : 'Could not update sharing visibility.',
@@ -855,7 +841,7 @@ export default function FriendsClient() {
                   )}
 
                   {sharing?.open && (
-                    <div className="mt-3 rounded-lg border border-border-soft bg-surface/70 p-3">
+                    <div className="mt-3 rounded-lg border border-border-soft bg-surface/70 p-3 motion-safe:animate-privacy-panel">
                       <p className="text-xs font-semibold text-text mb-2">General sharing visibility</p>
                       <p className="text-xs text-muted mb-3">
                         Choose one clear default for what this friend can see. You can still fine-tune exceptions below.
@@ -877,12 +863,12 @@ export default function FriendsClient() {
                                 <button
                                   key={option}
                                   type="button"
-                                  className={`rounded-xl border px-3 py-3 text-left transition-colors ${
+                                  className={`rounded-xl border px-3 py-3 text-left transition-all duration-150 ${
                                     selected
-                                      ? 'border-primary/60 bg-primary/10 text-text'
+                                      ? 'border-primary/60 bg-primary/10 text-text shadow-[0_0_0_1px_rgba(167,139,250,0.12)]'
                                       : 'border-border-soft bg-surface-alt/40 text-muted hover:border-border'
                                   }`}
-                                  disabled={busy || savingShareKey === `${friend.id}:all`}
+                                  disabled={busy || savingShareKey === `${friend.id}:all` || selected}
                                   onClick={() => void setAllMemberVisibility(friend.id, option)}
                                   aria-pressed={selected}
                                 >
@@ -899,17 +885,17 @@ export default function FriendsClient() {
                             })}
                           </div>
 
-                          <details className="mt-3 rounded-lg border border-border-soft bg-surface-alt/40 p-3">
+                          <details className="mt-3 rounded-lg border border-border-soft bg-surface-alt/40 p-3 transition-colors open:border-border/80">
                             <summary className="cursor-pointer text-xs font-semibold text-muted">
                               Member exceptions and field details
                             </summary>
-                            <ul className="mt-3 space-y-2">
+                            <ul className="mt-3 space-y-2 motion-safe:animate-privacy-panel">
                               {sharing.members.map((member) => {
                                 const shareKey = `${friend.id}:${member.id}`;
                                 const isSaving = savingShareKey === shareKey;
 
                                 return (
-                                  <li key={member.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border-soft px-2 py-2">
+                                  <li key={member.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border-soft px-2 py-2 transition-colors duration-150">
                                     <div>
                                       <p className="text-xs font-medium text-text">{member.name}</p>
                                       <p className="text-[11px] text-subtle">
@@ -933,7 +919,7 @@ export default function FriendsClient() {
                                       </select>
 
                                       {member.visibility !== 'hidden' && (
-                                        <div className="grid grid-cols-2 gap-1.5 rounded-lg border border-border-soft bg-surface-alt/60 p-2">
+                                        <div className="grid grid-cols-2 gap-1.5 rounded-lg border border-border-soft bg-surface-alt/60 p-2 motion-safe:animate-privacy-panel">
                                           {FIELD_KEYS.map((fieldKey) => (
                                             <label key={fieldKey} className="flex items-center gap-2 text-[11px] text-muted">
                                               <input
@@ -1040,6 +1026,57 @@ async function readJson<T>(res: Response): Promise<ApiResponse<T>> {
     return { success: false, error: 'Unexpected server response.' };
   }
   return res.json();
+}
+
+function updateSharingMember(
+  snapshot: SharingSnapshot,
+  friendSystemId: string,
+  memberId: string,
+  patch: Pick<SharingMember, 'visibility' | 'fieldVisibility' | 'updatedAt'>,
+): SharingSnapshot {
+  const current = snapshot[friendSystemId];
+  if (!current) return snapshot;
+
+  return {
+    ...snapshot,
+    [friendSystemId]: {
+      ...current,
+      members: current.members.map((member) =>
+        member.id === memberId
+          ? { ...member, ...patch }
+          : member,
+      ),
+    },
+  };
+}
+
+function updateAllSharingMembers(
+  snapshot: SharingSnapshot,
+  friendSystemId: string,
+  updates: Array<Pick<SharingMember, 'visibility' | 'fieldVisibility' | 'updatedAt'> & { memberId: string }>,
+): SharingSnapshot {
+  const current = snapshot[friendSystemId];
+  if (!current) return snapshot;
+
+  const updatesByMemberId = new Map(updates.map((update) => [update.memberId, update]));
+
+  return {
+    ...snapshot,
+    [friendSystemId]: {
+      ...current,
+      members: current.members.map((member) => {
+        const update = updatesByMemberId.get(member.id);
+        if (!update) return member;
+
+        return {
+          ...member,
+          visibility: update.visibility,
+          fieldVisibility: update.fieldVisibility,
+          updatedAt: update.updatedAt,
+        };
+      }),
+    },
+  };
 }
 
 

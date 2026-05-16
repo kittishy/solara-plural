@@ -62,6 +62,7 @@ const config: Config = {
       animation: {
         'pulse-soft': 'pulse 2s ease-in-out infinite',
         'fade-in':    'fadeIn 200ms ease',
+        'privacy-panel': 'privacyPanel 160ms var(--ease-snap)',
       },
       transitionDuration: {
         '0':   '0ms',
@@ -73,6 +74,10 @@ const config: Config = {
         fadeIn: {
           from: { opacity: '0', transform: 'scale(0.97)' },
           to:   { opacity: '1', transform: 'scale(1)' },
+        },
+        privacyPanel: {
+          from: { opacity: '0', transform: 'translateY(-4px)' },
+          to:   { opacity: '1', transform: 'translateY(0)' },
         },
       },
     },
