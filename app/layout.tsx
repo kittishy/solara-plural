@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Nunito } from 'next/font/google';
 import { LanguageProvider } from '@/components/providers/LanguageProvider';
 import './globals.css';
@@ -14,6 +14,11 @@ export const metadata: Metadata = {
   title: 'Solara Plural',
   description: 'A warm space for plural systems to organize and thrive',
   manifest: '/manifest.json',
+};
+
+export const viewport: Viewport = {
+  viewportFit: 'cover',
+  interactiveWidget: 'resizes-content',
 };
 
 export default function RootLayout({

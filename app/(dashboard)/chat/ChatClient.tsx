@@ -881,6 +881,7 @@ export function ChatClient({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const stickyToBottomRef = useRef(true);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
 
   const activeChannel = useMemo(
     () => channels.find((c) => c.id === activeChannelId) ?? channels[0] ?? null,
@@ -1001,6 +1002,32 @@ export function ChatClient({
     document.body.style.overflow = 'hidden';
     return () => { document.body.style.overflow = original; };
   }, [channelsOpen]);
+
+  // Fix mobile keyboard pushing header off-screen.
+  // dvh doesn't always update when the soft keyboard opens (especially in PWA
+  // mode on iOS Safari), so we use the visualViewport API to set the container
+  // height directly. When the keyboard is open the mobile nav bar sits behind
+  // the keyboard, so we use the full visual-viewport height; when closed we
+  // subtract the mobile nav height (5rem = 80px).
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!vv || window.innerWidth >= 768) return;
+
+    const MOBILE_NAV_H = 80; // 5rem
+    const fullHeight = vv.height;
+
+    function update() {
+      const el = chatContainerRef.current;
+      if (!el) return;
+      const isKeyboardOpen = vv!.height < fullHeight - 100;
+      const h = isKeyboardOpen ? vv!.height : vv!.height - MOBILE_NAV_H;
+      el.style.height = `${Math.max(h, 200)}px`;
+    }
+
+    vv.addEventListener('resize', update);
+    update();
+    return () => vv.removeEventListener('resize', update);
+  }, []);
 
   // Channel handlers
   const handleSelectChannel = useCallback((id: string) => {
@@ -1143,6 +1170,7 @@ export function ChatClient({
 
   return (
     <div
+      ref={chatContainerRef}
       className="-mx-4 md:-mx-8 -my-5 md:-my-8 flex flex-col
         h-[calc(100dvh-5rem-env(safe-area-inset-bottom))]
         md:h-[calc(100dvh-56px)]"
