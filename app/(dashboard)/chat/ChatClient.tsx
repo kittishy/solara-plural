@@ -1138,6 +1138,8 @@ export function ChatClient({
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
       if (e.key === 'Enter' && !e.shiftKey) {
+        // On touch devices (mobile), Enter inserts a newline naturally
+        if (window.matchMedia('(pointer: coarse)').matches) return;
         e.preventDefault();
         handleSend();
       }
