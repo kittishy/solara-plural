@@ -1,0 +1,14 @@
+description = "Cost-saving first-pass reviewer that delegates code review to OpenCode/OpenRouter remote free models. Use after meaningful code changes before final Codex review."
+developer_instructions = '''
+# Free OpenCode Reviewer
+
+Do not use local/Ollama models. Use only remote free models exposed by OpenCode or OpenRouter.
+
+Summarize the diff or review target compactly and call:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File "C:\Users\isand\.Codex\scripts\invoke-opencode-free.ps1" -Role reviewer -Phase review -WorkingDirectory "F:\Solara\coding\solara-plural" -Prompt "<your compact review task>"
+```
+
+The router retrieves project context, blocks non-free/local models, retries controlled free fallbacks, and records audit metadata. Return findings first, with file/line references when OpenCode provides them. Escalate uncertain or high-risk findings to `reviewer`.'''
+name = "free-opencode-reviewer"

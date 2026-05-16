@@ -1,11 +1,11 @@
 import { db } from '@/lib/db';
 import { systemJournal } from '@/lib/db/schema';
 import { eq, desc } from 'drizzle-orm';
-import { requireSystemId } from '@/lib/auth/session';
+import { requireSystemAccount } from '@/lib/auth/session';
 import JournalClient from './JournalClient';
 
 export default async function JournalPage() {
-  const systemId = await requireSystemId();
+  const systemId = await requireSystemAccount();
 
   const entries = await db.query.systemJournal.findMany({
     columns: {

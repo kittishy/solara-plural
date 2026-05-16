@@ -1,7 +1,7 @@
 import { db } from '@/lib/db';
 import { systemChatChannels, systemChatMessages } from '@/lib/db/schema';
 import { eq, asc, isNull, and } from 'drizzle-orm';
-import { requireAuth, ok, err, parseJsonRecord } from '@/lib/api/helpers';
+import { requireSystemAuth, ok, err, parseJsonRecord } from '@/lib/api/helpers';
 import { createId } from '@paralleldrive/cuid2';
 import { revalidatePath } from 'next/cache';
 
@@ -9,7 +9,7 @@ import { revalidatePath } from 'next/cache';
 // If no channels exist, create a default "general" channel and backfill any
 // legacy messages (channel_id IS NULL) to it.
 export async function GET() {
-  const auth = await requireAuth();
+  const auth = await requireSystemAuth();
   if (auth.error) return auth.error;
 
   let channels = await db
@@ -49,7 +49,7 @@ export async function GET() {
 
 // POST /api/chat/channels — create a new channel
 export async function POST(request: Request) {
-  const auth = await requireAuth();
+  const auth = await requireSystemAuth();
   if (auth.error) return auth.error;
 
   const parsed = await parseJsonRecord(request);

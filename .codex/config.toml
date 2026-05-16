@@ -1,0 +1,6 @@
+[shell_environment_policy]
+inherit = "core"
+
+[shell_environment_policy.set]
+OPENCODE_FREE_MODEL = "opencode/nemotron-3-super-free"
+OPENROUTER_FREE_MODEL = "nvidia/nemotron-3-super-120b-a12b:free"

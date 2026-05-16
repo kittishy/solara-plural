@@ -7,7 +7,7 @@ import {
   systems,
 } from '@/lib/db/schema';
 import { eq, asc, and, isNull } from 'drizzle-orm';
-import { requireSystemId } from '@/lib/auth/session';
+import { requireSystemAccount } from '@/lib/auth/session';
 import { createId } from '@paralleldrive/cuid2';
 import { ChatClient } from './ChatClient';
 import type { Metadata } from 'next';
@@ -18,7 +18,7 @@ export const metadata: Metadata = {
 };
 
 export default async function ChatPage() {
-  const systemId = await requireSystemId();
+  const systemId = await requireSystemAccount();
 
   // Fetch channels for this system. If none, create "geral" and backfill legacy
   // messages so the user lands in a working state on first visit.
