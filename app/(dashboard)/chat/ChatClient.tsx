@@ -709,7 +709,7 @@ function SendingAsPicker({
         aria-expanded={open}
         aria-label={labels.sendingAs}
         className={compact
-          ? 'flex items-center gap-1 p-1 transition-opacity hover:opacity-75 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60'
+          ? 'flex items-center justify-center w-8 h-8 transition-all duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60'
           : 'flex items-center gap-2 px-2.5 py-1.5 border bg-surface transition-all duration-150 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 max-w-[170px]'
         }
         style={compact ? undefined : {
@@ -719,21 +719,27 @@ function SendingAsPicker({
           borderRadius: '4px',
         }}
       >
-        {selected ? (
+        {compact ? (
+          open ? (
+            <span className="flex items-center justify-center w-8 h-8 text-muted hover:text-text transition-colors">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </span>
+          ) : (
+            <MemberAvatar name={selected?.name ?? '?'} color={selected?.color ?? null} avatarUrl={selected?.avatarUrl ?? null} size={30} />
+          )
+        ) : selected ? (
           <>
-            <MemberAvatar name={selected.name} color={selected.color} avatarUrl={selected.avatarUrl} size={compact ? 28 : 22} />
-            {!compact && (
-              <span className="text-[11px] font-black uppercase tracking-wider truncate" style={{ color: accentColor }}>
-                {selected.name}
-              </span>
-            )}
+            <MemberAvatar name={selected.name} color={selected.color} avatarUrl={selected.avatarUrl} size={22} />
+            <span className="text-[11px] font-black uppercase tracking-wider truncate" style={{ color: accentColor }}>
+              {selected.name}
+            </span>
           </>
         ) : (
-          !compact && (
-            <span className="text-[11px] text-muted font-black uppercase tracking-wider truncate">
-              {labels.sendAs}
-            </span>
-          )
+          <span className="text-[11px] text-muted font-black uppercase tracking-wider truncate">
+            {labels.sendAs}
+          </span>
         )}
         {!compact && (
           <svg aria-hidden="true" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -1224,24 +1230,6 @@ export function ChatClient({
             channelsOpen={channelsOpen}
             openLabel={t('chat.openChannels')}
             closeLabel={t('chat.closeChannels')}
-            pickerSlot={
-              <SendingAsPicker
-                members={members}
-                selected={selectedMember}
-                onSelect={setSelectedMember}
-                frontingIds={frontingIds}
-                direction="down"
-                compact
-                labels={{
-                  sendAs: t('chat.sendAs'),
-                  sendingAs: t('chat.sendingAs'),
-                  chooseAlter: t('chat.chooseAlter'),
-                  searchAlter: t('chat.searchAlter'),
-                  noAlterFound: t('chat.noAlterFound'),
-                  fronting: t('chat.fronting'),
-                }}
-              />
-            }
           />
 
           {/* Messages scroll area */}
@@ -1326,6 +1314,21 @@ export function ChatClient({
               className="flex items-end gap-2 p-1.5 border border-border-strong"
               style={{ background: 'var(--theme-surface-raised)' }}
             >
+              <SendingAsPicker
+                members={members}
+                selected={selectedMember}
+                onSelect={setSelectedMember}
+                frontingIds={frontingIds}
+                compact
+                labels={{
+                  sendAs: t('chat.sendAs'),
+                  sendingAs: t('chat.sendingAs'),
+                  chooseAlter: t('chat.chooseAlter'),
+                  searchAlter: t('chat.searchAlter'),
+                  noAlterFound: t('chat.noAlterFound'),
+                  fronting: t('chat.fronting'),
+                }}
+              />
               <textarea
                 ref={textareaRef}
                 value={draft}
