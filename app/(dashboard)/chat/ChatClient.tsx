@@ -1,6 +1,6 @@
 'use client';
 
-import {
+import React, {
   useCallback,
   useEffect,
   useMemo,
@@ -475,6 +475,7 @@ function ChannelHeader({
   channelsOpen,
   openLabel,
   closeLabel,
+  pickerSlot,
 }: {
   channelName: string;
   systemName: string;
@@ -482,6 +483,7 @@ function ChannelHeader({
   channelsOpen: boolean;
   openLabel: string;
   closeLabel: string;
+  pickerSlot?: React.ReactNode;
 }) {
   return (
     <header
@@ -527,6 +529,8 @@ function ChannelHeader({
           </>
         )}
       </div>
+
+      {pickerSlot && <div className="shrink-0">{pickerSlot}</div>}
     </header>
   );
 }
@@ -654,12 +658,16 @@ function SendingAsPicker({
   onSelect,
   frontingIds,
   labels,
+  direction = 'up',
+  compact = false,
 }: {
   members: MemberOption[];
   selected: MemberOption | null;
   onSelect: (m: MemberOption) => void;
   frontingIds: string[];
   labels: { sendAs: string; sendingAs: string; chooseAlter: string; searchAlter: string; noAlterFound: string; fronting: string };
+  direction?: 'up' | 'down';
+  compact?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
@@ -700,10 +708,11 @@ function SendingAsPicker({
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-label={labels.sendingAs}
-        className="flex items-center gap-2 px-2.5 py-1.5 border bg-surface
-          transition-all duration-150 text-left focus:outline-none
-          focus-visible:ring-2 focus-visible:ring-primary/60 max-w-[170px]"
-        style={{
+        className={compact
+          ? 'flex items-center gap-1 p-1 transition-opacity hover:opacity-75 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60'
+          : 'flex items-center gap-2 px-2.5 py-1.5 border bg-surface transition-all duration-150 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 max-w-[170px]'
+        }
+        style={compact ? undefined : {
           borderColor: selected?.color ? `${selected.color}55` : 'rgb(var(--theme-border-rgb) / 0.6)',
           borderLeftColor: accentColor,
           borderLeftWidth: '3px',
@@ -712,30 +721,36 @@ function SendingAsPicker({
       >
         {selected ? (
           <>
-            <MemberAvatar name={selected.name} color={selected.color} avatarUrl={selected.avatarUrl} size={22} />
-            <span className="text-[11px] font-black uppercase tracking-wider truncate" style={{ color: accentColor }}>
-              {selected.name}
-            </span>
+            <MemberAvatar name={selected.name} color={selected.color} avatarUrl={selected.avatarUrl} size={compact ? 28 : 22} />
+            {!compact && (
+              <span className="text-[11px] font-black uppercase tracking-wider truncate" style={{ color: accentColor }}>
+                {selected.name}
+              </span>
+            )}
           </>
         ) : (
-          <span className="text-[11px] text-muted font-black uppercase tracking-wider truncate">
-            {labels.sendAs}
-          </span>
+          !compact && (
+            <span className="text-[11px] text-muted font-black uppercase tracking-wider truncate">
+              {labels.sendAs}
+            </span>
+          )
         )}
-        <svg aria-hidden="true" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-          strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
-          className={`text-muted shrink-0 transition-transform duration-150 ${open ? 'rotate-180' : ''}`}
-        >
-          <path d="M6 9l6 6 6-6" />
-        </svg>
+        {!compact && (
+          <svg aria-hidden="true" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+            className={`text-muted shrink-0 transition-transform duration-150 ${open ? 'rotate-180' : ''}`}
+          >
+            <path d="M6 9l6 6 6-6" />
+          </svg>
+        )}
       </button>
 
       {open && (
         <div
           role="listbox"
           aria-label={labels.chooseAlter}
-          className="absolute bottom-full left-0 mb-2 w-60 border-2 border-border-strong
-            shadow-card-float overflow-hidden z-50 animate-slide-up"
+          className={`absolute ${direction === 'down' ? 'top-full mt-2 right-0' : 'bottom-full mb-2 left-0'} w-60 border-2 border-border-strong
+            shadow-card-float overflow-hidden z-50 animate-slide-up`}
           style={{
             background: 'var(--theme-surface-raised)',
             backgroundImage: SCANLINE_BG,
@@ -1209,6 +1224,24 @@ export function ChatClient({
             channelsOpen={channelsOpen}
             openLabel={t('chat.openChannels')}
             closeLabel={t('chat.closeChannels')}
+            pickerSlot={
+              <SendingAsPicker
+                members={members}
+                selected={selectedMember}
+                onSelect={setSelectedMember}
+                frontingIds={frontingIds}
+                direction="down"
+                compact
+                labels={{
+                  sendAs: t('chat.sendAs'),
+                  sendingAs: t('chat.sendingAs'),
+                  chooseAlter: t('chat.chooseAlter'),
+                  searchAlter: t('chat.searchAlter'),
+                  noAlterFound: t('chat.noAlterFound'),
+                  fronting: t('chat.fronting'),
+                }}
+              />
+            }
           />
 
           {/* Messages scroll area */}
@@ -1293,21 +1326,6 @@ export function ChatClient({
               className="flex items-end gap-2 p-1.5 border border-border-strong"
               style={{ background: 'var(--theme-surface-raised)' }}
             >
-              <SendingAsPicker
-                members={members}
-                selected={selectedMember}
-                onSelect={setSelectedMember}
-                frontingIds={frontingIds}
-                labels={{
-                  sendAs: t('chat.sendAs'),
-                  sendingAs: t('chat.sendingAs'),
-                  chooseAlter: t('chat.chooseAlter'),
-                  searchAlter: t('chat.searchAlter'),
-                  noAlterFound: t('chat.noAlterFound'),
-                  fronting: t('chat.fronting'),
-                }}
-              />
-
               <textarea
                 ref={textareaRef}
                 value={draft}
