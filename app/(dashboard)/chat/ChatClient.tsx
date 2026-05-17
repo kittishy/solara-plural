@@ -701,7 +701,7 @@ function SendingAsPicker({
   const accentColor = selected?.color ?? 'var(--theme-primary)';
 
   return (
-    <div ref={containerRef} className="relative shrink-0">
+    <div ref={containerRef} className="relative shrink-0 self-center">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
@@ -709,10 +709,14 @@ function SendingAsPicker({
         aria-expanded={open}
         aria-label={labels.sendingAs}
         className={compact
-          ? 'flex items-center justify-center w-8 h-8 transition-all duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60'
+          ? 'relative flex items-center justify-center w-9 h-9 rounded-full transition-all duration-200 focus:outline-none'
           : 'flex items-center gap-2 px-2.5 py-1.5 border bg-surface transition-all duration-150 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 max-w-[170px]'
         }
-        style={compact ? undefined : {
+        style={compact ? {
+          boxShadow: open
+            ? `0 0 0 2px ${accentColor}, 0 0 10px ${accentColor}55`
+            : `0 0 0 1.5px ${accentColor}70`,
+        } : {
           borderColor: selected?.color ? `${selected.color}55` : 'rgb(var(--theme-border-rgb) / 0.6)',
           borderLeftColor: accentColor,
           borderLeftWidth: '3px',
@@ -720,15 +724,27 @@ function SendingAsPicker({
         }}
       >
         {compact ? (
-          open ? (
-            <span className="flex items-center justify-center w-8 h-8 text-muted hover:text-text transition-colors">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
-              </svg>
-            </span>
-          ) : (
-            <MemberAvatar name={selected?.name ?? '?'} color={selected?.color ?? null} avatarUrl={selected?.avatarUrl ?? null} size={30} />
-          )
+          <>
+            <MemberAvatar
+              name={selected?.name ?? '?'}
+              color={selected?.color ?? null}
+              avatarUrl={selected?.avatarUrl ?? null}
+              size={36}
+            />
+            {open && (
+              <span
+                className="absolute inset-0 flex items-center justify-center rounded-full"
+                style={{ background: 'rgba(0,0,0,0.54)' }}
+                aria-hidden="true"
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"
+                  className="text-white">
+                  <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </span>
+            )}
+          </>
         ) : selected ? (
           <>
             <MemberAvatar name={selected.name} color={selected.color} avatarUrl={selected.avatarUrl} size={22} />
@@ -755,7 +771,7 @@ function SendingAsPicker({
         <div
           role="listbox"
           aria-label={labels.chooseAlter}
-          className={`absolute ${direction === 'down' ? 'top-full mt-2 right-0' : 'bottom-full mb-2 left-0'} w-60 border-2 border-border-strong
+          className={`absolute ${direction === 'down' ? 'top-full mt-2 right-0' : 'bottom-full mb-3 left-0'} w-64 border-2 border-border-strong
             shadow-card-float overflow-hidden z-50 animate-slide-up`}
           style={{
             background: 'var(--theme-surface-raised)',
@@ -766,6 +782,24 @@ function SendingAsPicker({
           <span aria-hidden="true"
             className="pointer-events-none absolute top-0 right-0 block w-2.5 h-2.5 border-t-2 border-r-2 border-primary" />
 
+          {/* Current member header */}
+          {selected && (
+            <div
+              className="flex items-center gap-2.5 px-3 py-2.5 border-b-2 border-border-strong/60"
+              style={{ borderLeftColor: accentColor, borderLeftWidth: '3px' }}
+            >
+              <MemberAvatar name={selected.name} color={selected.color} avatarUrl={selected.avatarUrl} size={22} />
+              <div className="flex-1 min-w-0">
+                <div className="text-[8px] font-black uppercase tracking-[0.2em] text-muted leading-none mb-[3px]">
+                  {labels.sendingAs}
+                </div>
+                <div className="text-[12px] font-black truncate leading-none" style={{ color: accentColor }}>
+                  {selected.name}
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="p-2 border-b border-border-strong/40">
             <input
               ref={inputRef}
@@ -773,7 +807,7 @@ function SendingAsPicker({
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder={labels.searchAlter}
-              className="w-full bg-surface border border-border/60 rounded-sm px-2.5 py-1.5
+              className="w-full bg-surface border border-border/60 px-2.5 py-1.5
                 text-xs text-text placeholder:text-muted focus:outline-none
                 focus:border-primary/60 transition-colors"
             />
@@ -818,20 +852,34 @@ function SendingAsPicker({
 function PickerRow({
   member, selected, fronting, onSelect,
 }: { member: MemberOption; selected: boolean; fronting?: boolean; onSelect: () => void }) {
+  const rowAccent = member.color ?? 'var(--theme-primary)';
   return (
     <li>
       <button type="button" role="option" aria-selected={selected} onClick={onSelect}
-        className={`w-full flex items-center gap-2.5 px-3 py-1.5 text-left transition-colors duration-100
-          focus:outline-none ${selected ? 'bg-primary/15 text-primary' : 'text-text hover:bg-surface-alt'}`}
+        className={`w-full flex items-center gap-3 px-3 py-2 text-left transition-colors duration-100
+          focus:outline-none ${selected ? 'bg-primary/10' : 'hover:bg-surface-alt'}`}
+        style={selected ? { borderLeft: `2px solid ${rowAccent}` } : { borderLeft: '2px solid transparent' }}
       >
-        <MemberAvatar name={member.name} color={member.color} avatarUrl={member.avatarUrl} size={24} />
-        <span className="text-xs font-semibold truncate flex-1">{member.name}</span>
-        {fronting && (
-          <span aria-hidden="true" className="text-[8px] text-primary"
-            style={{ filter: 'drop-shadow(0 0 4px rgb(var(--theme-primary-rgb) / 0.8))' }}>
-            ◉
-          </span>
-        )}
+        <MemberAvatar name={member.name} color={member.color} avatarUrl={member.avatarUrl} size={28} />
+        <span className="text-[12.5px] font-bold truncate flex-1 leading-tight"
+          style={{ color: selected ? rowAccent : undefined }}>
+          {member.name}
+        </span>
+        <span className="flex items-center gap-1.5 shrink-0">
+          {fronting && (
+            <span aria-hidden="true" className="text-[8px] text-primary"
+              style={{ filter: 'drop-shadow(0 0 4px rgb(var(--theme-primary-rgb) / 0.8))' }}>
+              ◉
+            </span>
+          )}
+          {selected && (
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"
+              className="text-primary" aria-hidden="true">
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
+          )}
+        </span>
       </button>
     </li>
   );
@@ -1311,8 +1359,12 @@ export function ChatClient({
             style={{ background: 'var(--theme-surface)', backgroundImage: SCANLINE_BG }}
           >
             <div
-              className="flex items-end gap-2 p-1.5 border border-border-strong"
-              style={{ background: 'var(--theme-surface-raised)' }}
+              className="flex items-end gap-2 p-1.5 border border-border-strong transition-all duration-300"
+              style={{
+                background: 'var(--theme-surface-raised)',
+                borderLeftColor: selectedMember?.color ?? 'var(--theme-primary)',
+                borderLeftWidth: '3px',
+              }}
             >
               <SendingAsPicker
                 members={members}
