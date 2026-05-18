@@ -4,10 +4,10 @@
 #
 # Returns full HTML page with notes list. Zero client-side JS.
 
-require_relative '../lib/turso'
-require_relative '../lib/auth'
-require_relative '../lib/response'
-require_relative '../lib/template'
+require_relative '../_lib/turso'
+require_relative '../_lib/auth'
+require_relative '../_lib/response'
+require_relative '../_lib/template'
 
 Handler = Proc.new do |req, res|
   system_id = Solara::Auth.system_id(req)

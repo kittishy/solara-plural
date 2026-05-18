@@ -6,10 +6,10 @@
 # PUT    /api/ruby/notes/:id  — update a note (title, content, category)
 # DELETE /api/ruby/notes/:id  — delete a note
 
-require_relative '../lib/turso'
-require_relative '../lib/auth'
-require_relative '../lib/response'
-require_relative '../lib/request'
+require_relative '../_lib/turso'
+require_relative '../_lib/auth'
+require_relative '../_lib/response'
+require_relative '../_lib/request'
 
 Handler = Proc.new do |req, res|
   system_id = Solara::Auth.system_id(req)
