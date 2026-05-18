@@ -13,10 +13,6 @@
       "runtime": "@vercel/ruby@2.3.2",
       "includeFiles": "api/ruby/_lib/**"
     },
-    "api/ruby/journal/[id].rb": {
-      "runtime": "@vercel/ruby@2.3.2",
-      "includeFiles": "api/ruby/_lib/**"
-    },
     "api/ruby/pages/*.rb": {
       "runtime": "@vercel/ruby@2.3.2",
       "includeFiles": "api/ruby/_lib/**,api/ruby/views/**"

@@ -150,7 +150,7 @@ export default function JournalEditor({ entry, members }: Props) {
     if (!content.trim()) return;
 
     setStatus({ type: 'info', message: 'Saving entry...' });
-    const url = entry ? `/api/ruby/journal/${entry.id}` : '/api/ruby/journal';
+    const url = entry ? `/api/journal/${entry.id}` : '/api/journal';
     const method = entry ? 'PUT' : 'POST';
 
     const res = await fetch(url, {
@@ -190,7 +190,7 @@ export default function JournalEditor({ entry, members }: Props) {
     if (!entry) return;
     if (!confirm(`Delete "${entry.title ?? 'this entry'}"? This cannot be undone.`)) return;
 
-    const res = await fetch(`/api/ruby/journal/${entry.id}`, { method: 'DELETE' });
+    const res = await fetch(`/api/journal/${entry.id}`, { method: 'DELETE' });
     if (!res.ok) {
       setStatus({ type: 'error', message: 'Could not delete this entry. Try again?' });
       return;
