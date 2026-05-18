@@ -118,20 +118,32 @@ function IconMenu({ size = 22 }: IconProps) {
   );
 }
 
-const navItemsBase = [
-  { href: '/', labelKey: 'nav.home', Icon: IconHome, systemOnly: false },
-  { href: '/members', labelKey: 'nav.members', Icon: IconMembers, systemOnly: true },
-  { href: '/notes', labelKey: 'nav.notes', Icon: IconNotes, systemOnly: false },
-  { href: '/chat', labelKey: 'nav.chat', Icon: IconChat, systemOnly: true },
+const systemNavItems = [
+  { href: '/', labelKey: 'nav.home', Icon: IconHome },
+  { href: '/members', labelKey: 'nav.members', Icon: IconMembers },
+  { href: '/notes', labelKey: 'nav.notes', Icon: IconNotes },
+  { href: '/chat', labelKey: 'nav.chat', Icon: IconChat },
 ] as const;
 
-const menuItemsBase = [
-  { href: '/partners', labelKey: 'nav.partners', Icon: IconPartners, systemOnly: false },
-  { href: '/journal', labelKey: 'nav.journal', Icon: IconJournal, systemOnly: true },
-  { href: '/friends', labelKey: 'nav.friends', Icon: IconFriends, systemOnly: false },
-  { href: '/front/history', labelKey: 'nav.frontHistory', Icon: IconCalendar, systemOnly: true },
-  { href: '/notifications', labelKey: 'nav.notifications', Icon: IconBell, systemOnly: false },
-  { href: '/settings', labelKey: 'nav.settings', Icon: IconSettings, systemOnly: false },
+const singletNavItems = [
+  { href: '/', labelKey: 'nav.home', Icon: IconHome },
+  { href: '/partners', labelKey: 'nav.partners', Icon: IconPartners },
+  { href: '/friends', labelKey: 'nav.friends', Icon: IconFriends },
+  { href: '/notifications', labelKey: 'nav.notifications', Icon: IconBell },
+] as const;
+
+const systemMenuItems = [
+  { href: '/partners', labelKey: 'nav.partners', Icon: IconPartners },
+  { href: '/journal', labelKey: 'nav.journal', Icon: IconJournal },
+  { href: '/friends', labelKey: 'nav.friends', Icon: IconFriends },
+  { href: '/front/history', labelKey: 'nav.frontHistory', Icon: IconCalendar },
+  { href: '/notifications', labelKey: 'nav.notifications', Icon: IconBell },
+  { href: '/settings', labelKey: 'nav.settings', Icon: IconSettings },
+] as const;
+
+const singletMenuItems = [
+  { href: '/notes', labelKey: 'nav.notes', Icon: IconNotes },
+  { href: '/settings', labelKey: 'nav.settings', Icon: IconSettings },
 ] as const;
 
 function isActive(pathname: string, href: string) {
@@ -146,8 +158,8 @@ export function MobileNav({ accountType = 'system' }: { accountType?: 'system' |
   const [menuOpen, setMenuOpen] = useState(false);
   const [isMenuClosing, setIsMenuClosing] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
-  const navItems = navItemsBase.filter((item) => accountType === 'system' || !item.systemOnly);
-  const menuItems = menuItemsBase.filter((item) => accountType === 'system' || !item.systemOnly);
+  const navItems = accountType === 'system' ? systemNavItems : singletNavItems;
+  const menuItems = accountType === 'system' ? systemMenuItems : singletMenuItems;
   const menuIsActive = menuItems.some((item) => isActive(activePathname, item.href));
 
   function closeMenu() {
