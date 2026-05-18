@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { revalidateNotes } from '@/lib/swr';
 
 type EditableNote = {
   id: string;
@@ -108,7 +107,6 @@ export default function NoteEditor({ note }: Props) {
       // Ignore storage cleanup failures.
     }
 
-    revalidateNotes();
     setStatus({ type: 'success', message: 'Note saved.' });
 
     if (!note) {
@@ -128,7 +126,6 @@ export default function NoteEditor({ note }: Props) {
       return;
     }
 
-    revalidateNotes();
     startTransition(() => router.push('/notes'));
   }
 
