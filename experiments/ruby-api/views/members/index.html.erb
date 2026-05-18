@@ -1,0 +1,75 @@
+<%# Server-rendered members list — Ruby SSR alternative to MembersClient.tsx
+     This page shows a read-only member list. Editing still routes to React. %>
+
+<section class="space-y-4">
+  <div class="flex items-center gap-2 mb-3">
+    <span class="text-primary text-xs font-black" aria-hidden="true">&#9670;</span>
+    <span class="text-xs font-black uppercase tracking-wide text-muted">Members</span>
+    <span style="flex:1;height:1px;background:var(--theme-border-strong)" aria-hidden="true"></span>
+  </div>
+
+  <h1 style="font-size:1.75rem;font-weight:900;letter-spacing:-0.02em">
+    Your Members
+  </h1>
+  <p class="text-muted text-sm">
+    <%= members.length %> <%= members.length == 1 ? 'member' : 'members' %> in your system
+  </p>
+
+  <% if members.empty? %>
+    <div class="card" style="padding:2.5rem;text-align:center;border-left:3px solid var(--theme-border-strong)">
+      <p class="text-muted">No members yet. Create your first member to get started.</p>
+    </div>
+  <% else %>
+    <div class="space-y-2">
+      <% members.each do |member| %>
+        <div class="card" style="border-left:3px solid <%= h.call(member[:color] || '#a78bfa') %>;display:flex;align-items:center;gap:0.75rem">
+          <% if member[:avatarUrl] %>
+            <img
+              src="<%= h.call(member[:avatarUrl]) %>"
+              alt="<%= h.call(member[:name]) %>"
+              width="40" height="40"
+              loading="lazy"
+              style="width:40px;height:40px;object-fit:cover;clip-path:polygon(0 0,calc(100% - 4px) 0,100% 4px,100% 100%,0 100%)"
+            >
+          <% else %>
+            <span
+              aria-hidden="true"
+              style="width:40px;height:40px;display:flex;align-items:center;justify-content:center;
+                     font-weight:900;font-size:0.875rem;color:var(--theme-bg);
+                     background:<%= h.call(member[:color] || '#a78bfa') %>;
+                     clip-path:polygon(0 0,calc(100% - 4px) 0,100% 4px,100% 100%,0 100%)"
+            >
+              <%= h.call(member[:name][0].upcase) %>
+            </span>
+          <% end %>
+
+          <div style="min-width:0;flex:1">
+            <p style="font-weight:900;font-size:0.875rem;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+              <%= h.call(member[:name]) %>
+            </p>
+            <% if member[:pronouns] %>
+              <p class="text-xs text-muted" style="margin-top:2px"><%= h.call(member[:pronouns]) %></p>
+            <% end %>
+            <% if member[:role] %>
+              <p class="text-xs text-primary" style="margin-top:2px;text-transform:uppercase;letter-spacing:0.1em;font-weight:700;font-size:0.625rem">
+                <%= h.call(member[:role]) %>
+              </p>
+            <% end %>
+          </div>
+
+          <% if member[:tags] && member[:tags].any? %>
+            <div style="display:flex;gap:4px;flex-wrap:wrap">
+              <% member[:tags].first(3).each do |tag| %>
+                <span style="font-size:0.625rem;font-weight:700;padding:2px 6px;
+                             background:rgba(167,139,250,0.1);color:var(--theme-primary);
+                             text-transform:uppercase;letter-spacing:0.05em">
+                  <%= h.call(tag) %>
+                </span>
+              <% end %>
+            </div>
+          <% end %>
+        </div>
+      <% end %>
+    </div>
+  <% end %>
+</section>

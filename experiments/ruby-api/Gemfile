@@ -1,0 +1,19 @@
+# frozen_string_literal: true
+
+source 'https://rubygems.org'
+
+ruby '>= 3.2'
+
+# Password hashing — compatible with bcryptjs used on the Node.js side.
+# Used when Ruby handles auth write endpoints.
+gem 'bcrypt', '~> 3.1'
+
+# Environment variable loading for local development.
+# Not needed in Vercel (env vars are set in project settings).
+gem 'dotenv', '~> 3.1', groups: [:development, :test]
+
+# Everything else used by the Ruby serverless functions is Ruby stdlib:
+#   net/http  — HTTP requests to Turso Pipeline API and NextAuth session
+#   json      — JSON encode/decode
+#   erb       — HTML template rendering
+#   securerandom — generating unique IDs

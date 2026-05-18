@@ -1,0 +1,21 @@
+# GitHub Linguist overrides
+# https://github.com/github-linguist/linguist/blob/master/docs/overrides.md
+
+# ── Vendored / generated — exclude from language stats ──────────────────────
+node_modules/**        linguist-vendored
+.next/**               linguist-vendored
+drizzle/**             linguist-generated
+public/service-worker.js linguist-vendored
+
+# ── Explicitly count the Ruby experiment ────────────────────────────────────
+# Linguist would normally include experiments/ but this makes intent explicit.
+experiments/ruby-api/**/*.rb   linguist-detectable=true
+experiments/ruby-api/**/*.erb  linguist-detectable=true
+
+# ── Config / data files — don't count as code ───────────────────────────────
+*.json                 linguist-language=JSON
+drizzle.config.ts      linguist-generated
+postcss.config.mjs     linguist-generated
+tailwind.config.ts     linguist-generated
+next.config.mjs        linguist-generated
+vitest.config.ts       linguist-generated
