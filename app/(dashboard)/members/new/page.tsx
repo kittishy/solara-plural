@@ -44,7 +44,7 @@ export default function NewMemberPage() {
 
     const tags = form.tags.split(',').map((t) => t.trim()).filter(Boolean);
 
-    const res = await fetch('/api/members', {
+    const res = await fetch('/api/ruby/members', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

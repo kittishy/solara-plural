@@ -12,6 +12,7 @@ require_relative '_lib/auth'
 require_relative '_lib/response'
 require_relative '_lib/request'
 require_relative '_lib/id'
+require_relative '_lib/custom_fields'
 require 'json'
 
 Handler = Proc.new do |req, res|
@@ -84,20 +85,25 @@ Handler = Proc.new do |req, res|
       [id, system_id, name, pronouns, avatar_url, description, color, role, tags_json, notes, now, now]
     )
 
+    custom_field_values = Solara::CustomFields.save_member_values(
+      system_id, id, body['customFieldValues']
+    )
+
     Solara::Response.ok(res, {
-      id:          id,
-      systemId:    system_id,
-      name:        name,
-      pronouns:    pronouns,
-      avatarUrl:   avatar_url,
-      description: description,
-      color:       color,
-      role:        role,
-      tags:        tags,
-      notes:       notes,
-      isArchived:  false,
-      createdAt:   now,
-      updatedAt:   now,
+      id:                id,
+      systemId:          system_id,
+      name:              name,
+      pronouns:          pronouns,
+      avatarUrl:         avatar_url,
+      description:       description,
+      color:             color,
+      role:              role,
+      tags:              tags,
+      notes:             notes,
+      isArchived:        false,
+      customFieldValues: custom_field_values,
+      createdAt:         now,
+      updatedAt:         now,
     }, status: 201)
 
   else
