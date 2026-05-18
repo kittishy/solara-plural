@@ -6,6 +6,8 @@
 # Handles per-member custom field values stored in the member_field_values table.
 
 require 'json'
+require_relative 'turso'
+require_relative 'id'
 
 module Solara
   module CustomFields
