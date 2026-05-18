@@ -1,0 +1,21 @@
+{
+  "framework": "nextjs",
+  "functions": {
+    "api/ruby/*.rb": {
+      "runtime": "@vercel/ruby@2.3.2",
+      "includeFiles": "api/ruby/lib/**"
+    },
+    "api/ruby/members/[id].rb": {
+      "runtime": "@vercel/ruby@2.3.2",
+      "includeFiles": "api/ruby/lib/**"
+    },
+    "api/ruby/notes/[id].rb": {
+      "runtime": "@vercel/ruby@2.3.2",
+      "includeFiles": "api/ruby/lib/**"
+    },
+    "api/ruby/pages/*.rb": {
+      "runtime": "@vercel/ruby@2.3.2",
+      "includeFiles": "api/ruby/lib/**,api/ruby/views/**"
+    }
+  }
+}
