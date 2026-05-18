@@ -48,14 +48,14 @@ module Solara
     private
 
     def self.extract_cookie(req)
-      req['Cookie'] || req.env&.dig('HTTP_COOKIE')
+      req['Cookie']
     end
 
     def self.extract_origin(req)
-      host = req['Host'] || req.env&.dig('HTTP_HOST')
+      host = req['Host']
       return nil unless host
 
-      scheme = req['X-Forwarded-Proto'] || req.env&.dig('HTTP_X_FORWARDED_PROTO') || 'https'
+      scheme = req['X-Forwarded-Proto'] || 'https'
       "#{scheme}://#{host}"
     end
 
