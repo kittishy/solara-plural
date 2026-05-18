@@ -121,12 +121,12 @@ function IconMenu({ size = 22 }: IconProps) {
 const navItemsBase = [
   { href: '/', labelKey: 'nav.home', Icon: IconHome, systemOnly: false },
   { href: '/members', labelKey: 'nav.members', Icon: IconMembers, systemOnly: true },
-  { href: '/partners', labelKey: 'nav.partners', Icon: IconPartners, systemOnly: false },
   { href: '/notes', labelKey: 'nav.notes', Icon: IconNotes, systemOnly: false },
   { href: '/chat', labelKey: 'nav.chat', Icon: IconChat, systemOnly: true },
 ] as const;
 
 const menuItemsBase = [
+  { href: '/partners', labelKey: 'nav.partners', Icon: IconPartners, systemOnly: false },
   { href: '/journal', labelKey: 'nav.journal', Icon: IconJournal, systemOnly: true },
   { href: '/friends', labelKey: 'nav.friends', Icon: IconFriends, systemOnly: false },
   { href: '/front/history', labelKey: 'nav.frontHistory', Icon: IconCalendar, systemOnly: true },
