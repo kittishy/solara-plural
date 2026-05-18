@@ -4,10 +4,12 @@ type ApiSuccess<T> = { success: true; data: T };
 type ApiFailure = { success: false; error?: string };
 
 export const swrKeys = {
-  members: '/api/members',
-  front: '/api/front',
-  notes: '/api/notes',
-  journal: '/api/journal',
+  // Ruby endpoints — GET reads routed to the Ruby backend
+  members: '/api/ruby/members',
+  front: '/api/ruby/front',
+  notes: '/api/ruby/notes',
+  journal: '/api/ruby/journal',
+  // TypeScript endpoints — not yet ported to Ruby
   frontHistory: '/api/front/history?limit=50&offset=0',
   notifications: '/api/notifications',
   partners: '/api/partners',

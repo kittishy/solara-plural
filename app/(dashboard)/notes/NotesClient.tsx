@@ -2,8 +2,6 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
-import useSWR from 'swr';
-import { apiFetcher, swrKeys } from '@/lib/swr';
 import { formatDate } from '@/lib/client/format';
 
 const INITIAL_VISIBLE_NOTES = 60;
@@ -57,11 +55,7 @@ function IconChevronRight() {
 export default function NotesClient({ initialNotes }: { initialNotes: NoteListItem[] }) {
   const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE_NOTES);
   const [activeFilter, setActiveFilter] = useState<FilterValue>('all');
-  const { data: notes = initialNotes } = useSWR<NoteListItem[]>(
-    swrKeys.notes,
-    apiFetcher,
-    { fallbackData: initialNotes, revalidateOnMount: false }
-  );
+  const notes = initialNotes;
 
   const filteredNotes = activeFilter === 'all'
     ? notes
