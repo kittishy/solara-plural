@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { revalidateJournal } from '@/lib/swr';
 
 type MemberPickerItem = {
   id: string;
@@ -178,7 +177,6 @@ export default function JournalEditor({ entry, members }: Props) {
       // Ignore storage cleanup failures.
     }
 
-    revalidateJournal();
     setStatus({ type: 'success', message: 'Entry saved.' });
 
     if (!entry) {
@@ -198,7 +196,6 @@ export default function JournalEditor({ entry, members }: Props) {
       return;
     }
 
-    revalidateJournal();
     startTransition(() => router.push('/journal'));
   }
 
