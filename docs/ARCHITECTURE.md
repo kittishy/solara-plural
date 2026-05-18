@@ -17,15 +17,15 @@ systems to organize their internal world.
 
 | Layer | Technology | Notes |
 |-------|-----------|-------|
-| Framework | Next.js 14 (App Router) | SSR + RSC + Route Handlers |
-| Language | TypeScript | Strict mode enabled |
+| Framework | Next.js 14 (App Router) | Canonical production stack; Ruby lives in experiments/ |
+| Languages | TypeScript (production), Ruby (experiment) | Ruby SSR/API layer staged in `experiments/ruby-api/` |
 | Database | Turso (libSQL) | SQLite-compatible, serverless-ready |
-| ORM | Drizzle ORM | `@libsql/client` adapter |
-| Auth | NextAuth.js v5 (Auth.js) | Credentials provider, JWT sessions |
-| Styling | Tailwind CSS v3 | Custom design tokens |
-| State | React Context + SWR | Auth context + data fetching |
-| Deployment | Vercel | Native Next.js support |
-| Package Manager | npm | Current lockfile is package-lock.json |
+| ORM | Drizzle ORM (Node.js), raw SQL (Ruby) | Ruby uses Turso HTTP Pipeline API directly |
+| Auth | NextAuth.js v5 (Auth.js) | Credentials provider, JWT sessions; Ruby delegates to NextAuth |
+| Styling | Tailwind CSS v3 + inline CSS (Ruby SSR) | Shared CSS custom properties for visual consistency |
+| State | SWR (client pages only) | Minimal client-side state; server-rendered pages need no state |
+| Deployment | Vercel | `@vercel/next` only in production; `@vercel/ruby` planned for a dedicated preview project |
+| Package Manager | npm | `Gemfile` lives in `experiments/ruby-api/`, not at root |
 
 ---
 
@@ -33,7 +33,16 @@ systems to organize their internal world.
 
 ```
 solara-plural/
-├── app/                          # Next.js App Router
+├── experiments/
+│   └── ruby-api/                 # Ruby SSR experiment (NOT in Vercel production build)
+│       ├── lib/                  # Shared Ruby helpers (turso, auth, response, template, id, request)
+│       ├── views/                # ERB templates for server-rendered pages
+│       ├── pages/                # SSR page handlers (return HTML)
+│       ├── endpoints/            # JSON API handlers (members, notes, front, journal, health)
+│       │   ├── members/
+│       │   └── notes/
+│       └── Gemfile               # Ruby dependencies (bcrypt, dotenv dev only)
+├── app/                          # Next.js App Router (legacy, being reduced)
 │   ├── (auth)/                   # Auth route group (no layout)
 │   │   ├── login/
 │   │   │   └── page.tsx
@@ -154,9 +163,15 @@ solara-plural/
 ## Data Flow
 
 ```
-Browser → Next.js Page (RSC or Client) → SWR hook → API Route Handler
+Production (Next.js):
+Browser → Vercel → Next.js Page (RSC or Client) → SWR hook / direct DB
 → Auth check (NextAuth session) → Drizzle query → Turso (libSQL)
 → Response → UI update
+
+Experiment (Ruby, preview only):
+Browser → Ruby handler (standalone Rack/Vercel preview project)
+→ Auth check (delegates to NextAuth session endpoint)
+→ Turso HTTP Pipeline API → JSON or HTML response
 ```
 
 ---
@@ -437,3 +452,90 @@ Current backend limitation:
 ### Adjacent hardening
 - `GET /api/export` now tolerates corrupted JSON in `members.tags` and `front_entries.memberIds` by exporting empty arrays for invalid values.
 - `POST /api/front` now verifies every `memberId` belongs to the authenticated system before creating a current front entry.
+
+---
+
+## 2026-05-18 Architecture Update: Ruby Hybrid Migration
+
+### Motivation
+
+Solara is migrating from a React-heavy architecture toward a Ruby-centric server-rendered model:
+- **Lower complexity** — Ruby endpoints are simpler than TypeScript route handlers for CRUD operations
+- **Less client JS** — server-rendered HTML pages eliminate React hydration for read-only views
+- **AI-friendly** — fewer files, less abstraction, lower token consumption for maintenance
+- **Artisanal feel** — the project should feel like handcrafted software, not a framework template
+
+### Why `experiments/ruby-api/` and not `api/ruby/`
+
+Vercel's CLI (`vercel build`) automatically detects a `Gemfile` at the project root and tries to resolve Ruby version dependencies before building. This validation fails regardless of the version spec used (`~> 3.3.x`, `3.3.0`, or no version). Moving Ruby to `experiments/` keeps the `Gemfile` out of the root, preventing detection and allowing `vercel build` to succeed with the pure Next.js stack.
+
+The Ruby layer is developed here and will be activated via a dedicated Vercel preview project or a separate Vercel project that only deploys `experiments/ruby-api/` when it is ready for production use.
+
+### Ruby Experiment Layer (`experiments/ruby-api/`)
+
+```
+experiments/ruby-api/
+├── lib/
+│   ├── turso.rb         # Turso HTTP Pipeline API client (no native extensions)
+│   ├── auth.rb          # Session verification (delegates to Next.js /api/auth/session)
+│   ├── response.rb      # JSON response helpers (same shape as lib/api/helpers.ts)
+│   ├── template.rb      # ERB template renderer for SSR pages
+│   ├── id.rb            # CUID2-style ID generator (SecureRandom, no gems)
+│   └── request.rb       # JSON body parsing and field validation helpers
+├── views/
+│   ├── layouts/
+│   │   └── application.html.erb   # Base HTML layout with Solara theme tokens
+│   ├── members/
+│   │   └── index.html.erb         # Server-rendered member list (XSS-safe via h.call())
+│   └── notes/
+│       └── index.html.erb         # Server-rendered notes list
+├── pages/
+│   ├── members.rb       # SSR members page (auth → DB → HTML)
+│   └── notes.rb         # SSR notes page (auth → DB → HTML)
+├── endpoints/
+│   ├── members.rb       # Members collection API (GET list, POST create)
+│   ├── members/
+│   │   └── [id].rb      # Per-member API (GET, PUT, soft-DELETE)
+│   ├── notes.rb         # Notes collection API (GET list, POST create)
+│   ├── notes/
+│   │   └── [id].rb      # Per-note API (GET, PUT, DELETE)
+│   ├── front.rb         # Front status API (GET only — writes stay in Next.js)
+│   ├── journal.rb       # Journal entries API (GET only)
+│   └── health.rb        # Health check
+├── Gemfile              # Ruby deps: bcrypt, dotenv (dev only); all else is stdlib
+└── README.md            # Experiment setup and local dev instructions
+```
+
+### Ruby Database Access
+
+Ruby uses the Turso HTTP Pipeline API (`lib/turso.rb`) instead of native libSQL bindings to avoid native extension issues in serverless runtimes. This client:
+- Converts `libsql://` URLs to HTTPS automatically
+- Uses the `/v2/pipeline` request format: `{ requests: [{ type: 'execute', stmt: { sql, args } }, { type: 'close' }] }`
+- Returns rows as Ruby hashes with column names as keys
+- Handles type coercion for integers, floats, text, and nulls
+
+### Ruby Authentication
+
+Ruby endpoints verify authentication by forwarding the browser's session cookie to the Next.js `/api/auth/session` endpoint (`lib/auth.rb`). This ensures Ruby and Next.js endpoints respect the same auth state without duplicating JWT verification logic.
+
+### Migration Coverage (experiment)
+
+| Surface | Ruby (experiment) | Next.js (production) |
+|---------|-------------------|---------------------|
+| Members list | `endpoints/members.rb` (JSON) + `pages/members.rb` (HTML) | `GET /api/members` + `/members` |
+| Notes list | `endpoints/notes.rb` (JSON) + `pages/notes.rb` (HTML) | `GET /api/notes` + `/notes` |
+| Front status | `endpoints/front.rb` (GET only) | `GET /api/front` + `/front` |
+| Journal list | `endpoints/journal.rb` (GET) | `GET /api/journal` + `/journal` |
+| Health check | `endpoints/health.rb` | — |
+| Front writes | — (R3) | `POST/DELETE /api/front` |
+| Notifications | — (R3) | `GET/PATCH /api/notifications` |
+
+### Migration Principles
+
+1. **Production-safe** — Ruby lives in `experiments/`, Vercel builds never touch it
+2. **Additive only** — Ruby endpoints are added alongside existing ones, nothing is removed
+3. **Same response shape** — Ruby returns `{ success: true, data: ... }` matching `lib/api/helpers.ts`
+4. **Same auth model** — Ruby delegates to NextAuth, no separate auth system
+5. **Same database** — both runtimes query the same Turso instance
+6. **No framework dependency** — plain Rack handlers, no Rails/Sinatra required in production
+7. **Progressive adoption** — pages that need interactivity stay in React; read-only views move to Ruby SSR

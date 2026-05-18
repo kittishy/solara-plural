@@ -202,3 +202,72 @@ See IDEAS.md for the full backlog of feature ideas.
 - [ ] Add optional manual conflict resolution for skipped ambiguous members
 - [ ] Decide whether front sync should be read-only preview, local import, or bidirectional sync
 - [ ] Add provider-specific docs for users to find tokens safely
+
+---
+
+## 2026-05-18 Ruby Migration Track
+
+> **Note:** Ruby code lives in `experiments/ruby-api/` — kept out of root so Vercel
+> build never detects the Gemfile. Main production deploy stays pure Next.js.
+> Ruby activates via a dedicated Vercel preview project when ready.
+
+### Phase R1: Infrastructure (complete)
+- [x] Create `experiments/ruby-api/Gemfile` with Ruby dependencies (bcrypt, dotenv dev)
+- [x] Create Ruby database layer (`lib/turso.rb`) using Turso HTTP Pipeline API
+- [x] Create Ruby auth helper (`lib/auth.rb`) delegating to NextAuth session endpoint
+- [x] Create Ruby response helpers (`lib/response.rb`) matching `lib/api/helpers.ts` shape
+- [x] Create Ruby ERB template system (`lib/template.rb`) with XSS-safe `h` helper
+- [x] Create ID generator (`lib/id.rb`) and request parser (`lib/request.rb`)
+- [x] Create base HTML layout with Solara CSS custom properties (`views/layouts/application.html.erb`)
+- [x] Health check endpoint (`endpoints/health.rb`)
+
+### Phase R2: First Ruby Endpoints (complete)
+- [x] `GET/POST endpoints/members.rb` — member list + create
+- [x] `GET/PUT/DELETE endpoints/members/[id].rb` — per-member CRUD (soft-delete)
+- [x] `GET/POST endpoints/notes.rb` — notes list + create
+- [x] `GET/PUT/DELETE endpoints/notes/[id].rb` — per-note CRUD
+- [x] `GET endpoints/front.rb` — front status (read-only; writes stay in Next.js)
+- [x] `GET endpoints/journal.rb` — journal entries
+- [x] `pages/members.rb` — server-rendered members page (auth → DB → HTML)
+- [x] `pages/notes.rb` — server-rendered notes page (auth → DB → HTML)
+
+### Phase R2.5: Safe Reorganization (complete)
+- [x] Move all Ruby code from `api/ruby/` → `experiments/ruby-api/`
+- [x] Remove root `vercel.json` and root `Gemfile` (restore clean Next.js Vercel config)
+- [x] Fix `require_relative` paths after restructure
+- [x] Write `experiments/ruby-api/README.md`
+- [x] Update `docs/ARCHITECTURE.md` and `docs/ROADMAP.md`
+
+### Phase R3: Expand Ruby APIs (next)
+- [ ] Migrate `POST/DELETE front` (requires PluralKit sync port)
+- [ ] Migrate journal write CRUD
+- [ ] Migrate custom fields CRUD
+- [ ] Migrate notifications list endpoint
+- [ ] Set up dedicated Vercel preview project pointing at `experiments/ruby-api/`
+- [ ] Add direct JWT verification in Ruby (remove NextAuth session delegation latency)
+
+### Phase R4: Ruby SSR Pages (next)
+- [ ] Server-rendered journal page
+- [ ] Server-rendered front history page
+- [ ] Server-rendered notifications page
+- [ ] Server-rendered dashboard page
+- [ ] Update frontend routing to serve Ruby HTML for read-only views
+- [ ] Add progressive enhancement for forms (HTML `<form>` + Ruby handler)
+
+### Phase R5: Reduce Next.js (future)
+- [ ] Move auth to Ruby (bcrypt + session cookies, remove NextAuth dependency)
+- [ ] Replace SWR with server-rendered data + HTML forms
+- [ ] Convert remaining static pages to Ruby SSR
+- [ ] Remove React from read-only pages
+- [ ] Reduce Tailwind build to CSS custom properties only
+- [ ] Evaluate removing Next.js entirely once all pages are Ruby SSR + vanilla JS
+
+### Phase R6: Frontend Simplification (ongoing)
+- [x] Delete `JournalClient.tsx` — SWR with `revalidateOnMount: false` was dead code
+- [x] Pre-fetch notifications server-side; pass as `initialData` to eliminate loading flash
+- [ ] Remove unnecessary `'use client'` directives
+- [ ] Convert display-only client components to server components
+- [ ] Replace SWR revalidation with server-side rendering where possible
+- [ ] Remove unused npm dependencies
+- [ ] Reduce TypeScript complexity in favor of plain data structures
+- [ ] Minimize client-side JavaScript payload
