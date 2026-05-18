@@ -27,9 +27,15 @@ function permissionLabel(permission: NotificationPermission | 'unsupported') {
   return 'Unsupported';
 }
 
-export default function NotificationsClient() {
+// Accepts server-pre-fetched initialData so the page renders immediately
+// without a loading skeleton. SWR is only used for mutation-driven updates.
+export default function NotificationsClient({ initialData }: { initialData: NotificationsPayload }) {
   const { formatDate, formatTime } = useLanguage();
-  const { data, error, isLoading, mutate } = useSWR<NotificationsPayload>(swrKeys.notifications, apiFetcher);
+  const { data, mutate } = useSWR<NotificationsPayload>(swrKeys.notifications, apiFetcher, {
+    fallbackData: initialData,
+    revalidateOnMount: false,
+  });
+
   const [permission, setPermission] = useState<NotificationPermission | 'unsupported'>(() => (
     typeof window !== 'undefined' && 'Notification' in window ? Notification.permission : 'unsupported'
   ));
@@ -100,10 +106,7 @@ export default function NotificationsClient() {
       {/* Push notifications slim bar */}
       <div className="flex items-center justify-between gap-3 rounded-xl border border-border/40 bg-surface px-4 py-3">
         <div className="flex items-center gap-2.5 min-w-0">
-          <span
-            className={`h-2 w-2 rounded-full flex-shrink-0 ${statusDot}`}
-            aria-hidden="true"
-          />
+          <span className={`h-2 w-2 rounded-full flex-shrink-0 ${statusDot}`} aria-hidden="true" />
           <span className="text-sm font-medium text-text">Push notifications</span>
           <span className="text-subtle text-xs" aria-hidden="true">·</span>
           <span className="text-muted text-xs truncate">{permissionLabel(permission)}</span>
@@ -120,33 +123,15 @@ export default function NotificationsClient() {
           </button>
         )}
       </div>
-      {pushStatus && (
-        <p className="text-sm text-muted px-1">{pushStatus}</p>
-      )}
+      {pushStatus && <p className="text-sm text-muted px-1">{pushStatus}</p>}
 
-      {/* Notification list */}
-      {isLoading && (
-        <div className="rounded-xl overflow-hidden border border-border/40">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="skeleton h-16 rounded-none border-b border-border/30 last:border-0" />
-          ))}
-        </div>
-      )}
-
-      {error && (
-        <p role="alert" className="text-sm text-error px-1">Could not load notifications.</p>
-      )}
-
-      {!isLoading && !error && notifications.length === 0 && (
+      {/* Notification list — data is always ready (no loading skeleton) */}
+      {notifications.length === 0 ? (
         <div className="card p-10 text-center animate-fade-in">
           <p className="text-text font-semibold">No notifications yet</p>
-          <p className="text-muted text-sm mt-2">
-            Front updates from friends will appear here.
-          </p>
+          <p className="text-muted text-sm mt-2">Front updates from friends will appear here.</p>
         </div>
-      )}
-
-      {!isLoading && notifications.length > 0 && (
+      ) : (
         <ul role="list" className="rounded-xl overflow-hidden border border-border/40">
           {notifications.map((notification) => {
             const createdAt = new Date(notification.createdAt);
@@ -163,10 +148,7 @@ export default function NotificationsClient() {
                 <div className="flex items-start justify-between gap-3 px-4 py-3.5">
                   <div className="flex items-start gap-3 min-w-0">
                     {isUnread && (
-                      <span
-                        className="mt-1.5 h-2 w-2 rounded-full bg-primary flex-shrink-0"
-                        aria-label="Unread"
-                      />
+                      <span className="mt-1.5 h-2 w-2 rounded-full bg-primary flex-shrink-0" aria-label="Unread" />
                     )}
                     <div className="min-w-0">
                       <p className="text-sm font-semibold text-text leading-snug">{notification.title}</p>
