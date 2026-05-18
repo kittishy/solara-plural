@@ -32,7 +32,7 @@ export default function EditMemberPage() {
     async function load() {
       try {
         const [memberRes, fieldsRes] = await Promise.all([
-          fetch(`/api/members/${id}`),
+          fetch(`/api/ruby/members/${id}`),
           fetch('/api/custom-fields'),
         ]);
         const fieldsJson = await fieldsRes.json().catch(() => null);
@@ -79,7 +79,7 @@ export default function EditMemberPage() {
 
     const tags = form.tags.split(',').map((t) => t.trim()).filter(Boolean);
 
-    const res = await fetch(`/api/members/${id}`, {
+    const res = await fetch(`/api/ruby/members/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -105,7 +105,7 @@ export default function EditMemberPage() {
   async function handleDelete() {
     if (!confirm('Remove this member? This cannot be undone.')) return;
     setDeleteError('');
-    const res = await fetch(`/api/members/${id}`, { method: 'DELETE' });
+    const res = await fetch(`/api/ruby/members/${id}`, { method: 'DELETE' });
     if (res.ok) {
       revalidateMembersAndFront();
       router.push('/members');

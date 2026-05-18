@@ -86,7 +86,7 @@ export default function NoteEditor({ note }: Props) {
     if (!content.trim()) return;
 
     setStatus({ type: 'info', message: 'Saving note...' });
-    const url = note ? `/api/notes/${note.id}` : '/api/notes';
+    const url = note ? `/api/ruby/notes/${note.id}` : '/api/ruby/notes';
     const method = note ? 'PUT' : 'POST';
 
     const res = await fetch(url, {
@@ -120,7 +120,7 @@ export default function NoteEditor({ note }: Props) {
     if (!note) return;
     if (!confirm(`Delete "${note.title ?? 'this note'}"? This cannot be undone.`)) return;
 
-    const res = await fetch(`/api/notes/${note.id}`, { method: 'DELETE' });
+    const res = await fetch(`/api/ruby/notes/${note.id}`, { method: 'DELETE' });
     if (!res.ok) {
       setStatus({ type: 'error', message: 'Could not delete this note. Try again?' });
       return;

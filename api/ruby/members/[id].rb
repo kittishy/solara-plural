@@ -10,6 +10,8 @@ require_relative '../_lib/turso'
 require_relative '../_lib/auth'
 require_relative '../_lib/response'
 require_relative '../_lib/request'
+require_relative '../_lib/id'
+require_relative '../_lib/custom_fields'
 require 'json'
 
 Handler = Proc.new do |req, res|
@@ -39,21 +41,23 @@ Handler = Proc.new do |req, res|
 
     row = rows[0]
     tags = row['tags'] ? (JSON.parse(row['tags']) rescue []) : []
+    custom_field_values = Solara::CustomFields.read_member_values(system_id, member_id)
 
     Solara::Response.ok(res, {
-      id:          row['id'],
-      systemId:    row['system_id'],
-      name:        row['name'],
-      pronouns:    row['pronouns'],
-      avatarUrl:   row['avatar_url'],
-      description: row['description'],
-      color:       row['color'],
-      role:        row['role'],
-      tags:        tags,
-      notes:       row['notes'],
-      isArchived:  row['is_archived'] == 1,
-      createdAt:   row['created_at'],
-      updatedAt:   row['updated_at'],
+      id:                row['id'],
+      systemId:          row['system_id'],
+      name:              row['name'],
+      pronouns:          row['pronouns'],
+      avatarUrl:         row['avatar_url'],
+      description:       row['description'],
+      color:             row['color'],
+      role:              row['role'],
+      tags:              tags,
+      notes:             row['notes'],
+      isArchived:        row['is_archived'] == 1,
+      customFieldValues: custom_field_values,
+      createdAt:         row['created_at'],
+      updatedAt:         row['updated_at'],
     })
 
   when 'PUT'
@@ -99,19 +103,24 @@ Handler = Proc.new do |req, res|
     end
 
     row = result[0]
+    custom_field_values = Solara::CustomFields.save_member_values(
+      system_id, member_id, body['customFieldValues']
+    )
+
     Solara::Response.ok(res, {
-      id:          row['id'],
-      systemId:    row['system_id'],
-      name:        row['name'],
-      pronouns:    row['pronouns'],
-      avatarUrl:   row['avatar_url'],
-      description: row['description'],
-      color:       row['color'],
-      role:        row['role'],
-      tags:        tags,
-      notes:       row['notes'],
-      isArchived:  row['is_archived'] == 1,
-      updatedAt:   now,
+      id:                row['id'],
+      systemId:          row['system_id'],
+      name:              row['name'],
+      pronouns:          row['pronouns'],
+      avatarUrl:         row['avatar_url'],
+      description:       row['description'],
+      color:             row['color'],
+      role:              row['role'],
+      tags:              tags,
+      notes:             row['notes'],
+      isArchived:        row['is_archived'] == 1,
+      customFieldValues: custom_field_values,
+      updatedAt:         now,
     })
 
   when 'DELETE'
