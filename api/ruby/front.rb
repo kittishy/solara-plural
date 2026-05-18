@@ -8,9 +8,9 @@
 # PluralKit sync, friend notifications, and Next.js cache revalidation.
 # Migrate them here in Phase R3 after porting those dependencies.
 
-require_relative 'lib/turso'
-require_relative 'lib/auth'
-require_relative 'lib/response'
+require_relative '_lib/turso'
+require_relative '_lib/auth'
+require_relative '_lib/response'
 require 'json'
 
 Handler = Proc.new do |req, res|

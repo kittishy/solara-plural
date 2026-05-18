@@ -9,10 +9,10 @@
 # The React version at /members still works for editing. This page
 # demonstrates the SSR migration path.
 
-require_relative '../lib/turso'
-require_relative '../lib/auth'
-require_relative '../lib/response'
-require_relative '../lib/template'
+require_relative '../_lib/turso'
+require_relative '../_lib/auth'
+require_relative '../_lib/response'
+require_relative '../_lib/template'
 require 'json'
 
 Handler = Proc.new do |req, res|

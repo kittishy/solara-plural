@@ -7,11 +7,11 @@
 #
 # Per-note endpoints: api/ruby/notes/[id].rb
 
-require_relative 'lib/turso'
-require_relative 'lib/auth'
-require_relative 'lib/response'
-require_relative 'lib/request'
-require_relative 'lib/id'
+require_relative '_lib/turso'
+require_relative '_lib/auth'
+require_relative '_lib/response'
+require_relative '_lib/request'
+require_relative '_lib/id'
 require 'json'
 
 Handler = Proc.new do |req, res|

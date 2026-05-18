@@ -6,10 +6,10 @@
 # PUT    /api/ruby/members/:id  — update a member
 # DELETE /api/ruby/members/:id  — soft-delete (archive) a member
 
-require_relative '../lib/turso'
-require_relative '../lib/auth'
-require_relative '../lib/response'
-require_relative '../lib/request'
+require_relative '../_lib/turso'
+require_relative '../_lib/auth'
+require_relative '../_lib/response'
+require_relative '../_lib/request'
 require 'json'
 
 Handler = Proc.new do |req, res|

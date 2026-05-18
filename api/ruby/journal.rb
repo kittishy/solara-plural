@@ -4,9 +4,9 @@
 #
 # Ruby equivalent of app/api/journal/route.ts GET handler.
 
-require_relative 'lib/turso'
-require_relative 'lib/auth'
-require_relative 'lib/response'
+require_relative '_lib/turso'
+require_relative '_lib/auth'
+require_relative '_lib/response'
 require 'json'
 
 Handler = Proc.new do |req, res|
