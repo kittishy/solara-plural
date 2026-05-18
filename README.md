@@ -8,15 +8,21 @@ The project is inspired by Simply Plural and informed by open projects like Shea
 
 ## Current Stack
 
+**Primary (new work):**
+- Ruby serverless functions (Vercel `@vercel/ruby`)
+- ERB templates for server-rendered pages
+- Turso/libSQL via HTTP Pipeline API
+- Plain Rack handlers (no framework)
+
+**Legacy (being gradually reduced):**
 - Next.js 14 App Router
-- React 18
+- React 18 (interactive pages only)
 - TypeScript
 - Tailwind CSS v3
 - Auth.js / NextAuth v5 beta
-- Turso/libSQL
 - Drizzle ORM
 - SWR
-- npm
+- npm + Bundler
 
 ---
 
@@ -45,6 +51,8 @@ Install dependencies:
 
 ```powershell
 npm install
+# Ruby experiment (optional):
+cd experiments/ruby-api && bundle install && cd ../..
 ```
 
 Create a local env file:
