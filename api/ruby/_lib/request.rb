@@ -9,10 +9,11 @@ module Solara
   module Request
     # Parse the JSON request body. Returns a hash or nil on failure.
     def self.json_body(req)
-      body = req.body.is_a?(IO) ? req.body.read : req.body.to_s
-      return nil if body.nil? || body.empty?
+      raw = req.body
+      body = raw.is_a?(IO) ? raw.read : raw.to_s
+      return nil if body.nil? || body.strip.empty?
       JSON.parse(body)
-    rescue JSON::ParserError
+    rescue JSON::ParserError, StandardError
       nil
     end
 
