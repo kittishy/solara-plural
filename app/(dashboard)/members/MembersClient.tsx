@@ -2,8 +2,8 @@
 
 import Link from 'next/link';
 import DynamicAvatarImage from '@/components/ui/DynamicAvatarImage';
-import { useEffect, useMemo, useRef, useState } from 'react';
-import useSWR from 'swr';
+import { useEffect, useMemo, useState } from 'react';
+import useSWR, { mutate as globalMutate } from 'swr';
 import { apiFetcher, revalidateMembersAndFront, swrKeys } from '@/lib/swr';
 import { formatTimeSince } from '@/lib/client/format';
 
@@ -30,8 +30,6 @@ type FrontEntryShape = {
   endedAt: Date | string | null;
 };
 
-type FrontAction = 'add' | 'set' | 'remove';
-
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function mergeMembersWithFront(
@@ -42,198 +40,14 @@ function mergeMembersWithFront(
   return members.map((m) => ({ ...m, isFronting: frontingIds.has(m.id) }));
 }
 
-// ─── BottomSheet ──────────────────────────────────────────────────────────────
-
-function BottomSheet({
-  member,
-  frontData,
-  onClose,
-  onAction,
-}: {
-  member: MemberItem | null;
-  frontData: FrontEntryShape | null;
-  onClose: () => void;
-  onAction: (member: MemberItem, action: FrontAction) => void;
-}) {
-  const [busy, setBusy] = useState(false);
-  const firstButtonRef = useRef<HTMLButtonElement>(null);
-  const isOpen = member !== null;
-
-  // Focus first button when sheet opens
-  useEffect(() => {
-    if (isOpen) {
-      const id = setTimeout(() => firstButtonRef.current?.focus(), 50);
-      return () => clearTimeout(id);
-    }
-  }, [isOpen]);
-
-  // Close on Escape
-  useEffect(() => {
-    if (!isOpen) return;
-    function onKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') onClose();
-    }
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, [isOpen, onClose]);
-
-  // Prevent body scroll when open
-  useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
-    }
-    return () => { document.body.style.overflow = ''; };
-  }, [isOpen]);
-
-  async function handleAction(action: FrontAction) {
-    if (!member || busy) return;
-    setBusy(true);
-    onAction(member, action);
-    onClose();
-    setBusy(false);
-  }
-
-  const isFronting = member?.isFronting ?? false;
-
-  return (
-    <>
-      {/* Backdrop */}
-      <div
-        aria-hidden="true"
-        onClick={onClose}
-        className={`fixed inset-0 z-40 bg-bg/80 backdrop-blur-sm transition-opacity duration-300 md:hidden
-          ${isOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
-      />
-
-      {/* Sheet */}
-      <div
-        role="dialog"
-        aria-label="Front actions"
-        aria-modal="true"
-        className={`fixed bottom-0 inset-x-0 z-50 rounded-t-2xl bg-surface border-t border-border shadow-2xl
-          pb-[max(1rem,env(safe-area-inset-bottom))] max-h-[85vh] overflow-y-auto
-          transition-transform duration-300 ease-out
-          ${isOpen ? 'translate-y-0' : 'translate-y-full'}`}
-      >
-        {/* Drag handle */}
-        <div className="w-10 h-1 rounded-full bg-border mx-auto mt-3 mb-1" aria-hidden="true" />
-
-        {/* Member name */}
-        {member && (
-          <p className="text-sm font-semibold text-text text-center px-4 py-3 border-b border-border/40">
-            {member.name}
-          </p>
-        )}
-
-        {/* Action buttons */}
-        <div role="group" aria-label="Front options">
-          {isFronting ? (
-            <>
-              <button
-                ref={firstButtonRef}
-                type="button"
-                aria-label={`Remove ${member?.name ?? ''} from front`}
-                disabled={busy}
-                onClick={() => void handleAction('remove')}
-                className="flex w-full items-center gap-4 px-6 min-h-[56px] text-error/90 transition-colors
-                  hover:bg-surface-alt disabled:opacity-50"
-              >
-                {/* Minus icon */}
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                  strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <line x1="5" x2="19" y1="12" y2="12" />
-                </svg>
-                <span className="text-sm font-medium">Remove from front</span>
-              </button>
-
-              <button
-                type="button"
-                aria-label={`Set ${member?.name ?? ''} as only front`}
-                disabled={busy}
-                onClick={() => void handleAction('set')}
-                className="flex w-full items-center gap-4 px-6 min-h-[56px] text-text transition-colors
-                  border-t border-border/40 hover:bg-surface-alt disabled:opacity-50"
-              >
-                {/* Sun icon */}
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                  strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <circle cx="12" cy="12" r="3" />
-                  <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" />
-                </svg>
-                <span className="text-sm font-medium">Set as only front</span>
-              </button>
-            </>
-          ) : (
-            <>
-              <button
-                ref={firstButtonRef}
-                type="button"
-                aria-label={`Add ${member?.name ?? ''} to front`}
-                disabled={busy}
-                onClick={() => void handleAction('add')}
-                className="flex w-full items-center gap-4 px-6 min-h-[56px] text-text transition-colors
-                  hover:bg-surface-alt disabled:opacity-50"
-              >
-                {/* Plus icon */}
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                  strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <line x1="12" x2="12" y1="5" y2="19" />
-                  <line x1="5" x2="19" y1="12" y2="12" />
-                </svg>
-                <span className="text-sm font-medium">Add to front</span>
-              </button>
-
-              <button
-                type="button"
-                aria-label={`Set ${member?.name ?? ''} as front`}
-                disabled={busy}
-                onClick={() => void handleAction('set')}
-                className="flex w-full items-center gap-4 px-6 min-h-[56px] text-text transition-colors
-                  border-t border-border/40 hover:bg-surface-alt disabled:opacity-50"
-              >
-                {/* Sun icon */}
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                  strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <circle cx="12" cy="12" r="3" />
-                  <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" />
-                </svg>
-                <span className="text-sm font-medium">Set as front</span>
-              </button>
-            </>
-          )}
-
-          {/* No action — always last */}
-          <button
-            type="button"
-            aria-label="Dismiss without action"
-            onClick={onClose}
-            className="flex w-full items-center gap-4 px-6 min-h-[56px] text-muted transition-colors
-              border-t border-border/40 hover:bg-surface-alt"
-          >
-            {/* X icon */}
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-              strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <line x1="18" y1="6" x2="6" y2="18" />
-              <line x1="6" y1="6" x2="18" y2="18" />
-            </svg>
-            <span className="text-sm font-medium">No action</span>
-          </button>
-        </div>
-      </div>
-    </>
-  );
-}
-
 // ─── MemberCard ───────────────────────────────────────────────────────────────
 
 function MemberCard({
   member,
-  onOpenSheet,
+  onToggle,
 }: {
   member: MemberItem;
-  onOpenSheet: (member: MemberItem) => void;
+  onToggle: (member: MemberItem) => void;
 }) {
   const accent = member.color ?? '#c084fc';
   const frontColor = 'rgb(var(--theme-front-rgb))';
@@ -318,13 +132,13 @@ function MemberCard({
           </div>
         </Link>
 
-        {/* Front action strip */}
+        {/* Front toggle */}
         <button
           type="button"
-          aria-label={`Front actions for ${member.name}`}
-          aria-haspopup="dialog"
-          onClick={() => onOpenSheet(member)}
-          className="flex-none w-full flex items-center justify-center gap-1.5 py-2.5 text-[10px] font-black uppercase tracking-widest transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/60"
+          aria-label={isF ? `Remove ${member.name} from front` : `Add ${member.name} to front`}
+          aria-pressed={isF}
+          onClick={() => onToggle(member)}
+          className="flex-none w-full flex items-center justify-center gap-1.5 py-2.5 text-[10px] font-black uppercase tracking-widest transition-[background-color,color,border-color,transform] duration-150 ease-out active:scale-[0.97] focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/60"
           style={{
             background: `color-mix(in srgb, ${borderColor} 12%, var(--theme-surface))`,
             borderTop: `1px solid color-mix(in srgb, ${borderColor} 30%, transparent)`,
@@ -416,7 +230,6 @@ export default function MembersClient({
 }) {
   const [query, setQuery] = useState('');
   const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE_MEMBERS);
-  const [sheetMember, setSheetMember] = useState<MemberItem | null>(null);
 
   const { data: membersData = initialMembers } = useSWR<Omit<MemberItem, 'isFronting'>[]>(
     swrKeys.members,
@@ -477,37 +290,41 @@ export default function MembersClient({
     ? `${filtered.length} of ${parsed.length} member${parsed.length !== 1 ? 's' : ''}`
     : `${parsed.length} member${parsed.length !== 1 ? 's' : ''} in your system`;
 
-  async function executeAction(member: MemberItem, action: FrontAction) {
+  async function toggleFront(member: MemberItem) {
+    const currentIds: string[] = frontData?.memberIds ?? [];
+    const isCurrentlyFronting = currentIds.includes(member.id);
+    const nextIds = isCurrentlyFronting
+      ? currentIds.filter((id) => id !== member.id)
+      : [...currentIds, member.id];
+
+    // Optimistic update — UI flips instantly, before the network round-trip
+    const optimisticFront: FrontEntryShape | null =
+      nextIds.length === 0
+        ? null
+        : {
+            id: frontData?.id ?? 'optimistic',
+            memberIds: nextIds,
+            startedAt: frontData?.startedAt ?? new Date().toISOString(),
+            endedAt: null,
+          };
+
+    void globalMutate(swrKeys.front, optimisticFront, { revalidate: false });
+
     try {
-      if (action === 'remove') {
-        const remaining = (frontData?.memberIds ?? []).filter((id) => id !== member.id);
-        if (remaining.length === 0) {
-          const res = await fetch('/api/front', { method: 'DELETE' });
-          if (!res.ok) throw new Error();
-        } else {
-          const res = await fetch('/api/front', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ memberIds: remaining }),
-          });
-          if (!res.ok) throw new Error();
-        }
-      } else {
-        const currentIds: string[] = frontData?.memberIds ?? [];
-        const memberIds =
-          action === 'add'
-            ? Array.from(new Set([...currentIds, member.id]))
-            : [member.id];
-        const res = await fetch('/api/front', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ memberIds }),
-        });
-        if (!res.ok) throw new Error();
-      }
+      const init: RequestInit =
+        nextIds.length === 0
+          ? { method: 'DELETE' }
+          : {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ memberIds: nextIds }),
+            };
+      const res = await fetch('/api/front', init);
+      if (!res.ok) throw new Error();
       revalidateMembersAndFront();
     } catch {
-      // Silently fail — optimistic UI updates will revert on next revalidation
+      // Revert by revalidating from the server
+      void globalMutate(swrKeys.front);
     }
   }
 
@@ -659,7 +476,7 @@ export default function MembersClient({
                       <MemberCard
                         key={member.id}
                         member={member}
-                        onOpenSheet={setSheetMember}
+                        onToggle={toggleFront}
                       />
                     ))}
                 </ul>
@@ -679,7 +496,7 @@ export default function MembersClient({
                     <MemberCard
                       key={member.id}
                       member={member}
-                      onOpenSheet={setSheetMember}
+                      onToggle={toggleFront}
                     />
                   ))}
               </ul>
@@ -697,14 +514,6 @@ export default function MembersClient({
           </div>
         )}
       </div>
-
-      {/* Bottom sheet — rendered outside the main flow, fixed to viewport */}
-      <BottomSheet
-        member={sheetMember}
-        frontData={frontData}
-        onClose={() => setSheetMember(null)}
-        onAction={(member, action) => void executeAction(member, action)}
-      />
     </>
   );
 }
