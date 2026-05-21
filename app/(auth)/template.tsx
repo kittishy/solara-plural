@@ -1,6 +1,8 @@
-// Light page transition for auth routes (login / register / forgot / reset).
-// The auth pages are small forms; a snap-in is enough — no scanline sweep here.
+// Pass-through template. Auth pages already animate their own content
+// (e.g. `animate-fade-in` + `animate-slide-up` on the form cards), so the
+// outer snap-in wrapper here added no real value and risked the same
+// containing-block bug we hit on the dashboard side.
 
 export default function AuthTemplate({ children }: { children: React.ReactNode }) {
-  return <div className="animate-snap-in">{children}</div>;
+  return <>{children}</>;
 }

@@ -1,10 +1,15 @@
-// Next 14 templates re-mount on every route change inside the segment,
-// which gives us a free hook to play a brief entrance animation per page.
-// Pure CSS — no JS, GPU-friendly transform/opacity only.
+// Pass-through template.
 //
-// `.page-enter` plays a snap-in + a thin scanline sweep across the top edge.
-// Respects prefers-reduced-motion via the global CSS rule.
+// Earlier this wrapped {children} in a `.page-enter` div that played a
+// snapIn animation. That wrapper, even after the animation finished with
+// `transform: none`, intermittently re-created a containing block for
+// descendant `position: fixed` elements (e.g. the members BottomSheet),
+// causing it to render in-flow and trigger an auto-scroll on open.
+//
+// Per-page entrance animations now live on the inner content components
+// (e.g. `animate-fade-in` on the MembersClient root div), which are
+// SIBLINGS of any fixed-position UI, not ancestors.
 
 export default function DashboardTemplate({ children }: { children: React.ReactNode }) {
-  return <div className="page-enter">{children}</div>;
+  return <>{children}</>;
 }

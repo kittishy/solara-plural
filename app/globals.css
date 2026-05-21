@@ -806,29 +806,6 @@
   .animate-wipe-in     { animation: wipeIn 380ms var(--ease-snap) both; transform-origin: left center; }
   .animate-ping-once   { animation: pingOnce 700ms var(--ease-out-soft) both; }
 
-  /* Page transition — used inside dashboard/auth template */
-  .page-enter {
-    animation: snapIn 320ms var(--ease-out-soft) both;
-    position: relative;
-  }
-  .page-enter::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    height: 2px;
-    width: 40%;
-    background: linear-gradient(90deg,
-      transparent 0%,
-      rgb(var(--theme-primary-rgb) / 0.9) 40%,
-      rgb(var(--theme-front-rgb) / 0.9) 60%,
-      transparent 100%);
-    animation: scanlineSweep 700ms var(--ease-snap) 60ms forwards;
-    pointer-events: none;
-    z-index: 50;
-    filter: drop-shadow(0 0 6px rgb(var(--theme-primary-rgb) / 0.7));
-  }
-
   /* Mobile tap feedback — stronger scale + glow flash on touch devices.
      Pointer:coarse targets phones/tablets where tactile feedback matters most. */
   @media (pointer: coarse) {
