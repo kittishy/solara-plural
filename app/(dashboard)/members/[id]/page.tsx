@@ -4,6 +4,7 @@ import { eq, and, asc, desc, like, isNull } from 'drizzle-orm';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import DynamicAvatarImage from '@/components/ui/DynamicAvatarImage';
+import { ScrollToTopOnMount } from '@/components/ui/ScrollToTopOnMount';
 import { requireSystemId } from '@/lib/auth/session';
 import { parseCustomFieldType, parseStoredCustomFieldOptions } from '@/lib/custom-fields';
 
@@ -131,6 +132,7 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
 
   return (
     <div className="animate-fade-in space-y-5">
+      <ScrollToTopOnMount />
       {/* Back nav */}
       <Link
         href="/members"
