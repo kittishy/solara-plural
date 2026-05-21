@@ -116,7 +116,7 @@ export default async function DashboardPage() {
     : [];
 
   return (
-    <div className="animate-fade-in space-y-5 md:space-y-6">
+    <div className="stagger-children space-y-5 md:space-y-6">
       <section className="-mx-4 px-4 pt-4 pb-2 md:mx-0 md:px-0 md:pt-0">
         <div className="flex items-center gap-2 mb-3">
           <span className="text-primary text-[10px] font-black" aria-hidden="true">◆</span>
@@ -327,7 +327,7 @@ async function SingletDashboard({
     .filter((f): f is NonNullable<typeof f> => f !== null);
 
   return (
-    <div className="animate-fade-in space-y-5 md:space-y-6">
+    <div className="stagger-children space-y-5 md:space-y-6">
       {/* Page header */}
       <section className="-mx-4 px-4 pt-4 pb-2 md:mx-0 md:px-0 md:pt-0">
         <div className="flex items-center gap-2 mb-3">

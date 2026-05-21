@@ -122,7 +122,12 @@ export default function PartnershipDetailClient(props: Props) {
         ))}
       </nav>
 
-      {tab === 'overview' && <OverviewTab {...props} />}
+      {tab === 'overview' && (
+        <>
+          <OverviewTab {...props} />
+          <DangerZone partnershipId={props.partnershipId} partnerName={props.partner.name} />
+        </>
+      )}
       {tab === 'diary' && <DiaryTab partnershipId={props.partnershipId} initial={props.initialNotes} />}
       {tab === 'pairings' && (
         <PairingsTab
@@ -651,6 +656,71 @@ function BucketTab({ partnershipId, initial }: { partnershipId: string; initial:
 
       {items.length === 0 && (
         <p className="text-center text-sm text-muted">No bucket-list items yet.</p>
+      )}
+    </section>
+  );
+}
+
+// ─── Danger zone ─────────────────────────────────────────────────────────────
+
+function DangerZone({ partnershipId, partnerName }: { partnershipId: string; partnerName: string }) {
+  const router = useRouter();
+  const [confirming, setConfirming] = useState(false);
+  const [removing, setRemoving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function remove() {
+    setRemoving(true);
+    setError(null);
+    const res = await fetch(`/api/partners/${partnershipId}`, { method: 'DELETE' });
+    setRemoving(false);
+    if (!res.ok) {
+      setError('Could not remove. Try again?');
+      return;
+    }
+    router.push('/partners');
+    router.refresh();
+  }
+
+  return (
+    <section className="card space-y-3 p-5 border-error/30">
+      <div>
+        <h2 className="text-sm font-bold uppercase tracking-wider text-muted">Danger zone</h2>
+        <p className="mt-1 text-sm text-muted">
+          Remove partner status with {partnerName}. The friendship stays; only the relationship label, dates, and shared partner data are cleared.
+        </p>
+      </div>
+
+      {error && <p role="alert" className="text-xs text-error">{error}</p>}
+
+      {!confirming ? (
+        <button
+          type="button"
+          onClick={() => setConfirming(true)}
+          className="btn-ghost min-h-[40px] border border-error/40 px-4 text-sm text-error hover:border-error hover:bg-error/10"
+        >
+          Remove partner status
+        </button>
+      ) : (
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-sm text-muted">Are you sure?</span>
+          <button
+            type="button"
+            onClick={remove}
+            disabled={removing}
+            className="btn-ghost min-h-[40px] border border-error px-4 text-sm font-semibold text-error hover:bg-error/15 disabled:opacity-50"
+          >
+            {removing ? 'Removing…' : 'Yes, remove'}
+          </button>
+          <button
+            type="button"
+            onClick={() => setConfirming(false)}
+            disabled={removing}
+            className="btn-ghost min-h-[40px] border border-border/60 px-4 text-sm"
+          >
+            Cancel
+          </button>
+        </div>
       )}
     </section>
   );

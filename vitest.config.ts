@@ -6,7 +6,7 @@ export default defineConfig({
   test: {
     environment: 'node',
     include: ['**/__tests__/**/*.test.ts', '**/*.test.ts'],
-    exclude: ['node_modules', '**/node_modules/**', '.next/**', '.opencode/**', 'mobile-app/**', 'scripts/**'],
+    exclude: ['node_modules', '**/node_modules/**', '.next/**', '.opencode/**', '.claude/**', '.codex/**', '.gemini/**', '.trae/**', 'scripts/**'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html'],

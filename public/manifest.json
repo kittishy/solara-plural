@@ -6,8 +6,8 @@
   "scope": "/",
   "display": "standalone",
   "display_override": ["window-controls-overlay", "standalone", "browser"],
-  "background_color": "#1a1625",
-  "theme_color": "#a78bfa",
+  "background_color": "#09070f",
+  "theme_color": "#09070f",
   "orientation": "portrait-primary",
   "categories": ["productivity", "health", "lifestyle"],
   "icons": [

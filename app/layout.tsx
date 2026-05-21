@@ -14,10 +14,29 @@ export const metadata: Metadata = {
   title: 'Solara Plural',
   description: 'A warm space for plural systems to organize and thrive',
   manifest: '/manifest.json',
+  applicationName: 'Solara',
+  appleWebApp: {
+    capable: true,
+    title: 'Solara',
+    // 'black-translucent' lets the page paint behind the iOS status bar —
+    // the .app-topbar gradient handles the safe-area inset visually.
+    statusBarStyle: 'black-translucent',
+  },
+  formatDetection: {
+    telephone: false,
+  },
 };
 
 export const viewport: Viewport = {
   viewportFit: 'cover',
+  themeColor: [
+    { media: '(prefers-color-scheme: dark)', color: '#09070f' },
+    { media: '(prefers-color-scheme: light)', color: '#09070f' },
+  ],
+  // Allow the page to extend behind the iOS status bar in PWA mode so the
+  // top-bar gradient blends into the system chrome instead of being capped
+  // by an opaque white strip.
+  colorScheme: 'dark',
 };
 
 export default function RootLayout({

@@ -210,7 +210,7 @@ export function MobileNav({ accountType = 'system' }: { accountType?: 'system' |
         {/* Popup menu */}
         {(menuOpen || isMenuClosing) && (
           <div
-            className={`absolute bottom-full left-0 right-0 border-t-2 border-border-strong ${isMenuClosing ? 'animate-slide-down' : 'animate-slide-up'}`}
+            className={`absolute bottom-full left-0 right-0 border-t-2 border-border-strong ${isMenuClosing ? 'animate-slide-down' : 'animate-slide-up'} ${isMenuClosing ? '' : 'stagger-tight'}`}
             role="menu"
             aria-label={t('nav.moreMenu')}
             style={{
@@ -262,7 +262,7 @@ export function MobileNav({ accountType = 'system' }: { accountType?: 'system' |
                 aria-label={t(item.labelKey)}
                 aria-current={current ? 'page' : undefined}
                 onClick={() => setMenuOpen(false)}
-                className={`relative flex flex-col items-center justify-center gap-1 min-h-[64px] py-2 text-[9px] font-black uppercase tracking-widest transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/70 ${
+                className={`tap-feedback relative flex flex-col items-center justify-center gap-1 min-h-[64px] py-2 text-[9px] font-black uppercase tracking-widest transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/70 ${
                   current
                     ? 'bg-primary text-bg'
                     : 'text-muted hover:text-text hover:bg-surface-alt'
@@ -272,11 +272,21 @@ export function MobileNav({ accountType = 'system' }: { accountType?: 'system' |
                 } : undefined}
               >
                 {current && (
-                  <span
-                    className="absolute top-0 left-1/2 h-0.5 w-8 -translate-x-1/2 bg-primary rounded-full"
-                    style={{ boxShadow: '0 0 8px rgb(var(--theme-primary-rgb) / 0.75)' }}
-                    aria-hidden="true"
-                  />
+                  <>
+                    <span
+                      key={`bar-${item.href}`}
+                      className="absolute top-0 left-1/2 h-0.5 w-8 -translate-x-1/2 bg-primary rounded-full animate-wipe-in"
+                      style={{ boxShadow: '0 0 8px rgb(var(--theme-primary-rgb) / 0.75)' }}
+                      aria-hidden="true"
+                    />
+                    {/* Single-shot ping that fires on activation (re-mount via key) */}
+                    <span
+                      key={`ping-${item.href}`}
+                      className="pointer-events-none absolute top-0 left-1/2 h-1.5 w-1.5 -translate-x-1/2 rounded-full bg-primary animate-ping-once"
+                      style={{ boxShadow: '0 0 10px rgb(var(--theme-primary-rgb) / 0.9)' }}
+                      aria-hidden="true"
+                    />
+                  </>
                 )}
                 <item.Icon size={20} />
                 <span className="leading-none">{t(item.labelKey)}</span>
@@ -290,7 +300,7 @@ export function MobileNav({ accountType = 'system' }: { accountType?: 'system' |
             aria-label={t('nav.moreOptions')}
             aria-expanded={menuOpen}
             aria-haspopup="menu"
-            className={`relative flex flex-col items-center justify-center gap-1 min-h-[64px] py-2 text-[9px] font-black uppercase tracking-widest transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/70 ${
+            className={`tap-feedback relative flex flex-col items-center justify-center gap-1 min-h-[64px] py-2 text-[9px] font-black uppercase tracking-widest transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/70 ${
               menuIsActive || menuOpen
                 ? 'bg-primary text-bg'
                 : 'text-muted hover:text-text hover:bg-surface-alt'
@@ -301,7 +311,7 @@ export function MobileNav({ accountType = 'system' }: { accountType?: 'system' |
           >
             {(menuIsActive || menuOpen) && (
               <span
-                className="absolute top-0 left-1/2 h-0.5 w-8 -translate-x-1/2 bg-primary rounded-full"
+                className="absolute top-0 left-1/2 h-0.5 w-8 -translate-x-1/2 bg-primary rounded-full animate-wipe-in"
                 style={{ boxShadow: '0 0 8px rgb(var(--theme-primary-rgb) / 0.75)' }}
                 aria-hidden="true"
               />
