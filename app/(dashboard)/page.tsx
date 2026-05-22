@@ -116,7 +116,7 @@ export default async function DashboardPage() {
     : [];
 
   return (
-    <div className="stagger-children space-y-5 md:space-y-6">
+    <div className="stagger-children space-y-6 md:space-y-8">
       <section className="-mx-4 px-4 pt-4 pb-2 md:mx-0 md:px-0 md:pt-0">
         <div className="flex items-center gap-2 mb-3">
           <span className="text-primary text-[10px] font-black" aria-hidden="true">◆</span>
@@ -159,7 +159,7 @@ export default async function DashboardPage() {
               </span>
             </div>
             <Link href="/front"
-              className="inline-flex min-h-[44px] items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-front/60 hover:text-front transition-colors"
+              className="inline-flex min-h-[44px] items-center gap-1.5 text-[11px] font-black uppercase tracking-widest text-front/60 hover:text-front transition-colors"
             >
               <Trans k="common.manage" />
               <IconArrowRight />
@@ -176,13 +176,13 @@ export default async function DashboardPage() {
                 }}
               >
                 {member.avatarUrl ? (
-                  <div className="h-9 w-9 flex-shrink-0 overflow-hidden"
+                  <div className="h-10 w-10 flex-shrink-0 overflow-hidden"
                     style={{ clipPath: 'polygon(0 0, calc(100% - 4px) 0, 100% 4px, 100% 100%, 0 100%)' }}
                   >
-                    <DynamicAvatarImage src={member.avatarUrl} alt={member.name} className="h-9 w-9 object-cover" />
+                    <DynamicAvatarImage src={member.avatarUrl} alt={member.name} className="h-10 w-10 object-cover" />
                   </div>
                 ) : (
-                  <span className="flex h-9 w-9 items-center justify-center text-sm font-black text-bg flex-shrink-0"
+                  <span className="flex h-10 w-10 items-center justify-center text-base font-black text-bg flex-shrink-0"
                     style={{ backgroundColor: member.color ?? '#c084fc', clipPath: 'polygon(0 0, calc(100% - 4px) 0, 100% 4px, 100% 100%, 0 100%)' }}
                     aria-hidden="true"
                   >
@@ -190,7 +190,7 @@ export default async function DashboardPage() {
                   </span>
                 )}
                 <div>
-                  <p className="text-sm font-black text-text leading-none">{member.name}</p>
+                  <p className="text-sm font-bold text-text leading-none">{member.name}</p>
                   {member.pronouns && (
                     <p className="text-[10px] text-muted leading-none mt-0.5 font-black uppercase tracking-wider">
                       {member.pronouns}
@@ -220,12 +220,12 @@ export default async function DashboardPage() {
               <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-muted">
                 <Trans k="dashboard.currentFront" />
               </h2>
-              <p className="text-sm text-muted mt-1.5 font-bold">
+              <p className="text-sm text-muted mt-1.5">
                 <Trans k="dashboard.noCurrentFront" />
               </p>
             </div>
             <Link href="/front"
-              className="inline-flex items-center gap-2 min-h-[44px] px-4 py-2 text-[11px] font-black uppercase tracking-widest transition-all duration-150 hover:shadow-glow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+              className="inline-flex items-center gap-2 min-h-[44px] px-4 py-2 text-[12px] font-black uppercase tracking-widest transition-all duration-150 hover:shadow-glow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
               style={{
                 background: 'rgb(var(--theme-primary-rgb))',
                 color: 'rgb(var(--theme-bg-rgb))',
@@ -327,7 +327,7 @@ async function SingletDashboard({
     .filter((f): f is NonNullable<typeof f> => f !== null);
 
   return (
-    <div className="stagger-children space-y-5 md:space-y-6">
+    <div className="stagger-children space-y-6 md:space-y-8">
       {/* Page header */}
       <section className="-mx-4 px-4 pt-4 pb-2 md:mx-0 md:px-0 md:pt-0">
         <div className="flex items-center gap-2 mb-3">
@@ -357,7 +357,7 @@ async function SingletDashboard({
           </div>
           {partnersWithInfo.length > 0 && (
             <Link href="/partners"
-              className="inline-flex min-h-[44px] items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-primary/60 hover:text-primary transition-colors"
+              className="inline-flex min-h-[44px] items-center gap-1.5 text-[11px] font-black uppercase tracking-widest text-primary/60 hover:text-primary transition-colors"
             >
               <Trans k="common.seeAll" />
               <IconArrowRight />
@@ -386,7 +386,7 @@ async function SingletDashboard({
                 <div className="flex items-center gap-3">
                   <SystemAvatar system={p.otherSystem} size={40} />
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-black text-text leading-tight truncate">
+                    <p className="text-sm font-semibold text-text leading-tight truncate">
                       {p.nickname || p.otherSystem.name}
                     </p>
                     {p.relationshipLabel ? (
@@ -422,7 +422,7 @@ async function SingletDashboard({
           </div>
           {friendsWithInfo.length > 0 && (
             <Link href="/friends"
-              className="inline-flex min-h-[44px] items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-primary/60 hover:text-primary transition-colors"
+              className="inline-flex min-h-[44px] items-center gap-1.5 text-[11px] font-black uppercase tracking-widest text-primary/60 hover:text-primary transition-colors"
             >
               <Trans k="common.seeAll" />
               <IconArrowRight />
@@ -474,7 +474,7 @@ function EmptyCallout({
   href: string;
 }) {
   return (
-    <div className="relative overflow-hidden py-6 px-5"
+    <div className="relative overflow-hidden py-8 px-6"
       style={{
         background: 'rgb(var(--theme-surface-rgb))',
         borderLeft: '3px solid rgb(var(--theme-border-strong-rgb))',
@@ -485,7 +485,7 @@ function EmptyCallout({
         <Trans k={messageKey} />
       </p>
       <Link href={href}
-        className="inline-flex items-center gap-2 min-h-[44px] px-4 py-2 text-[11px] font-black uppercase tracking-widest transition-all duration-150 hover:shadow-glow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+        className="inline-flex items-center gap-2 min-h-[44px] px-4 py-2 text-[12px] font-black uppercase tracking-widest transition-all duration-150 hover:shadow-glow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
         style={{
           background: 'rgb(var(--theme-primary-rgb))',
           color: 'rgb(var(--theme-bg-rgb))',
@@ -514,7 +514,7 @@ function RecentNotesSection({
           </h2>
         </div>
         <Link href="/notes"
-          className="inline-flex min-h-[44px] items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-primary/60 hover:text-primary transition-colors"
+          className="inline-flex min-h-[44px] items-center gap-1.5 text-[11px] font-black uppercase tracking-widest text-primary/60 hover:text-primary transition-colors"
         >
           <Trans k="common.seeAll" />
           <IconArrowRight />
@@ -522,7 +522,7 @@ function RecentNotesSection({
       </div>
 
       {recentNotes.length === 0 ? (
-        <div className="relative overflow-hidden py-6 px-5"
+        <div className="relative overflow-hidden py-8 px-6"
           style={{
             background: 'rgb(var(--theme-surface-rgb))',
             borderLeft: '3px solid rgb(var(--theme-border-strong-rgb))',
@@ -533,7 +533,7 @@ function RecentNotesSection({
             <Trans k="dashboard.notesEmpty" />
           </p>
           <Link href="/notes/new"
-            className="inline-flex items-center gap-2 min-h-[44px] px-4 py-2 text-[11px] font-black uppercase tracking-widest transition-all duration-150 hover:shadow-glow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+            className="inline-flex items-center gap-2 min-h-[44px] px-4 py-2 text-[12px] font-black uppercase tracking-widest transition-all duration-150 hover:shadow-glow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
             style={{
               background: 'rgb(var(--theme-primary-rgb))',
               color: 'rgb(var(--theme-bg-rgb))',
@@ -552,11 +552,11 @@ function RecentNotesSection({
               style={{
                 background: 'rgb(var(--theme-surface-alt-rgb))',
                 borderLeft: '3px solid rgb(var(--theme-primary-rgb))',
-                padding: '0.75rem 1rem',
+                padding: '0.875rem 1.125rem',
               }}
             >
               <span className="pointer-events-none absolute top-0 right-0 block w-2.5 h-2.5 border-t border-r border-primary/30" aria-hidden="true" />
-              <p className="text-sm font-black text-text line-clamp-1">
+              <p className="text-sm font-semibold text-text line-clamp-1">
                 {note.title ?? <Trans k="dashboard.untitledNote" />}
               </p>
               <p className="text-xs text-muted mt-1 line-clamp-2">{note.content}</p>

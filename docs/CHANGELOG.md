@@ -5,6 +5,22 @@
 
 ---
 
+## [ui] — 2026-05-22
+
+### Changed — UI modernization pass (preserves cyberpunk-gothic OLED identity)
+- **Typography hierarchy** — body and card titles no longer use `font-black` indiscriminately. Front-chip member names now `font-bold` (700), partner nicknames and note titles `font-semibold` (600), empty-state copy unweighted. `font-black` is reserved for HUD labels (10–11 px uppercase) and display titles. Touches `app/(dashboard)/page.tsx`.
+- **Action link/button sizes** — inline action links bumped from `text-[10px]` to `text-[11px]`; CTA buttons (`START FRONT`, `FIND PARTNERS`, `WRITE FIRST NOTE`) bumped from `text-[11px]` to `text-[12px]`. Forgot-password link on `/login` bumped from `9 px` to `11 px` for legibility and a11y.
+- **Section rhythm** — dashboard section gap `space-y-5 md:space-y-6` → `space-y-6 md:space-y-8` (24/32 px). Empty-state callout padding `py-6 px-5` → `py-8 px-6` (32/24 px). Note-card preview padding `0.75rem 1rem` → `0.875rem 1.125rem` (14/18 px).
+- **Front-chip avatar presence** — 36 → 40 px (`h-9 w-9` → `h-10 w-10`); initial glyph `text-sm` → `text-base`.
+- **Mobile bottom nav active state** — solid pink fill `bg-primary text-bg` → translucent `bg-primary/10 text-primary`. Wipe-in top bar, single-shot ping, and drop-shadow glow on the icon are preserved.
+- **Login wordmark separator** — added `box-shadow: 0 0 12px primary/0.5` to the 4 rem accent bar for an OLED-correct beam look.
+- **Section header diamond `◆`** — added `text-shadow: 0 0 6px primary/0.5` to `.section-header::before` in `app/globals.css` so the marker subtly vibrates instead of reading flat.
+- **`docs/PROJECT_STYLE_GUIDE.md`** — appended a "ZZZ-Flavor Visual Layer" section documenting the live OLED tokens, typography rules, rhythm values, mobile-nav active pattern, and identity invariants. The original warm/cozy sections were left intact.
+
+Identity preserved: paleta `#09070f / pink / purple / gold`, clip-paths, corner brackets, scanlines, glint sweep, `◆` markers, ZZZ animations (`clipReveal`, `snapIn`, `wipeIn`, `pingOnce`), aurora backgrounds, border-left accent strips, 44 px minimum touch targets.
+
+---
+
 ## [fix] — 2026-04-25
 
 ### Fixed

@@ -112,6 +112,7 @@ export default function LoginPage() {
             height: '2px',
             background: 'rgb(var(--theme-primary-rgb))',
             margin: '0.5rem auto 0',
+            boxShadow: '0 0 12px rgb(var(--theme-primary-rgb) / 0.5)',
           }}
         />
       </div>
@@ -149,7 +150,7 @@ export default function LoginPage() {
               <Link
                 href="/forgot-password"
                 className="link-glow font-black uppercase"
-                style={{ fontSize: '9px', letterSpacing: '0.12em' }}
+                style={{ fontSize: '11px', letterSpacing: '0.12em' }}
               >
                 {t('auth.login.forgotPassword')}
               </Link>

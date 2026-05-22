@@ -272,3 +272,82 @@ module.exports = {
 
 ---
 
+## ZZZ-Flavor Visual Layer (live tokens)
+
+> Appended 2026-05-22. The sections above describe the original "warm cozy" intent.
+> Over time, Solara's actual implementation evolved into a darker cyberpunk-gothic OLED layer
+> inspired by HUD vocabulary (Zenless Zone Zero, Cyberpunk Edgerunners). This section
+> documents the **tokens and patterns that the codebase actually ships** so contributors
+> can extend the system without drift. Both layers coexist: warmth and care in copy and
+> emotional design; ZZZ-flavor in chrome and rhythm.
+
+### Live tokens (source: `app/globals.css`)
+
+```css
+--theme-bg:             #09070f;  /* OLED-deep base */
+--theme-surface:        #100c1e;
+--theme-surface-alt:    #181228;
+--theme-surface-raised: #221939;
+--theme-border:         #2a2248;
+--theme-border-soft:    #211a3a;
+--theme-border-strong:  #4a3d7a;
+--theme-text:           #f2ecff;
+--theme-muted:          #a090c8;
+--theme-subtle:         #6a5e8a;
+--theme-primary:        #f472b6;  /* pink-400 — primary accent */
+--theme-primary-soft:   #db2777;  /* pink-600 — depressed gradient stop */
+--theme-primary-glow:   #f9a8d4;  /* pink-300 — highlights */
+--theme-front:          #c084fc;  /* purple-400 — "in front" */
+--theme-front-soft:     #7c3aed;  /* purple-600 */
+--theme-gold:           #fbbf24;  /* amber-400 — accents */
+```
+
+### Tagline
+- `闇に生まれて、星になる` — "Born of darkness, become a star." Use sparingly in narrative
+  surfaces (about, splash, settings credit).
+
+### Typography hierarchy (post-2026-05 modernization)
+Apps started feeling flat when *everything* used `font-black`. The rule is now:
+
+- `font-black` (900) — **HUD labels only**: `text-[10px]`–`text-[11px]` uppercase
+  `tracking-[0.2em]` or `tracking-widest`, and **display titles** (`page-title`, hero
+  greetings).
+- `font-bold` (700) — card titles in front chips, friend chip names, member names in lists.
+- `font-semibold` (600) — partner nicknames, note card titles, member-detail headings.
+- `font-medium` (500) / default (400) — body copy, descriptions, empty-state messages.
+- Never use `font-bold` or `font-black` on plain body paragraphs.
+
+### Minimum sizes
+- HUD labels: `text-[10px]`–`text-[11px]` — ok because they are uppercase + tracked.
+- Action links (inline anchors with arrow): `text-[11px]` minimum.
+- CTA buttons (clip-path pills, full pink): `text-[12px]` minimum.
+- Body copy: `text-sm` (14px) minimum.
+- Tab labels (bottom nav): `text-[9px]` allowed — short single-word labels.
+
+### Rhythm
+- Section gap on dashboard column: `space-y-6 md:space-y-8` (24/32 px).
+- Empty-state callout padding: `py-8 px-6` (32/24 px).
+- Note card padding: `0.875rem 1.125rem` (14/18 px).
+- Front chip avatar: `40 × 40 px` (`h-10 w-10`) with `clip-path: polygon(0 0, calc(100% - 4px) 0, 100% 4px, 100% 100%, 0 100%)`.
+
+### Active state (bottom nav)
+- Translucent fill, not solid: `bg-primary/10 text-primary`.
+- Keep the wipe-in top bar + single-shot ping + drop-shadow on the icon.
+- Filled `bg-primary text-bg` is too loud once the bar and glow are present.
+
+### Section header diamond `◆`
+- Token: `0.5rem`, color `--theme-primary`, `text-shadow: 0 0 6px primary/0.5`.
+- Always sits at the start of a section header line, followed by an uppercase
+  `tracking-[0.2em]` muted label.
+
+### Identity invariants (do not modernize away)
+- Clip-paths on cards, panels, buttons, avatars (`polygon(...)` with 4–14 px corner cuts).
+- Corner brackets (`.card-corner::after / ::before`).
+- Scanline texture in `.card::before` (repeating-linear-gradient at 2 px).
+- Glint sweep on `.btn-primary:hover::after` (700 ms diagonal highlight).
+- ZZZ animations: `clipReveal`, `snapIn`, `wipeIn`, `pingOnce`, `glintSweep`.
+- Diamond `◆` markers as the only ornamental glyph.
+- Aurora background on auth and dashboard (`.auth-bg`, `.aurora-bg-subtle`).
+- Border-left accent strip on panels (`3px solid primary` or `front`).
+- Touch target minimum 44 px (`min-h-[44px]` on action links and buttons).
+

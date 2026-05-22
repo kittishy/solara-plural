@@ -248,6 +248,7 @@
     color: rgb(var(--theme-primary-rgb));
     font-size: 0.5rem;
     flex-shrink: 0;
+    text-shadow: 0 0 6px rgb(var(--theme-primary-rgb) / 0.5);
   }
 
   /* ─── Page title ─────────────────────────────────────────── */

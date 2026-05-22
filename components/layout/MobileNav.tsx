@@ -264,7 +264,7 @@ export function MobileNav({ accountType = 'system' }: { accountType?: 'system' |
                 onClick={() => setMenuOpen(false)}
                 className={`tap-feedback relative flex flex-col items-center justify-center gap-1 min-h-[64px] py-2 text-[9px] font-black uppercase tracking-widest transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/70 ${
                   current
-                    ? 'bg-primary text-bg'
+                    ? 'bg-primary/10 text-primary'
                     : 'text-muted hover:text-text hover:bg-surface-alt'
                 }`}
                 style={current ? {
@@ -302,7 +302,7 @@ export function MobileNav({ accountType = 'system' }: { accountType?: 'system' |
             aria-haspopup="menu"
             className={`tap-feedback relative flex flex-col items-center justify-center gap-1 min-h-[64px] py-2 text-[9px] font-black uppercase tracking-widest transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/70 ${
               menuIsActive || menuOpen
-                ? 'bg-primary text-bg'
+                ? 'bg-primary/10 text-primary'
                 : 'text-muted hover:text-text hover:bg-surface-alt'
             }`}
             style={(menuIsActive || menuOpen) ? {
