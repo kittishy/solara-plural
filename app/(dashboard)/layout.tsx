@@ -1,6 +1,5 @@
 import { Sidebar } from '@/components/layout/Sidebar';
 import { MobileNav } from '@/components/layout/MobileNav';
-import { MobileTopBar } from '@/components/layout/MobileTopBar';
 import { DashboardClientProviders } from './DashboardClientProviders';
 import { getAccountType, getCachedSession, requireSystemId } from '@/lib/auth/session';
 import { Trans } from '@/components/language/Trans';
@@ -29,13 +28,11 @@ export default async function DashboardLayout({
 
       <Sidebar systemName={systemName} accountType={accountType} />
 
-      <MobileTopBar systemName={systemName} />
-
       <main id="main-content" className="relative flex-1 md:pt-14 pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-0 min-h-dvh">
         {/* Ultra-subtle aurora presence — static, no animation, pointer-events none */}
         <div className="aurora-bg-subtle pointer-events-none fixed inset-0 z-0" aria-hidden="true" />
         <DashboardClientProviders>
-          <div className="relative z-10 max-w-4xl mx-auto px-4 pt-3 pb-5 md:px-8 md:py-8">
+          <div className="relative z-10 max-w-4xl mx-auto px-4 pt-[calc(env(safe-area-inset-top)+0.75rem)] pb-5 md:px-8 md:pt-8 md:pb-8">
             {children}
           </div>
         </DashboardClientProviders>

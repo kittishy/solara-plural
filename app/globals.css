@@ -626,59 +626,6 @@
     animation: shimmer 1.4s linear infinite;
   }
 
-  /* ─── Mobile app shell — thin top bar with safe-area inset ─── */
-  .app-topbar {
-    position: sticky;
-    top: 0;
-    z-index: 30;
-    display: flex;
-    align-items: center;
-    gap: 0.625rem;
-    padding-top: calc(env(safe-area-inset-top) + 0.5rem);
-    padding-bottom: 0.5rem;
-    padding-left: 1rem;
-    padding-right: 1rem;
-    background:
-      linear-gradient(180deg,
-        rgb(var(--theme-bg-rgb)) 0%,
-        rgb(var(--theme-bg-rgb) / 0.92) 70%,
-        rgb(var(--theme-bg-rgb) / 0.0) 100%);
-    /* hairline accent under the bar */
-    box-shadow: inset 0 -1px 0 rgb(var(--theme-border-rgb) / 0.6);
-  }
-  .app-topbar::after {
-    content: '';
-    position: absolute;
-    left: 1rem;
-    right: 1rem;
-    bottom: 0;
-    height: 1px;
-    background: linear-gradient(90deg,
-      rgb(var(--theme-primary-rgb) / 0.55) 0%,
-      rgb(var(--theme-primary-rgb) / 0.0) 35%,
-      rgb(var(--theme-front-rgb) / 0.0) 65%,
-      rgb(var(--theme-front-rgb) / 0.45) 100%);
-    pointer-events: none;
-  }
-  .app-topbar__brand {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    font-size: 0.6875rem;
-    font-weight: 900;
-    text-transform: uppercase;
-    letter-spacing: 0.18em;
-    color: rgb(var(--theme-text-rgb));
-  }
-  .app-topbar__brand-mark {
-    display: inline-block;
-    width: 14px;
-    height: 14px;
-    background: linear-gradient(135deg, rgb(var(--theme-primary-rgb)), rgb(var(--theme-front-rgb)));
-    clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
-    filter: drop-shadow(0 0 6px rgb(var(--theme-primary-rgb) / 0.55));
-  }
-
   /* ─── Divider with accent diamond ─────────────────────────── */
   .divider-diamond {
     display: flex;
