@@ -212,7 +212,7 @@ export default function FrontHistoryClient({
         <button
           type="button"
           onClick={openCreate}
-          className="btn-primary min-h-[44px] px-5 text-sm font-medium"
+          className="btn-primary min-h-[44px] px-5"
         >
           Add retroactive entry
         </button>

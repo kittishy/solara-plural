@@ -1072,6 +1072,19 @@ export function ChatClient({
     return () => { document.body.style.overflow = original; };
   }, [channelsOpen]);
 
+  // Lock page scroll while the chat is mounted — only the messages container should scroll.
+  // Prevents the dashboard layout's min-h-dvh + padding from making the page taller than the viewport.
+  useEffect(() => {
+    const originalBody = document.body.style.overflow;
+    const originalHtml = document.documentElement.style.overflow;
+    document.body.style.overflow = 'hidden';
+    document.documentElement.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = originalBody;
+      document.documentElement.style.overflow = originalHtml;
+    };
+  }, []);
+
   // Fix mobile keyboard pushing header off-screen.
   // dvh doesn't always update when the soft keyboard opens (especially in PWA
   // mode on iOS Safari), so we use the visualViewport API to set the container
