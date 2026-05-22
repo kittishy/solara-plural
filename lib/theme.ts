@@ -257,6 +257,21 @@ function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
 }
 
+// ─── Member accent readability ────────────────────────────────────────────────
+
+/**
+ * Returns a version of `hex` that is readable as text/borders/icons on the
+ * app's dark surfaces. Colors already bright enough are returned unchanged.
+ * Only lifts the HSL lightness — hue and saturation stay the same, so the
+ * colour still reads as "the same colour the member chose".
+ */
+export function ensureAccentReadable(hex: string): string {
+  if (!isHex6(hex)) return hex;
+  const [h, s, l] = hexToHsl(hex);
+  if (l >= 35) return hex;
+  return hslToHex(h, s, 45);
+}
+
 // ─── Wallpaper palette extraction ─────────────────────────────────────────────
 
 export async function extractPaletteFromWallpaper(

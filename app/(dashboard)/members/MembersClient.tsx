@@ -6,6 +6,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import useSWR from 'swr';
 import { apiFetcher, revalidateMembersAndFront, swrKeys } from '@/lib/swr';
 import { formatTimeSince } from '@/lib/client/format';
+import { ensureAccentReadable } from '@/lib/theme';
 
 const INITIAL_VISIBLE_MEMBERS = 60;
 const VISIBLE_MEMBERS_INCREMENT = 60;
@@ -236,9 +237,10 @@ function MemberCard({
   onOpenSheet: (member: MemberItem) => void;
 }) {
   const accent = member.color ?? '#c084fc';
+  const readableAccent = ensureAccentReadable(accent);
   const frontColor = 'rgb(var(--theme-front-rgb))';
   const isF = member.isFronting;
-  const borderColor = isF ? 'rgb(var(--theme-front-rgb))' : accent;
+  const borderColor = isF ? 'rgb(var(--theme-front-rgb))' : readableAccent;
 
   return (
     <li role="listitem"
@@ -246,7 +248,7 @@ function MemberCard({
         aspectRatio: '3/5',
         filter: isF
           ? `drop-shadow(0 0 10px rgb(var(--theme-front-rgb) / 0.6)) drop-shadow(0 6px 20px rgba(0,0,0,0.8))`
-          : `drop-shadow(0 0 4px ${accent}55) drop-shadow(0 6px 20px rgba(0,0,0,0.7))`,
+          : `drop-shadow(0 0 4px ${readableAccent}55) drop-shadow(0 6px 20px rgba(0,0,0,0.7))`,
         transition: 'filter 200ms ease, transform 200ms ease',
       }}
     >

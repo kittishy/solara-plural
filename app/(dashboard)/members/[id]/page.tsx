@@ -7,6 +7,7 @@ import DynamicAvatarImage from '@/components/ui/DynamicAvatarImage';
 import { ScrollToTopOnMount } from '@/components/ui/ScrollToTopOnMount';
 import { requireSystemId } from '@/lib/auth/session';
 import { parseCustomFieldType, parseStoredCustomFieldOptions } from '@/lib/custom-fields';
+import { ensureAccentReadable } from '@/lib/theme';
 
 function formatDuration(start: Date, end: Date): string {
   const ms = end.getTime() - start.getTime();
@@ -101,6 +102,7 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
 
   const tags = member.tags ? JSON.parse(member.tags) as string[] : [];
   const accentColor = member.color ?? '#a78bfa';
+  const readableAccent = ensureAccentReadable(accentColor);
   const isFronting = Boolean(isFrontingEntry);
   const valuesByFieldId = new Map(customValueRows.map((row) => [row.fieldId, row.value]));
 
@@ -182,7 +184,7 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
               className="w-full rounded-lg overflow-hidden flex items-center justify-center text-4xl font-bold"
               style={{
                 height: 120,
-                backgroundColor: !member.avatarUrl ? accentColor : undefined,
+                backgroundColor: !member.avatarUrl ? readableAccent : undefined,
                 color: '#09070f',
               }}
             >
@@ -215,7 +217,7 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
 
         {/* Name / pronouns / role / tags — below the banner on surface */}
         <div className="bg-surface px-5 py-4 space-y-2.5"
-          style={{ borderTop: `2px solid ${accentColor}` }}
+          style={{ borderTop: `2px solid ${readableAccent}` }}
         >
           <div>
             <h1 className="text-2xl font-black text-text leading-none tracking-tight">{member.name}</h1>
@@ -226,9 +228,9 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
               <span
                 className="mt-2 inline-block text-[10px] font-black uppercase tracking-widest px-2.5 py-1"
                 style={{
-                  background: `color-mix(in srgb, ${accentColor} 15%, transparent)`,
-                  border: `1px solid color-mix(in srgb, ${accentColor} 35%, transparent)`,
-                  color: accentColor,
+                  background: `color-mix(in srgb, ${readableAccent} 15%, transparent)`,
+                  border: `1px solid color-mix(in srgb, ${readableAccent} 35%, transparent)`,
+                  color: readableAccent,
                   borderRadius: '4px',
                 }}
               >
@@ -244,9 +246,9 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
                   key={tag}
                   className="text-[10px] font-black uppercase tracking-wider px-2.5 py-1"
                   style={{
-                    background: `color-mix(in srgb, ${accentColor} 12%, transparent)`,
-                    border: `1px solid color-mix(in srgb, ${accentColor} 30%, transparent)`,
-                    color: accentColor,
+                    background: `color-mix(in srgb, ${readableAccent} 12%, transparent)`,
+                    border: `1px solid color-mix(in srgb, ${readableAccent} 30%, transparent)`,
+                    color: readableAccent,
                     borderRadius: '9999px',
                   }}
                 >
@@ -264,10 +266,10 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
           className="relative overflow-hidden px-5 py-4"
           style={{
             background: 'rgb(var(--theme-surface-rgb))',
-            borderLeft: `3px solid ${accentColor}`,
+            borderLeft: `3px solid ${readableAccent}`,
             border: '1px solid rgb(var(--theme-border-rgb))',
             borderLeftWidth: '3px',
-            borderLeftColor: accentColor,
+            borderLeftColor: readableAccent,
             borderRadius: '10px',
           }}
         >
@@ -302,7 +304,7 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
             background: 'rgb(var(--theme-surface-rgb))',
             border: '1px solid rgb(var(--theme-border-rgb))',
             borderLeftWidth: '3px',
-            borderLeftColor: accentColor,
+            borderLeftColor: readableAccent,
             borderRadius: '10px',
           }}
           aria-labelledby="member-details-heading"
@@ -338,9 +340,9 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
           <div
             className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest mb-3 px-3 py-2 w-fit"
             style={{
-              color: accentColor,
-              background: `color-mix(in srgb, ${accentColor} 10%, transparent)`,
-              border: `1px solid color-mix(in srgb, ${accentColor} 25%, transparent)`,
+              color: readableAccent,
+              background: `color-mix(in srgb, ${readableAccent} 10%, transparent)`,
+              border: `1px solid color-mix(in srgb, ${readableAccent} 25%, transparent)`,
               borderRadius: '4px',
             }}
           >
@@ -366,7 +368,7 @@ export default async function MemberProfilePage({ params }: { params: Promise<{ 
                   key={entry.id}
                   role="listitem"
                   className="border-b border-border/40 last:border-b-0 bg-surface hover:bg-surface-alt/60 transition-colors duration-150"
-                  style={{ borderLeft: `3px solid ${accentColor}` }}
+                  style={{ borderLeft: `3px solid ${readableAccent}` }}
                 >
                   <div className="flex items-start justify-between gap-3 px-4 py-3.5">
                     <div className="min-w-0">

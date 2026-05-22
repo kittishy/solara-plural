@@ -13,6 +13,7 @@ import { getAccountType, requireSystemId } from '@/lib/auth/session';
 import { DashboardGreeting, LocalizedTime, LocalizedToday } from '@/components/language/DashboardI18n';
 import { Trans } from '@/components/language/Trans';
 import type { TranslationKey } from '@/lib/i18n';
+import { ensureAccentReadable } from '@/lib/theme';
 
 function IconArrowRight() {
   return (
@@ -171,7 +172,7 @@ export default async function DashboardPage() {
               <div key={member.id} className="flex items-center gap-3 px-3 py-2.5 min-w-[160px]"
                 style={{
                   background: `linear-gradient(135deg, color-mix(in srgb, ${member.color ?? '#c084fc'} 25%, #100c1e) 0%, #100c1e 100%)`,
-                  borderLeft: `3px solid ${member.color ?? 'rgb(var(--theme-front-rgb))'}`,
+                  borderLeft: `3px solid ${ensureAccentReadable(member.color ?? 'rgb(var(--theme-front-rgb))')}`,
                   clipPath: 'polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 0 100%)',
                 }}
               >
@@ -183,7 +184,7 @@ export default async function DashboardPage() {
                   </div>
                 ) : (
                   <span className="flex h-9 w-9 items-center justify-center text-sm font-black text-bg flex-shrink-0"
-                    style={{ backgroundColor: member.color ?? '#c084fc', clipPath: 'polygon(0 0, calc(100% - 4px) 0, 100% 4px, 100% 100%, 0 100%)' }}
+                    style={{ backgroundColor: ensureAccentReadable(member.color ?? '#c084fc'), clipPath: 'polygon(0 0, calc(100% - 4px) 0, 100% 4px, 100% 100%, 0 100%)' }}
                     aria-hidden="true"
                   >
                     {member.name[0].toUpperCase()}

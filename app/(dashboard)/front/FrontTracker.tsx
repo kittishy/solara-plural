@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import type { FrontEntry } from '@/lib/db/schema';
 import { revalidateFrontHistory, revalidateMembersAndFront } from '@/lib/swr';
 import { useLanguage } from '@/components/providers/LanguageProvider';
+import { ensureAccentReadable } from '@/lib/theme';
 
 type FrontMember = {
   id: string;
@@ -41,7 +42,7 @@ function MemberAvatar({ member, size }: { member: FrontMember; size: 'xs' | 'sm'
   return (
     <div
       className={`${cls} flex flex-shrink-0 items-center justify-center rounded-full font-bold text-bg ring-1 ring-border/50`}
-      style={{ backgroundColor: member.color ?? '#a78bfa' }}
+      style={{ backgroundColor: ensureAccentReadable(member.color ?? '#a78bfa') }}
     >
       {member.name[0].toUpperCase()}
     </div>

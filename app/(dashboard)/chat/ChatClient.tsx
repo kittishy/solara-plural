@@ -9,6 +9,7 @@ import React, {
 } from 'react';
 import { SCANLINE_BG } from '@/lib/styles';
 import { useLanguage } from '@/components/providers/LanguageProvider';
+import { ensureAccentReadable } from '@/lib/theme';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -573,7 +574,7 @@ function MessageRow({
   deleteLabel: string;
   unknownLabel: string;
 }) {
-  const accentColor = message.memberColor ?? 'var(--theme-primary)';
+  const accentColor = ensureAccentReadable(message.memberColor ?? 'var(--theme-primary)');
   const displayName = message.memberName ?? unknownLabel;
   const time = formatTime(message.createdAt, locale);
 
@@ -698,7 +699,7 @@ function SendingAsPicker({
     if (open) setTimeout(() => inputRef.current?.focus(), 20);
   }, [open]);
 
-  const accentColor = selected?.color ?? 'var(--theme-primary)';
+  const accentColor = ensureAccentReadable(selected?.color ?? 'var(--theme-primary)');
 
   return (
     <div ref={containerRef} className="relative shrink-0 self-center">
@@ -717,7 +718,7 @@ function SendingAsPicker({
             ? `0 0 0 2px ${accentColor}, 0 0 10px ${accentColor}55`
             : `0 0 0 1.5px ${accentColor}70`,
         } : {
-          borderColor: selected?.color ? `${selected.color}55` : 'rgb(var(--theme-border-rgb) / 0.6)',
+          borderColor: selected?.color ? `${accentColor}55` : 'rgb(var(--theme-border-rgb) / 0.6)',
           borderLeftColor: accentColor,
           borderLeftWidth: '3px',
           borderRadius: '4px',
@@ -852,7 +853,7 @@ function SendingAsPicker({
 function PickerRow({
   member, selected, fronting, onSelect,
 }: { member: MemberOption; selected: boolean; fronting?: boolean; onSelect: () => void }) {
-  const rowAccent = member.color ?? 'var(--theme-primary)';
+  const rowAccent = ensureAccentReadable(member.color ?? 'var(--theme-primary)');
   return (
     <li>
       <button type="button" role="option" aria-selected={selected} onClick={onSelect}
@@ -1375,7 +1376,7 @@ export function ChatClient({
               className="flex items-end gap-2 p-1.5 border border-border-strong transition-all duration-300"
               style={{
                 background: 'var(--theme-surface-raised)',
-                borderLeftColor: selectedMember?.color ?? 'var(--theme-primary)',
+                borderLeftColor: ensureAccentReadable(selectedMember?.color ?? 'var(--theme-primary)'),
                 borderLeftWidth: '3px',
               }}
             >

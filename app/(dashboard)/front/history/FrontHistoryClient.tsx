@@ -5,6 +5,7 @@ import DynamicAvatarImage from '@/components/ui/DynamicAvatarImage';
 import { useRouter } from 'next/navigation';
 import { formatDuration, formatFrontEntryRange, toDatetimeLocalValue } from '@/lib/front';
 import { revalidateFrontHistory, revalidateMembersAndFront } from '@/lib/swr';
+import { ensureAccentReadable } from '@/lib/theme';
 
 type Entry = {
   id: string;
@@ -61,7 +62,7 @@ function MemberAvatar({ m, size }: { m: HistoryMember; size: 'sm' | 'md' }) {
   return (
     <div
       className={`${cls} rounded-full flex items-center justify-center font-bold text-bg flex-shrink-0 ring-1 ring-border/50`}
-      style={{ backgroundColor: m.color ?? '#a78bfa' }}
+      style={{ backgroundColor: ensureAccentReadable(m.color ?? '#a78bfa') }}
     >
       {m.name[0].toUpperCase()}
     </div>
@@ -384,7 +385,7 @@ export default function FrontHistoryClient({
               <h2 className="text-sm font-semibold text-muted uppercase tracking-wider">Time per member</h2>
               <ul role="list" className="space-y-3">
                 {stats.memberTimes.map(({ member, ms }) => {
-                  const barColor = member.color ?? '#a78bfa';
+                  const barColor = ensureAccentReadable(member.color ?? '#a78bfa');
                   const widthPct = Math.max(4, Math.round((ms / stats.maxMs) * 100));
                   return (
                     <li key={member.id} className="flex items-center gap-3">
@@ -440,7 +441,7 @@ export default function FrontHistoryClient({
         <div className="space-y-3">
           {history.map((entry) => {
             const entryMembers = entry.memberIds.map((id) => memberMap[id]).filter(Boolean);
-            const accentColor = entryMembers[0]?.color ?? '#a78bfa';
+            const accentColor = ensureAccentReadable(entryMembers[0]?.color ?? '#a78bfa');
             const isExpanded = expandedId === entry.id;
             const startDate = new Date(entry.startedAt);
             const endDate = new Date(entry.endedAt ?? entry.startedAt);
@@ -477,7 +478,7 @@ export default function FrontHistoryClient({
                               key={m.id}
                               title={m.name}
                               className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold text-bg border-2 border-surface ring-1 ring-border/20"
-                              style={{ backgroundColor: m.color ?? '#a78bfa' }}
+                              style={{ backgroundColor: ensureAccentReadable(m.color ?? '#a78bfa') }}
                             >
                               {m.name[0].toUpperCase()}
                             </div>
