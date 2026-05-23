@@ -19,14 +19,19 @@ import { GroupedSection, GroupedRow } from "@/components/glass/GlassCard";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "next-themes";
+import { LanguageSelector } from "@/components/language/LanguageSelector";
+import { useLanguage } from "@/components/providers/LanguageProvider";
+import { LANGUAGES } from "@/lib/i18n";
 
 export default function SettingsPage() {
   const { data: session } = useSession();
   const { theme, setTheme } = useTheme();
+  const { language, setLanguage } = useLanguage();
   const [signingOut, setSigningOut] = useState(false);
 
   const themeLabel =
     theme === "light" ? "Claro" : theme === "dark" ? "Escuro" : "Sistema";
+  const currentLang = LANGUAGES.find((l) => l.code === language);
 
   async function handleSignOut() {
     setSigningOut(true);
@@ -101,13 +106,13 @@ export default function SettingsPage() {
             chevron
             className="cursor-pointer"
           />
-          <GroupedRow
-            label="Idioma"
-            icon={<Globe size={18} />}
-            value="Português"
-            chevron
-            className="cursor-pointer"
-          />
+          <div className="flex items-center gap-3 px-4 py-2 min-h-[44px]">
+            <span className="w-8 h-8 flex items-center justify-center text-ios-blue flex-shrink-0">
+              <Globe size={18} />
+            </span>
+            <span className="flex-1 text-body text-foreground">Idioma</span>
+            <LanguageSelector />
+          </div>
           <GroupedRow
             label="Privacidade"
             icon={<Shield size={18} />}

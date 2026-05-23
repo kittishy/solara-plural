@@ -7,24 +7,34 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { GlassCard } from "@/components/glass/GlassCard";
+import { LanguageSelector } from "@/components/language/LanguageSelector";
+import { useLanguage } from "@/components/providers/LanguageProvider";
 
 export default function LoginPage() {
+  const { t } = useLanguage();
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    setError("");
     setLoading(true);
     const form = e.currentTarget;
     const data = new FormData(form);
 
     try {
       const { signIn } = await import("next-auth/react");
-      await signIn("credentials", {
+      const result = await signIn("credentials", {
         email: data.get("email"),
         password: data.get("password"),
-        callbackUrl: "/",
+        redirect: false,
       });
+      if (result?.error) {
+        setError(t("auth.login.invalid"));
+      } else {
+        window.location.href = "/";
+      }
     } finally {
       setLoading(false);
     }
@@ -32,6 +42,11 @@ export default function LoginPage() {
 
   return (
     <div className="flex flex-col items-center gap-8 animate-fade-in">
+      {/* Language selector top-right */}
+      <div className="w-full flex justify-end">
+        <LanguageSelector />
+      </div>
+
       {/* Logo */}
       <div className="flex flex-col items-center gap-3">
         <div className="w-20 h-20 rounded-ios-xl bg-ios-blue flex items-center justify-center shadow-ios-md">
@@ -40,7 +55,7 @@ export default function LoginPage() {
         <div className="text-center">
           <h1 className="text-title-1 text-foreground">Solara</h1>
           <p className="text-subheadline text-muted-foreground mt-0.5">
-            Para sistemas plurais
+            {t("auth.login.tagline")}
           </p>
         </div>
       </div>
@@ -49,7 +64,7 @@ export default function LoginPage() {
       <GlassCard className="w-full" padding="lg">
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="email">E-mail</Label>
+            <Label htmlFor="email">{t("auth.login.email")}</Label>
             <Input
               id="email"
               name="email"
@@ -61,7 +76,7 @@ export default function LoginPage() {
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="password">Senha</Label>
+            <Label htmlFor="password">{t("auth.login.password")}</Label>
             <div className="relative">
               <Input
                 id="password"
@@ -87,23 +102,27 @@ export default function LoginPage() {
               href="/forgot-password"
               className="text-subheadline text-ios-blue hover:opacity-80 ios-transition"
             >
-              Esqueci a senha
+              {t("auth.login.forgotPassword")}
             </Link>
           </div>
 
+          {error && (
+            <p className="text-subheadline text-ios-red text-center">{error}</p>
+          )}
+
           <Button type="submit" className="w-full mt-2" disabled={loading}>
-            {loading ? "Entrando..." : "Entrar"}
+            {loading ? t("auth.login.signingIn") : t("auth.login.signIn")}
           </Button>
         </form>
       </GlassCard>
 
       <p className="text-subheadline text-muted-foreground">
-        Não tem uma conta?{" "}
+        {t("auth.login.newHere")}{" "}
         <Link
           href="/register"
           className="text-ios-blue font-semibold hover:opacity-80 ios-transition"
         >
-          Criar conta
+          {t("auth.register.create")}
         </Link>
       </p>
     </div>
