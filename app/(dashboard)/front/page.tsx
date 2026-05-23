@@ -2,73 +2,94 @@
 
 import useSWR, { mutate } from "swr";
 import { useState } from "react";
-import { Clock, Plus, X } from "lucide-react";
+import { Clock, Plus, X, Check } from "lucide-react";
 import { LargeTitle } from "@/components/layout/NavBar";
 import { GlassCard } from "@/components/glass/GlassCard";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { apiFetcher, swrKeys, revalidateMembersAndFront } from "@/lib/swr";
+import DynamicAvatarImage from "@/components/ui/DynamicAvatarImage";
+import { cn } from "@/lib/utils";
 
-const fetcher = (url: string) => fetch(url).then((r) => r.json());
+type Member = {
+  id: string;
+  name: string;
+  pronouns?: string | null;
+  color?: string | null;
+  avatarUrl?: string | null;
+};
 
-function formatTime(dateStr: string) {
-  return new Date(dateStr).toLocaleTimeString("pt-BR", {
+type FrontEntry = {
+  id: string;
+  memberIds: string[];
+  startedAt: string | number | Date;
+  endedAt?: string | number | Date | null;
+  note?: string | null;
+};
+
+function formatTime(value: string | number | Date) {
+  const d = new Date(value);
+  return d.toLocaleTimeString("pt-BR", {
     hour: "2-digit",
     minute: "2-digit",
   });
 }
 
-function formatDate(dateStr: string) {
-  return new Date(dateStr).toLocaleDateString("pt-BR", {
+function formatDate(value: string | number | Date) {
+  const d = new Date(value);
+  return d.toLocaleDateString("pt-BR", {
     day: "numeric",
     month: "short",
   });
 }
 
 export default function FrontPage() {
-  const { data: frontData, isLoading: loadingFront } = useSWR(
-    "/api/front",
-    fetcher
+  const { data: currentFront, isLoading: loadingFront } = useSWR<FrontEntry | null>(
+    swrKeys.front,
+    apiFetcher
   );
-  const { data: membersData, isLoading: loadingMembers } = useSWR(
-    "/api/members",
-    fetcher
+  const { data: members, isLoading: loadingMembers } = useSWR<Member[]>(
+    swrKeys.members,
+    apiFetcher
   );
-  const { data: historyData, isLoading: loadingHistory } = useSWR(
-    "/api/front/history",
-    fetcher
+  const { data: historyData } = useSWR<FrontEntry[]>(
+    swrKeys.frontHistory,
+    apiFetcher
   );
 
-  const [showPicker, setShowPicker] = useState(false);
   const [updating, setUpdating] = useState(false);
+  const [showPicker, setShowPicker] = useState(false);
 
-  const fronting: any[] = frontData?.entries ?? [];
-  const members: any[] = membersData?.members ?? [];
-  const history: any[] = historyData?.entries ?? [];
-  const frontingIds = new Set(fronting.map((e: any) => e.memberId));
+  const memberList = members ?? [];
+  const memberById = new Map(memberList.map((m) => [m.id, m]));
+  const frontingIds = currentFront ? currentFront.memberIds : [];
+  const frontingSet = new Set(frontingIds);
+  const history = historyData ?? [];
 
   async function toggleMember(memberId: string) {
     setUpdating(true);
     try {
-      if (frontingIds.has(memberId)) {
-        const entry = fronting.find((e: any) => e.memberId === memberId);
-        if (entry) {
-          await fetch(`/api/front/history/${entry.id}`, {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ endTime: new Date().toISOString() }),
-          });
-        }
+      const isFronting = frontingSet.has(memberId);
+      const newIds = isFronting
+        ? frontingIds.filter((id) => id !== memberId)
+        : [...frontingIds, memberId];
+
+      if (newIds.length === 0) {
+        await fetch("/api/front", {
+          method: "DELETE",
+          credentials: "same-origin",
+        });
       } else {
         await fetch("/api/front", {
           method: "POST",
+          credentials: "same-origin",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ memberId }),
+          body: JSON.stringify({ memberIds: newIds }),
         });
       }
-      mutate("/api/front");
-      mutate("/api/front/history");
+      revalidateMembersAndFront();
+      void mutate(swrKeys.frontHistory);
     } finally {
       setUpdating(false);
     }
@@ -94,54 +115,62 @@ export default function FrontPage() {
         </p>
         <GlassCard padding="none" className="overflow-hidden">
           {loadingFront ? (
-            <div className="p-4 flex flex-col gap-3">
-              <div className="flex gap-3">
-                <Skeleton className="w-12 h-12 rounded-full" />
-                <div className="flex-1 flex flex-col gap-2">
-                  <Skeleton className="h-4 w-28" />
-                  <Skeleton className="h-3 w-20" />
-                </div>
+            <div className="p-4 flex gap-3">
+              <Skeleton className="w-12 h-12 rounded-full" />
+              <div className="flex-1 flex flex-col gap-2">
+                <Skeleton className="h-4 w-28" />
+                <Skeleton className="h-3 w-20" />
               </div>
             </div>
-          ) : fronting.length === 0 ? (
+          ) : !currentFront || frontingIds.length === 0 ? (
             <div className="py-8 text-center">
               <p className="text-muted-foreground text-subheadline">
                 Ninguém na frente agora
               </p>
             </div>
           ) : (
-            fronting.map((entry: any, i: number) => (
-              <div
-                key={entry.id ?? i}
-                className="flex items-center gap-3 px-4 py-3.5 border-b border-border/50 last:border-0"
-              >
-                <Avatar className="w-12 h-12">
-                  {entry.member?.avatarUrl && (
-                    <AvatarImage src={entry.member.avatarUrl} />
-                  )}
-                  <AvatarFallback
+            frontingIds.map((id) => {
+              const m = memberById.get(id);
+              if (!m) return null;
+              return (
+                <div
+                  key={id}
+                  className="flex items-center gap-3 px-4 py-3.5 border-b border-border/50 last:border-0"
+                >
+                  <div
+                    className="w-12 h-12 rounded-full overflow-hidden flex items-center justify-center flex-shrink-0"
                     style={{
-                      background: entry.member?.color
-                        ? `${entry.member.color}20`
-                        : undefined,
-                      color: entry.member?.color,
+                      background: m.color ? `${m.color}22` : "#8E8E9322",
                     }}
                   >
-                    {(entry.member?.name ?? "?")[0].toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1 min-w-0">
-                  <p className="text-body font-semibold text-foreground">
-                    {entry.member?.name ?? "Membro"}
-                  </p>
-                  <p className="text-caption-1 text-muted-foreground flex items-center gap-1">
-                    <Clock size={11} />
-                    desde {formatTime(entry.startTime)}
-                  </p>
+                    {m.avatarUrl ? (
+                      <DynamicAvatarImage
+                        src={m.avatarUrl}
+                        alt={m.name}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <span
+                        className="text-body font-semibold"
+                        style={{ color: m.color ?? "#8E8E93" }}
+                      >
+                        {m.name[0].toUpperCase()}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-body font-semibold text-foreground">
+                      {m.name}
+                    </p>
+                    <p className="text-caption-1 text-muted-foreground flex items-center gap-1">
+                      <Clock size={11} />
+                      desde {formatTime(currentFront.startedAt)}
+                    </p>
+                  </div>
+                  <Badge variant="success">Frente</Badge>
                 </div>
-                <Badge variant="success">Frente</Badge>
-              </div>
-            ))
+              );
+            })
           )}
         </GlassCard>
       </div>
@@ -150,57 +179,56 @@ export default function FrontPage() {
       {showPicker && (
         <div className="px-4 mb-4 animate-slide-up">
           <p className="text-footnote font-semibold text-muted-foreground uppercase tracking-wide mb-2 px-1">
-            Selecionar membro
+            Selecionar membros
           </p>
           <GlassCard padding="none" className="overflow-hidden">
             {loadingMembers ? (
               <div className="p-4">
                 <Skeleton className="h-10 w-full" />
               </div>
+            ) : memberList.length === 0 ? (
+              <div className="py-6 text-center text-muted-foreground text-subheadline">
+                Crie um membro primeiro
+              </div>
             ) : (
-              members.map((member: any, i: number) => {
-                const isActive = frontingIds.has(member.id);
+              memberList.map((m) => {
+                const isActive = frontingSet.has(m.id);
                 return (
                   <button
-                    key={member.id ?? i}
-                    onClick={() => toggleMember(member.id)}
+                    key={m.id}
+                    onClick={() => toggleMember(m.id)}
                     disabled={updating}
-                    className="w-full flex items-center gap-3 px-4 py-3 border-b border-border/50 last:border-0 active:bg-muted/50 ios-transition text-left"
+                    className={cn(
+                      "w-full flex items-center gap-3 px-4 py-3 border-b border-border/50 last:border-0 active:bg-muted/50 ios-transition text-left disabled:opacity-50"
+                    )}
                   >
-                    <Avatar className="w-10 h-10 flex-shrink-0">
-                      {member.avatarUrl && (
-                        <AvatarImage src={member.avatarUrl} />
+                    <div
+                      className="w-10 h-10 rounded-full overflow-hidden flex items-center justify-center flex-shrink-0"
+                      style={{
+                        background: m.color ? `${m.color}22` : "#8E8E9322",
+                      }}
+                    >
+                      {m.avatarUrl ? (
+                        <DynamicAvatarImage
+                          src={m.avatarUrl}
+                          alt={m.name}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <span
+                          className="text-subheadline font-semibold"
+                          style={{ color: m.color ?? "#8E8E93" }}
+                        >
+                          {m.name[0].toUpperCase()}
+                        </span>
                       )}
-                      <AvatarFallback
-                        style={{
-                          background: member.color
-                            ? `${member.color}20`
-                            : undefined,
-                          color: member.color,
-                        }}
-                      >
-                        {(member.name ?? "?")[0].toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
+                    </div>
                     <span className="flex-1 text-body text-foreground">
-                      {member.name}
+                      {m.name}
                     </span>
                     {isActive && (
-                      <div className="w-5 h-5 rounded-full bg-ios-blue flex items-center justify-center">
-                        <svg
-                          width="10"
-                          height="8"
-                          viewBox="0 0 10 8"
-                          fill="none"
-                        >
-                          <path
-                            d="M1 4L3.5 6.5L9 1"
-                            stroke="white"
-                            strokeWidth="1.5"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          />
-                        </svg>
+                      <div className="w-6 h-6 rounded-full bg-ios-blue flex items-center justify-center">
+                        <Check size={14} className="text-white" strokeWidth={3} />
                       </div>
                     )}
                   </button>
@@ -213,59 +241,46 @@ export default function FrontPage() {
 
       {/* History */}
       <div className="px-4 mb-6">
-        <p className="text-footnote font-semibold text-muted-foreground uppercase tracking-wide mb-2 px-1">
-          Histórico
-        </p>
+        <div className="flex items-center justify-between mb-2 px-1">
+          <p className="text-footnote font-semibold text-muted-foreground uppercase tracking-wide">
+            Histórico
+          </p>
+          <a
+            href="/front/history"
+            className="text-subheadline text-ios-blue ios-press"
+          >
+            Ver tudo
+          </a>
+        </div>
         <GlassCard padding="none" className="overflow-hidden">
-          {loadingHistory ? (
-            <div className="p-4 flex flex-col gap-3">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="flex gap-3">
-                  <Skeleton className="w-10 h-10 rounded-full" />
-                  <div className="flex-1 flex flex-col gap-2">
-                    <Skeleton className="h-4 w-24" />
-                    <Skeleton className="h-3 w-32" />
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : history.length === 0 ? (
+          {history.length === 0 ? (
             <div className="py-6 text-center text-muted-foreground text-subheadline">
               Sem histórico ainda
             </div>
           ) : (
-            history.slice(0, 10).map((entry: any, i: number) => (
-              <div
-                key={entry.id ?? i}
-                className="flex items-center gap-3 px-4 py-3 border-b border-border/50 last:border-0"
-              >
-                <Avatar className="w-10 h-10 flex-shrink-0">
-                  {entry.member?.avatarUrl && (
-                    <AvatarImage src={entry.member.avatarUrl} />
-                  )}
-                  <AvatarFallback
-                    style={{
-                      background: entry.member?.color
-                        ? `${entry.member.color}20`
-                        : undefined,
-                      color: entry.member?.color,
-                    }}
-                  >
-                    {(entry.member?.name ?? "?")[0].toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1 min-w-0">
-                  <p className="text-subheadline font-semibold text-foreground truncate">
-                    {entry.member?.name ?? "Membro"}
-                  </p>
-                  <p className="text-caption-1 text-muted-foreground">
-                    {formatDate(entry.startTime)} ·{" "}
-                    {formatTime(entry.startTime)}
-                    {entry.endTime && ` → ${formatTime(entry.endTime)}`}
-                  </p>
+            history.slice(0, 8).map((entry) => {
+              const memberNames = entry.memberIds
+                .map((id) => memberById.get(id)?.name)
+                .filter(Boolean)
+                .join(", ");
+              return (
+                <div
+                  key={entry.id}
+                  className="flex items-center gap-3 px-4 py-3 border-b border-border/50 last:border-0"
+                >
+                  <Clock size={14} className="text-muted-foreground flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-subheadline font-semibold text-foreground truncate">
+                      {memberNames || "—"}
+                    </p>
+                    <p className="text-caption-1 text-muted-foreground">
+                      {formatDate(entry.startedAt)} · {formatTime(entry.startedAt)}
+                      {entry.endedAt && ` → ${formatTime(entry.endedAt)}`}
+                    </p>
+                  </div>
                 </div>
-              </div>
-            ))
+              );
+            })
           )}
         </GlassCard>
       </div>

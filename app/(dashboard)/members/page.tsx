@@ -6,19 +6,31 @@ import { Plus, Search } from "lucide-react";
 import { useState } from "react";
 import { LargeTitle } from "@/components/layout/NavBar";
 import { GlassCard } from "@/components/glass/GlassCard";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { apiFetcher, swrKeys } from "@/lib/swr";
+import DynamicAvatarImage from "@/components/ui/DynamicAvatarImage";
 
-const fetcher = (url: string) => fetch(url).then((r) => r.json());
+type Member = {
+  id: string;
+  name: string;
+  pronouns?: string | null;
+  role?: string | null;
+  tags: string[];
+  color?: string | null;
+  avatarUrl?: string | null;
+};
 
 export default function MembersPage() {
-  const { data, isLoading } = useSWR("/api/members", fetcher);
+  const { data: members, isLoading } = useSWR<Member[]>(
+    swrKeys.members,
+    apiFetcher
+  );
   const [search, setSearch] = useState("");
 
-  const members: any[] = data?.members ?? [];
-  const filtered = members.filter((m) =>
+  const list = members ?? [];
+  const filtered = list.filter((m) =>
     m.name?.toLowerCase().includes(search.toLowerCase())
   );
 
@@ -37,7 +49,7 @@ export default function MembersPage() {
       <div className="px-4 mb-4 relative">
         <Search
           size={16}
-          className="absolute left-7 top-1/2 -translate-y-1/2 text-muted-foreground"
+          className="absolute left-7 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none"
         />
         <Input
           placeholder="Buscar membro..."
@@ -68,9 +80,7 @@ export default function MembersPage() {
           ) : filtered.length === 0 ? (
             <div className="py-12 text-center flex flex-col items-center gap-3">
               <p className="text-muted-foreground text-subheadline">
-                {search
-                  ? "Nenhum membro encontrado"
-                  : "Nenhum membro ainda"}
+                {search ? "Nenhum membro encontrado" : "Nenhum membro ainda"}
               </p>
               {!search && (
                 <Link href="/members/new">
@@ -82,23 +92,35 @@ export default function MembersPage() {
               )}
             </div>
           ) : (
-            filtered.map((member: any, i: number) => (
+            filtered.map((member) => (
               <Link
-                key={member.id ?? i}
+                key={member.id}
                 href={`/members/${member.id}`}
                 className="flex items-center gap-3 px-4 py-3 border-b border-border/50 last:border-0 active:bg-muted/50 ios-transition"
               >
-                <Avatar className="w-11 h-11 flex-shrink-0">
-                  {member.avatarUrl && <AvatarImage src={member.avatarUrl} />}
-                  <AvatarFallback
-                    style={{
-                      background: member.color ? `${member.color}20` : undefined,
-                      color: member.color,
-                    }}
-                  >
-                    {(member.name ?? "?")[0].toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
+                <div
+                  className="w-11 h-11 rounded-full overflow-hidden flex items-center justify-center flex-shrink-0"
+                  style={{
+                    background: member.color
+                      ? `${member.color}22`
+                      : "#8E8E9322",
+                  }}
+                >
+                  {member.avatarUrl ? (
+                    <DynamicAvatarImage
+                      src={member.avatarUrl}
+                      alt={member.name}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <span
+                      className="text-body font-semibold"
+                      style={{ color: member.color ?? "#8E8E93" }}
+                    >
+                      {(member.name ?? "?")[0].toUpperCase()}
+                    </span>
+                  )}
+                </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-body font-semibold text-foreground truncate">
                     {member.name}

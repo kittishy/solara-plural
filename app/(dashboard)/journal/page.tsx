@@ -7,8 +7,15 @@ import { LargeTitle } from "@/components/layout/NavBar";
 import { GlassCard } from "@/components/glass/GlassCard";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { apiFetcher, swrKeys } from "@/lib/swr";
 
-const fetcher = (url: string) => fetch(url).then((r) => r.json());
+type JournalEntry = {
+  id: string;
+  title: string | null;
+  content: string;
+  mood: string | null;
+  createdAt: string | number | Date;
+};
 
 const moodEmoji: Record<string, string> = {
   great: "😄",
@@ -18,8 +25,9 @@ const moodEmoji: Record<string, string> = {
   terrible: "😞",
 };
 
-function formatDate(dateStr: string) {
-  return new Date(dateStr).toLocaleDateString("pt-BR", {
+function formatDate(value: string | number | Date) {
+  const d = new Date(value);
+  return d.toLocaleDateString("pt-BR", {
     day: "numeric",
     month: "long",
     year: "numeric",
@@ -27,8 +35,11 @@ function formatDate(dateStr: string) {
 }
 
 export default function JournalPage() {
-  const { data, isLoading } = useSWR("/api/journal", fetcher);
-  const entries: any[] = data?.entries ?? [];
+  const { data, isLoading } = useSWR<JournalEntry[]>(
+    swrKeys.journal,
+    apiFetcher
+  );
+  const entries = data ?? [];
 
   return (
     <div className="animate-fade-in">
@@ -78,9 +89,9 @@ export default function JournalPage() {
               </Link>
             </div>
           ) : (
-            entries.map((entry: any, i: number) => (
+            entries.map((entry) => (
               <Link
-                key={entry.id ?? i}
+                key={entry.id}
                 href={`/journal/${entry.id}`}
                 className="flex flex-col gap-1.5 px-4 py-4 border-b border-border/50 last:border-0 active:bg-muted/50 ios-transition"
               >
