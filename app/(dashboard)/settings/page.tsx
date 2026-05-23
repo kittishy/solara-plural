@@ -1,86 +1,177 @@
-import { db } from '@/lib/db';
-import { memberExternalLinks, systemIntegrations, systems } from '@/lib/db/schema';
-import { and, eq, sql } from 'drizzle-orm';
-import SettingsClient from './SettingsClient';
-import { requireSystemId } from '@/lib/auth/session';
-import { Trans } from '@/components/language/Trans';
+"use client";
 
-export default async function SettingsPage() {
-  const systemId = await requireSystemId();
+import { useSession, signOut } from "next-auth/react";
+import { useState } from "react";
+import {
+  User,
+  Bell,
+  Shield,
+  Download,
+  Upload,
+  Trash2,
+  ChevronRight,
+  Moon,
+  Globe,
+  LogOut,
+} from "lucide-react";
+import { LargeTitle } from "@/components/layout/NavBar";
+import { GroupedSection, GroupedRow } from "@/components/glass/GlassCard";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { useTheme } from "next-themes";
 
-  const system = await db.query.systems.findFirst({
-    columns: {
-      id: true,
-      name: true,
-      email: true,
-      description: true,
-      accountType: true,
-      avatarMode: true,
-      avatarEmoji: true,
-      avatarUrl: true,
-      deletionRequestedAt: true,
-      deletionScheduledFor: true,
-      createdAt: true,
-      updatedAt: true,
-    },
-    where: eq(systems.id, systemId),
-  });
+export default function SettingsPage() {
+  const { data: session } = useSession();
+  const { theme, setTheme } = useTheme();
+  const [signingOut, setSigningOut] = useState(false);
 
-  let pluralKitConnection: {
-    linkedMembers: number;
-    hasLinkedMembers: boolean;
-    hasSavedToken: boolean;
-    lastSyncedAt: string | null;
-  } = {
-    linkedMembers: 0,
-    hasLinkedMembers: false,
-    hasSavedToken: false,
-    lastSyncedAt: null,
-  };
+  const themeLabel =
+    theme === "light" ? "Claro" : theme === "dark" ? "Escuro" : "Sistema";
 
-  try {
-    const [pluralKitLinkStats] = await db
-      .select({
-        linkedMembers: sql<number>`count(*)`,
-        lastSyncedAt: sql<number | null>`max(${memberExternalLinks.lastSyncedAt})`,
-      })
-      .from(memberExternalLinks)
-      .where(and(
-        eq(memberExternalLinks.systemId, systemId),
-        eq(memberExternalLinks.provider, 'pluralkit'),
-      ));
+  async function handleSignOut() {
+    setSigningOut(true);
+    await signOut({ callbackUrl: "/login" });
+  }
 
-    const savedPluralKitToken = await db.query.systemIntegrations.findFirst({
-      columns: {
-        id: true,
-      },
-      where: and(
-        eq(systemIntegrations.systemId, systemId),
-        eq(systemIntegrations.provider, 'pluralkit'),
-      ),
-    });
-
-    const linkedMembers = Number(pluralKitLinkStats?.linkedMembers ?? 0);
-    pluralKitConnection = {
-      linkedMembers,
-      hasLinkedMembers: linkedMembers > 0,
-      hasSavedToken: Boolean(savedPluralKitToken),
-      lastSyncedAt: pluralKitLinkStats?.lastSyncedAt
-        ? new Date(pluralKitLinkStats.lastSyncedAt * 1000).toISOString()
-        : null,
-    };
-  } catch {
-    // Some local environments may be temporarily out-of-sync with integration migrations.
-    // Keep Settings available and hide persisted integration status until schema is ready.
+  function cycleTheme() {
+    if (theme === "system") setTheme("light");
+    else if (theme === "light") setTheme("dark");
+    else setTheme("system");
   }
 
   return (
-    <div className="space-y-6 max-w-2xl">
-      <div>
-        <h1 className="text-2xl font-bold text-text"><Trans k="pages.settingsTitle" /></h1>
-        <p className="text-muted text-sm mt-0.5"><Trans k="pages.settingsSubtitle" /></p>
+    <div className="animate-fade-in">
+      <div className="px-4 pt-14 pb-2">
+        <LargeTitle className="px-0">Configurações</LargeTitle>
       </div>
-      <SettingsClient system={system ?? null} pluralKitConnection={pluralKitConnection} />
+
+      {/* Profile */}
+      <div className="px-4 mb-6">
+        <GroupedSection>
+          <GroupedRow
+            label={session?.user?.name ?? "Sistema"}
+            icon={
+              <Avatar className="w-8 h-8">
+                <AvatarFallback className="text-caption-1 bg-ios-blue/20 text-ios-blue">
+                  {(session?.user?.name ?? "S")[0].toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+            }
+            value={
+              <span className="text-caption-1 text-muted-foreground">
+                {session?.user?.email}
+              </span>
+            }
+          />
+        </GroupedSection>
+      </div>
+
+      {/* Appearance */}
+      <div className="px-4 mb-6">
+        <p className="text-footnote font-semibold text-muted-foreground uppercase tracking-wide mb-2 px-1">
+          Aparência
+        </p>
+        <GroupedSection>
+          <GroupedRow
+            label="Tema"
+            icon={<Moon size={18} />}
+            value={themeLabel}
+            chevron
+            onClick={cycleTheme}
+            className="cursor-pointer"
+          />
+        </GroupedSection>
+      </div>
+
+      {/* Account */}
+      <div className="px-4 mb-6">
+        <p className="text-footnote font-semibold text-muted-foreground uppercase tracking-wide mb-2 px-1">
+          Conta
+        </p>
+        <GroupedSection>
+          <GroupedRow
+            label="Perfil"
+            icon={<User size={18} />}
+            chevron
+            className="cursor-pointer"
+          />
+          <GroupedRow
+            label="Notificações"
+            icon={<Bell size={18} />}
+            chevron
+            className="cursor-pointer"
+          />
+          <GroupedRow
+            label="Idioma"
+            icon={<Globe size={18} />}
+            value="Português"
+            chevron
+            className="cursor-pointer"
+          />
+          <GroupedRow
+            label="Privacidade"
+            icon={<Shield size={18} />}
+            chevron
+            className="cursor-pointer"
+          />
+        </GroupedSection>
+      </div>
+
+      {/* Data */}
+      <div className="px-4 mb-6">
+        <p className="text-footnote font-semibold text-muted-foreground uppercase tracking-wide mb-2 px-1">
+          Dados
+        </p>
+        <GroupedSection>
+          <GroupedRow
+            label="Exportar dados"
+            icon={<Download size={18} />}
+            chevron
+            className="cursor-pointer"
+            onClick={async () => {
+              const res = await fetch("/api/export");
+              const blob = await res.blob();
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement("a");
+              a.href = url;
+              a.download = "solara-export.json";
+              a.click();
+              URL.revokeObjectURL(url);
+            }}
+          />
+          <GroupedRow
+            label="Importar dados"
+            icon={<Upload size={18} />}
+            chevron
+            className="cursor-pointer"
+          />
+        </GroupedSection>
+      </div>
+
+      {/* Danger zone */}
+      <div className="px-4 mb-6">
+        <GroupedSection>
+          <GroupedRow
+            label="Excluir conta"
+            icon={<Trash2 size={18} className="text-ios-red" />}
+            chevron
+            className="cursor-pointer"
+          />
+        </GroupedSection>
+      </div>
+
+      {/* Sign out */}
+      <div className="px-4 mb-10">
+        <Button
+          variant="outline"
+          className="w-full text-ios-red border-ios-red/30 hover:bg-ios-red/5"
+          onClick={handleSignOut}
+          disabled={signingOut}
+        >
+          <LogOut size={18} />
+          {signingOut ? "Saindo..." : "Sair da conta"}
+        </Button>
+      </div>
     </div>
   );
 }

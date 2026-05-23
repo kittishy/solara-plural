@@ -1,44 +1,14 @@
-import { Sidebar } from '@/components/layout/Sidebar';
-import { MobileNav } from '@/components/layout/MobileNav';
-import { DashboardClientProviders } from './DashboardClientProviders';
-import { getAccountType, getCachedSession, requireSystemId } from '@/lib/auth/session';
-import { Trans } from '@/components/language/Trans';
+import { TabBar } from "@/components/layout/TabBar";
 
-export default async function DashboardLayout({
+export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  await requireSystemId();
-  const session = await getCachedSession();
-  const systemName = session?.user?.name ?? undefined;
-  const accountType = await getAccountType();
-
   return (
-    <div className="min-h-dvh bg-bg">
-      {/* Accessibility: skip to main content */}
-      <a
-        href="#main-content"
-        className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-50
-          focus:px-4 focus:py-2 focus:bg-surface focus:text-primary focus:rounded-xl
-          focus:ring-2 focus:ring-primary focus:shadow-card"
-      >
-        <Trans k="nav.skip" />
-      </a>
-
-      <Sidebar systemName={systemName} accountType={accountType} />
-
-      <main id="main-content" className="relative flex-1 md:pt-14 pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-0 min-h-dvh">
-        {/* Ultra-subtle aurora presence — static, no animation, pointer-events none */}
-        <div className="aurora-bg-subtle pointer-events-none fixed inset-0 z-0" aria-hidden="true" />
-        <DashboardClientProviders>
-          <div className="relative z-10 max-w-4xl mx-auto px-4 pt-[calc(env(safe-area-inset-top)+0.75rem)] pb-5 md:px-8 md:pt-8 md:pb-8">
-            {children}
-          </div>
-        </DashboardClientProviders>
-      </main>
-
-      <MobileNav accountType={accountType} />
+    <div className="min-h-screen bg-[var(--ios-bg)]">
+      <main className="pb-32">{children}</main>
+      <TabBar />
     </div>
   );
 }
