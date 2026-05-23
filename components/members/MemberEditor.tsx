@@ -86,7 +86,7 @@ export function MemberEditor({ memberId }: MemberEditorProps) {
         });
         const fieldsJson = await fieldsRes.json();
         if (fieldsJson.success && !cancelled) {
-          setCustomFields(fieldsJson.data ?? []);
+          setCustomFields(fieldsJson.data?.fields ?? []);
         }
       } catch {
         // ignore
