@@ -314,6 +314,10 @@ export const translations = {
       seeAll: 'See all',
       noHistory: 'No history yet',
       createMemberFirst: 'Create a member first',
+      addToFront: 'Add to front',
+      removeFromFront: 'Remove from front',
+      setAsOnly: 'Set as only front',
+      noAction: 'No action',
     },
     chat: {
       title: 'Chat',
@@ -720,6 +724,10 @@ export const translations = {
       seeAll: 'Ver tudo',
       noHistory: 'Sem histórico ainda',
       createMemberFirst: 'Crie um membro primeiro',
+      addToFront: 'Adicionar à frente',
+      removeFromFront: 'Remover da frente',
+      setAsOnly: 'Definir como único na frente',
+      noAction: 'Nenhuma ação',
     },
     chat: {
       title: 'Chat',
@@ -1126,6 +1134,10 @@ export const translations = {
       seeAll: 'Ver todo',
       noHistory: 'Sin historial todavía',
       createMemberFirst: 'Crea un miembro primero',
+      addToFront: 'Añadir al frente',
+      removeFromFront: 'Quitar del frente',
+      setAsOnly: 'Establecer como único en frente',
+      noAction: 'Sin acción',
     },
     chat: {
       title: 'Chat',

@@ -2,7 +2,7 @@
 
 import useSWR, { mutate } from "swr";
 import Link from "next/link";
-import { Plus, Search, Check } from "lucide-react";
+import { Plus, Search, Minus, Sun, X } from "lucide-react";
 import { useState } from "react";
 import { LargeTitle } from "@/components/layout/NavBar";
 import { GlassCard } from "@/components/glass/GlassCard";
@@ -32,20 +32,46 @@ export default function MembersPage() {
   const { data: members, isLoading } = useSWR<Member[]>(swrKeys.members, apiFetcher);
   const { data: currentFront } = useSWR<FrontEntry | null>(swrKeys.front, apiFetcher);
   const [search, setSearch] = useState("");
-  const [sheetOpen, setSheetOpen] = useState(false);
+  const [selectedMember, setSelectedMember] = useState<Member | null>(null);
   const [updating, setUpdating] = useState(false);
 
   const frontingIds = currentFront?.memberIds ?? [];
   const frontingSet = new Set(frontingIds);
+  const selectedIsFronting = selectedMember ? frontingSet.has(selectedMember.id) : false;
 
-  async function toggleMember(memberId: string) {
-    if (updating) return;
+  function openSheet(e: React.MouseEvent, member: Member) {
+    e.preventDefault();
+    e.stopPropagation();
+    setSelectedMember(member);
+  }
+
+  function closeSheet() {
+    setSelectedMember(null);
+  }
+
+  async function addToFront() {
+    if (!selectedMember || updating) return;
     setUpdating(true);
     try {
-      const isFronting = frontingSet.has(memberId);
-      const newIds = isFronting
-        ? frontingIds.filter((id) => id !== memberId)
-        : [...frontingIds, memberId];
+      await fetch("/api/front", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ memberIds: [...frontingIds, selectedMember.id] }),
+      });
+      revalidateMembersAndFront();
+      void mutate(swrKeys.frontHistory);
+      closeSheet();
+    } finally {
+      setUpdating(false);
+    }
+  }
+
+  async function removeFromFront() {
+    if (!selectedMember || updating) return;
+    setUpdating(true);
+    try {
+      const newIds = frontingIds.filter((id) => id !== selectedMember.id);
       if (newIds.length === 0) {
         await fetch("/api/front", { method: "DELETE", credentials: "same-origin" });
       } else {
@@ -58,19 +84,25 @@ export default function MembersPage() {
       }
       revalidateMembersAndFront();
       void mutate(swrKeys.frontHistory);
+      closeSheet();
     } finally {
       setUpdating(false);
     }
   }
 
-  async function endFront() {
-    if (updating) return;
+  async function setAsOnly() {
+    if (!selectedMember || updating) return;
     setUpdating(true);
     try {
-      await fetch("/api/front", { method: "DELETE", credentials: "same-origin" });
+      await fetch("/api/front", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ memberIds: [selectedMember.id] }),
+      });
       revalidateMembersAndFront();
       void mutate(swrKeys.frontHistory);
-      setSheetOpen(false);
+      closeSheet();
     } finally {
       setUpdating(false);
     }
@@ -186,17 +218,21 @@ export default function MembersPage() {
                       />
                     )}
                   </Link>
+
+                  {/* Front action button */}
                   <button
-                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); setSheetOpen(true); }}
-                    aria-label={t("front.whoIsFronting")}
+                    onClick={(e) => openSheet(e, member)}
+                    aria-label={t("front.addToFront")}
                     className={cn(
                       "flex-shrink-0 mr-3 w-8 h-8 rounded-full flex items-center justify-center ios-transition",
                       isFronting
-                        ? "bg-ios-green text-white"
+                        ? "bg-ios-green/20 text-ios-green"
                         : "bg-secondary text-muted-foreground"
                     )}
                   >
-                    {isFronting ? <Check size={15} strokeWidth={2.5} /> : <Plus size={15} strokeWidth={2.5} />}
+                    {isFronting
+                      ? <Minus size={15} strokeWidth={2.5} />
+                      : <Plus size={15} strokeWidth={2.5} />}
                   </button>
                 </div>
               );
@@ -205,103 +241,68 @@ export default function MembersPage() {
         </GlassCard>
       </div>
 
-      {/* Front picker sheet — same as front/page.tsx */}
+      {/* Per-member front action sheet */}
       <BottomSheet
-        open={sheetOpen}
-        onClose={() => setSheetOpen(false)}
-        title={t("front.whoIsFronting")}
+        open={selectedMember !== null}
+        onClose={closeSheet}
+        title={selectedMember?.name ?? ""}
       >
-        <div className="flex flex-col gap-3">
-          {frontingIds.length > 0 && (
-            <p className="text-caption-1 text-ios-blue font-semibold text-center -mt-1">
-              {frontingIds.length === 1
-                ? t("front.selected", { n: frontingIds.length })
-                : t("front.selectedPlural", { n: frontingIds.length })}
-            </p>
-          )}
-
-          <div className="rounded-ios-lg overflow-hidden border border-border/50">
-            {isLoading ? (
-              <div className="p-4 flex flex-col gap-3">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="flex items-center gap-3">
-                    <Skeleton className="w-11 h-11 rounded-full" />
-                    <div className="flex-1 flex flex-col gap-1.5">
-                      <Skeleton className="h-4 w-28" />
-                      <Skeleton className="h-3 w-16" />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : list.length === 0 ? (
-              <div className="py-10 text-center flex flex-col items-center gap-2">
-                <p className="text-body text-muted-foreground">{t("members.noMembers")}</p>
-                <Link
-                  href="/members/new"
-                  onClick={() => setSheetOpen(false)}
-                  className="text-subheadline text-ios-blue font-semibold ios-press"
-                >
-                  {t("front.createMemberFirst")}
-                </Link>
-              </div>
-            ) : (
-              list.map((m, idx) => {
-                const isActive = frontingSet.has(m.id);
-                return (
-                  <button
-                    key={m.id}
-                    onClick={() => toggleMember(m.id)}
-                    disabled={updating}
-                    className={cn(
-                      "w-full flex items-center gap-3 px-4 py-3.5 text-left ios-transition disabled:opacity-60",
-                      idx < list.length - 1 && "border-b border-border/50",
-                      isActive ? "bg-ios-blue/8" : "active:bg-muted/50"
-                    )}
-                  >
-                    <div
-                      className="w-11 h-11 rounded-full overflow-hidden flex items-center justify-center flex-shrink-0"
-                      style={{ background: m.color ? `${m.color}22` : "#8E8E9322" }}
-                    >
-                      {m.avatarUrl ? (
-                        <DynamicAvatarImage src={m.avatarUrl} alt={m.name} className="w-full h-full object-cover" />
-                      ) : (
-                        <span className="text-subheadline font-semibold" style={{ color: m.color ?? "#8E8E93" }}>
-                          {m.name[0].toUpperCase()}
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className={cn("text-body font-semibold truncate", isActive ? "text-ios-blue" : "text-foreground")}>
-                        {m.name}
-                      </p>
-                      {m.pronouns && (
-                        <p className="text-caption-1 text-muted-foreground truncate">{m.pronouns}</p>
-                      )}
-                    </div>
-                    <div
-                      className={cn(
-                        "w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ios-transition",
-                        isActive ? "bg-ios-blue" : "border-2 border-border"
-                      )}
-                    >
-                      {isActive && <Check size={14} className="text-white" strokeWidth={3} />}
-                    </div>
-                  </button>
-                );
-              })
-            )}
-          </div>
-
-          {frontingIds.length > 0 && (
-            <Button
-              variant="outline"
-              className="w-full text-ios-red border-ios-red/30 hover:bg-ios-red/5 mt-1"
-              onClick={endFront}
+        <div className="flex flex-col divide-y divide-border/50 rounded-ios-lg overflow-hidden border border-border/50">
+          {/* Add / Remove from front */}
+          {selectedIsFronting ? (
+            <button
+              onClick={removeFromFront}
               disabled={updating}
+              className="flex items-center gap-4 px-4 py-4 text-left active:bg-muted/40 ios-transition disabled:opacity-50"
             >
-              {updating ? t("front.ending2") : t("front.endFront2")}
-            </Button>
+              <div className="w-9 h-9 rounded-full bg-ios-red/15 flex items-center justify-center flex-shrink-0">
+                <Minus size={18} className="text-ios-red" />
+              </div>
+              <span className="text-body font-medium text-ios-red">
+                {t("front.removeFromFront")}
+              </span>
+            </button>
+          ) : (
+            <button
+              onClick={addToFront}
+              disabled={updating}
+              className="flex items-center gap-4 px-4 py-4 text-left active:bg-muted/40 ios-transition disabled:opacity-50"
+            >
+              <div className="w-9 h-9 rounded-full bg-ios-blue/15 flex items-center justify-center flex-shrink-0">
+                <Plus size={18} className="text-ios-blue" />
+              </div>
+              <span className="text-body font-medium text-ios-blue">
+                {t("front.addToFront")}
+              </span>
+            </button>
           )}
+
+          {/* Set as only front */}
+          <button
+            onClick={setAsOnly}
+            disabled={updating}
+            className="flex items-center gap-4 px-4 py-4 text-left active:bg-muted/40 ios-transition disabled:opacity-50"
+          >
+            <div className="w-9 h-9 rounded-full bg-secondary flex items-center justify-center flex-shrink-0">
+              <Sun size={18} className="text-foreground" />
+            </div>
+            <span className="text-body font-medium text-foreground">
+              {t("front.setAsOnly")}
+            </span>
+          </button>
+
+          {/* No action */}
+          <button
+            onClick={closeSheet}
+            className="flex items-center gap-4 px-4 py-4 text-left active:bg-muted/40 ios-transition"
+          >
+            <div className="w-9 h-9 rounded-full bg-secondary flex items-center justify-center flex-shrink-0">
+              <X size={18} className="text-muted-foreground" />
+            </div>
+            <span className="text-body font-medium text-muted-foreground">
+              {t("front.noAction")}
+            </span>
+          </button>
         </div>
       </BottomSheet>
     </div>
