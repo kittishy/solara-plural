@@ -3,6 +3,7 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import { SessionProvider } from "@/components/providers/SessionProvider";
 import { LanguageProvider } from "@/components/providers/LanguageProvider";
+import { ThemeRuntime } from "@/components/providers/ThemeRuntime";
 
 export const metadata: Metadata = {
   title: "Solara",
@@ -46,6 +47,7 @@ export default function RootLayout({
         >
           <SessionProvider>
             <LanguageProvider>{children}</LanguageProvider>
+            <ThemeRuntime />
           </SessionProvider>
         </ThemeProvider>
       </body>

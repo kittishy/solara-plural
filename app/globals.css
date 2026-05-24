@@ -206,3 +206,24 @@
     --member-color: var(--m-color, #007aff);
   }
 }
+
+/* Wallpaper background support */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background-image: var(--solara-wallpaper-image, none);
+  background-size: cover;
+  background-position: center;
+  filter: blur(var(--solara-wallpaper-blur, 0px));
+  opacity: calc(1 - var(--solara-wallpaper-dim, 0));
+  pointer-events: none;
+}
+
+/* Reduce texture option */
+[data-solara-reduce-texture] .glass,
+[data-solara-reduce-texture] .glass-subtle {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
