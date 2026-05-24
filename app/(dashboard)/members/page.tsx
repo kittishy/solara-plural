@@ -2,16 +2,17 @@
 
 import useSWR from "swr";
 import Link from "next/link";
-import { Plus, Search } from "lucide-react";
+import { Plus, Search, Check } from "lucide-react";
 import { useState } from "react";
 import { LargeTitle } from "@/components/layout/NavBar";
 import { GlassCard } from "@/components/glass/GlassCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { apiFetcher, swrKeys } from "@/lib/swr";
+import { apiFetcher, swrKeys, revalidateMembersAndFront } from "@/lib/swr";
 import DynamicAvatarImage from "@/components/ui/DynamicAvatarImage";
 import { useLanguage } from "@/components/providers/LanguageProvider";
+import { cn } from "@/lib/utils";
 
 type Member = {
   id: string;
@@ -23,13 +24,43 @@ type Member = {
   avatarUrl?: string | null;
 };
 
+type FrontEntry = { memberIds: string[] };
+
 export default function MembersPage() {
   const { t } = useLanguage();
-  const { data: members, isLoading } = useSWR<Member[]>(
-    swrKeys.members,
-    apiFetcher
-  );
+  const { data: members, isLoading } = useSWR<Member[]>(swrKeys.members, apiFetcher);
+  const { data: currentFront } = useSWR<FrontEntry | null>(swrKeys.front, apiFetcher);
   const [search, setSearch] = useState("");
+  const [toggling, setToggling] = useState<string | null>(null);
+
+  const frontingIds = new Set(currentFront?.memberIds ?? []);
+
+  async function toggleFront(e: React.MouseEvent, memberId: string) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (toggling) return;
+    setToggling(memberId);
+    try {
+      const currentIds = currentFront?.memberIds ?? [];
+      const isFronting = frontingIds.has(memberId);
+      const newIds = isFronting
+        ? currentIds.filter((id) => id !== memberId)
+        : [...currentIds, memberId];
+      if (newIds.length === 0) {
+        await fetch("/api/front", { method: "DELETE", credentials: "same-origin" });
+      } else {
+        await fetch("/api/front", {
+          method: "POST",
+          credentials: "same-origin",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ memberIds: newIds }),
+        });
+      }
+      revalidateMembersAndFront();
+    } finally {
+      setToggling(null);
+    }
+  }
 
   const list = members ?? [];
   const filtered = list.filter((m) =>
@@ -94,68 +125,69 @@ export default function MembersPage() {
               )}
             </div>
           ) : (
-            filtered.map((member) => (
-              <Link
-                key={member.id}
-                href={`/members/${member.id}`}
-                className="flex items-center gap-3 px-4 py-3 border-b border-border/50 last:border-0 active:bg-muted/50 ios-transition"
-              >
+            filtered.map((member) => {
+              const isFronting = frontingIds.has(member.id);
+              return (
                 <div
-                  className="w-11 h-11 rounded-full overflow-hidden flex items-center justify-center flex-shrink-0"
-                  style={{
-                    background: member.color
-                      ? `${member.color}22`
-                      : "#8E8E9322",
-                  }}
+                  key={member.id}
+                  className="flex items-center border-b border-border/50 last:border-0"
                 >
-                  {member.avatarUrl ? (
-                    <DynamicAvatarImage
-                      src={member.avatarUrl}
-                      alt={member.name}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <span
-                      className="text-body font-semibold"
-                      style={{ color: member.color ?? "#8E8E93" }}
+                  <Link
+                    href={`/members/${member.id}`}
+                    className="flex-1 flex items-center gap-3 px-4 py-3 active:bg-muted/50 ios-transition min-w-0"
+                  >
+                    <div
+                      className="w-11 h-11 rounded-full overflow-hidden flex items-center justify-center flex-shrink-0"
+                      style={{ background: member.color ? `${member.color}22` : "#8E8E9322" }}
                     >
-                      {(member.name ?? "?")[0].toUpperCase()}
-                    </span>
-                  )}
+                      {member.avatarUrl ? (
+                        <DynamicAvatarImage
+                          src={member.avatarUrl}
+                          alt={member.name}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <span
+                          className="text-body font-semibold"
+                          style={{ color: member.color ?? "#8E8E93" }}
+                        >
+                          {(member.name ?? "?")[0].toUpperCase()}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-body font-semibold text-foreground truncate">
+                        {member.name}
+                      </p>
+                      {member.pronouns && (
+                        <p className="text-caption-1 text-muted-foreground truncate">
+                          {member.pronouns}
+                        </p>
+                      )}
+                    </div>
+                    {member.color && (
+                      <div
+                        className="w-3 h-3 rounded-full flex-shrink-0"
+                        style={{ background: member.color }}
+                      />
+                    )}
+                  </Link>
+                  <button
+                    onClick={(e) => toggleFront(e, member.id)}
+                    disabled={toggling === member.id}
+                    aria-label={isFronting ? t("members.fronting") : t("front.startFrontCta")}
+                    className={cn(
+                      "flex-shrink-0 mr-3 w-8 h-8 rounded-full flex items-center justify-center ios-transition disabled:opacity-40",
+                      isFronting
+                        ? "bg-ios-green text-white"
+                        : "bg-secondary text-muted-foreground"
+                    )}
+                  >
+                    {isFronting ? <Check size={15} strokeWidth={2.5} /> : <Plus size={15} strokeWidth={2.5} />}
+                  </button>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-body font-semibold text-foreground truncate">
-                    {member.name}
-                  </p>
-                  {member.pronouns && (
-                    <p className="text-caption-1 text-muted-foreground truncate">
-                      {member.pronouns}
-                    </p>
-                  )}
-                </div>
-                {member.color && (
-                  <div
-                    className="w-3 h-3 rounded-full flex-shrink-0"
-                    style={{ background: member.color }}
-                  />
-                )}
-                <svg
-                  width="8"
-                  height="13"
-                  viewBox="0 0 8 13"
-                  fill="none"
-                  className="text-muted-foreground/50 flex-shrink-0"
-                >
-                  <path
-                    d="M1 1L7 6.5L1 12"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              </Link>
-            ))
+              );
+            })
           )}
         </GlassCard>
       </div>
