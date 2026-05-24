@@ -1,7 +1,7 @@
 "use client";
 
 import useSWR from "swr";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Layers } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { GlassCard } from "@/components/glass/GlassCard";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -23,7 +23,7 @@ type FriendSystemData = {
     color?: string | null;
     avatarUrl?: string | null;
   }[];
-  currentFront?: { memberIds: string[] } | null;
+  currentFront?: { members: { id: string; name: string; avatarUrl?: string | null; color?: string | null }[] } | null;
 };
 
 export default function ExternalSystemPage({
@@ -90,6 +90,46 @@ export default function ExternalSystemPage({
           </p>
         )}
       </div>
+
+      {data.currentFront && data.currentFront.members.length > 0 && (
+        <div className="px-4 mb-6">
+          <p className="text-footnote font-semibold text-muted-foreground uppercase tracking-wide mb-2 px-1">
+            {t("front.currentlyFronting")}
+          </p>
+          <GlassCard padding="none" className="overflow-hidden">
+            {data.currentFront.members.map((m) => (
+              <div
+                key={m.id}
+                className="flex items-center gap-3 px-4 py-3 border-b border-border/50 last:border-0"
+              >
+                <div
+                  className="w-10 h-10 rounded-full overflow-hidden flex items-center justify-center flex-shrink-0"
+                  style={{ background: m.color ? `${m.color}22` : "#8E8E9322" }}
+                >
+                  {m.avatarUrl ? (
+                    <DynamicAvatarImage
+                      src={m.avatarUrl}
+                      alt={m.name}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <span
+                      className="text-subheadline font-semibold"
+                      style={{ color: m.color ?? "#8E8E93" }}
+                    >
+                      {m.name[0].toUpperCase()}
+                    </span>
+                  )}
+                </div>
+                <p className="flex-1 text-body font-semibold text-foreground truncate">
+                  {m.name}
+                </p>
+                <Layers size={14} className="text-ios-green flex-shrink-0" />
+              </div>
+            ))}
+          </GlassCard>
+        </div>
+      )}
 
       {data.sharedMembers && data.sharedMembers.length > 0 && (
         <div className="px-4 mb-6">

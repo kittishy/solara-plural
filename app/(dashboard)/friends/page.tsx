@@ -12,6 +12,7 @@ import {
   Shield,
   Eye,
   EyeOff,
+  Layers,
 } from "lucide-react";
 import { LargeTitle } from "@/components/layout/NavBar";
 import { GlassCard } from "@/components/glass/GlassCard";
@@ -35,10 +36,14 @@ type SystemSummary = {
   avatarUrl?: string | null;
 };
 
+type FrontMember = { id: string; name: string; avatarUrl?: string | null; color?: string | null };
+
 type FriendsPayload = {
   friends: (SystemSummary & {
     friendshipId: string;
     connectedAt: string;
+    sharedMembers?: FrontMember[];
+    currentFront?: { startedAt: string; members: FrontMember[] } | null;
   })[];
   incomingRequests: {
     friendshipId: string;
@@ -225,11 +230,40 @@ export default function FriendsPage() {
                       <p className="text-body font-semibold text-foreground truncate">
                         {f.name}
                       </p>
-                      {f.description && (
+                      {/* Front preview */}
+                      {f.currentFront && f.currentFront.members.length > 0 ? (
+                        <div className="flex items-center gap-1 mt-0.5">
+                          <Layers size={10} className="text-ios-green flex-shrink-0" />
+                          <div className="flex items-center gap-1.5 overflow-hidden">
+                            {f.currentFront.members.slice(0, 3).map((m) => (
+                              <div key={m.id} className="flex items-center gap-0.5 flex-shrink-0">
+                                {m.avatarUrl ? (
+                                  <div className="w-3.5 h-3.5 rounded-full overflow-hidden flex-shrink-0">
+                                    <DynamicAvatarImage src={m.avatarUrl} alt={m.name} className="w-full h-full object-cover" />
+                                  </div>
+                                ) : (
+                                  <div
+                                    className="w-3.5 h-3.5 rounded-full flex-shrink-0"
+                                    style={{ background: m.color ?? "#8E8E93" }}
+                                  />
+                                )}
+                                <span className="text-caption-2 text-ios-green font-medium">
+                                  {m.name.split(" ")[0]}
+                                </span>
+                              </div>
+                            ))}
+                            {f.currentFront.members.length > 3 && (
+                              <span className="text-caption-2 text-muted-foreground">
+                                +{f.currentFront.members.length - 3}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      ) : f.description ? (
                         <p className="text-caption-1 text-muted-foreground truncate">
                           {f.description}
                         </p>
-                      )}
+                      ) : null}
                     </div>
                   </a>
                   <button
@@ -433,29 +467,37 @@ function SharingSheet({
     `/api/friends/sharing/${friend.id}`,
     apiFetcher
   );
-  const [saving, setSaving] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
-  async function setVisibility(memberId: string, visibility: "hidden" | "profile" | "full") {
-    setSaving(memberId);
+  const activeMembers = (data?.members ?? []).filter((m) => !m.isArchived);
+  const currentVisibility: "hidden" | "profile" | "full" = (() => {
+    if (activeMembers.length === 0) return "hidden";
+    const visibilities = new Set(activeMembers.map((m) => m.visibility));
+    if (visibilities.size === 1) return activeMembers[0].visibility;
+    return "hidden";
+  })();
+
+  async function setGlobalVisibility(visibility: "hidden" | "profile" | "full") {
+    setSaving(true);
     try {
       await fetch(`/api/friends/sharing/${friend.id}`, {
-        method: "PUT",
+        method: "PATCH",
         credentials: "same-origin",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ memberId, visibility }),
+        body: JSON.stringify({ visibility }),
       });
       void mutate(`/api/friends/sharing/${friend.id}`);
+      void mutate(swrKeys.friends);
+      onClose();
     } finally {
-      setSaving(null);
+      setSaving(false);
     }
   }
 
-  const activeMembers = (data?.members ?? []).filter((m) => !m.isArchived);
-
-  const visibilityOptions: { value: SharingMember["visibility"]; label: string; icon: React.ReactNode }[] = [
-    { value: "hidden", label: t("sharing.hidden"), icon: <EyeOff size={14} /> },
-    { value: "profile", label: t("sharing.profile"), icon: <Eye size={14} /> },
-    { value: "full", label: t("sharing.full"), icon: <Eye size={14} className="text-ios-blue" /> },
+  const options: { value: "hidden" | "profile" | "full"; label: string; desc: string; icon: React.ReactNode; activeColor: string }[] = [
+    { value: "hidden", label: t("sharing.hidden"), desc: t("sharing.hiddenDesc"), icon: <EyeOff size={20} />, activeColor: "border-muted-foreground bg-muted/40" },
+    { value: "profile", label: t("sharing.profile"), desc: t("sharing.profileDesc"), icon: <Eye size={20} />, activeColor: "border-ios-green bg-ios-green/10" },
+    { value: "full", label: t("sharing.full"), desc: t("sharing.fullDesc"), icon: <Eye size={20} />, activeColor: "border-ios-blue bg-ios-blue/10" },
   ];
 
   return (
@@ -469,67 +511,56 @@ function SharingSheet({
           {t("sharing.subtitle", { name: friend.name })}
         </p>
 
-        <div className="rounded-ios-lg overflow-hidden border border-border/50">
-          {isLoading ? (
-            <div className="p-4 flex flex-col gap-3">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="flex items-center gap-3">
-                  <Skeleton className="w-9 h-9 rounded-full" />
-                  <div className="flex-1 flex flex-col gap-1.5">
-                    <Skeleton className="h-4 w-28" />
-                  </div>
-                  <Skeleton className="h-7 w-48 rounded-full" />
-                </div>
-              ))}
-            </div>
-          ) : activeMembers.length === 0 ? (
-            <p className="py-8 text-center text-muted-foreground text-subheadline">
-              {t("members.noMembers")}
-            </p>
-          ) : (
-            activeMembers.map((m, idx) => (
-              <div
-                key={m.id}
-                className={cn(
-                  "flex items-center gap-3 px-4 py-3",
-                  idx < activeMembers.length - 1 && "border-b border-border/50"
-                )}
-              >
-                <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center flex-shrink-0">
-                  <span className="text-caption-1 font-semibold text-muted-foreground">
-                    {m.name[0].toUpperCase()}
+        {isLoading ? (
+          <div className="flex flex-col gap-2">
+            {[1, 2, 3].map((i) => (
+              <Skeleton key={i} className="h-16 rounded-ios-lg" />
+            ))}
+          </div>
+        ) : (
+          <div className="flex flex-col gap-2">
+            {options.map((opt) => {
+              const isActive = currentVisibility === opt.value;
+              return (
+                <button
+                  key={opt.value}
+                  onClick={() => setGlobalVisibility(opt.value)}
+                  disabled={saving}
+                  className={cn(
+                    "flex items-center gap-3 px-4 py-3.5 rounded-ios-lg border ios-transition ios-press text-left disabled:opacity-50",
+                    isActive ? opt.activeColor : "border-border/50 bg-secondary/50"
+                  )}
+                >
+                  <span className={cn(
+                    "flex-shrink-0",
+                    isActive
+                      ? opt.value === "hidden" ? "text-foreground" : opt.value === "profile" ? "text-ios-green" : "text-ios-blue"
+                      : "text-muted-foreground"
+                  )}>
+                    {opt.icon}
                   </span>
-                </div>
-                <p className="flex-1 text-body font-medium text-foreground truncate min-w-0">
-                  {m.name}
-                </p>
-                {/* Segmented visibility control */}
-                <div className="flex rounded-full border border-border/60 overflow-hidden flex-shrink-0">
-                  {visibilityOptions.map((opt) => (
-                    <button
-                      key={opt.value}
-                      onClick={() => setVisibility(m.id, opt.value)}
-                      disabled={saving === m.id}
-                      className={cn(
-                        "px-2.5 py-1 text-caption-2 font-semibold flex items-center gap-1 ios-transition disabled:opacity-50",
-                        m.visibility === opt.value
-                          ? opt.value === "hidden"
-                            ? "bg-muted text-foreground"
-                            : opt.value === "full"
-                              ? "bg-ios-blue text-white"
-                              : "bg-ios-green/80 text-white"
-                          : "text-muted-foreground bg-transparent"
-                      )}
-                    >
-                      {opt.icon}
+                  <div className="flex-1 min-w-0">
+                    <p className={cn(
+                      "text-body font-semibold",
+                      isActive
+                        ? opt.value === "hidden" ? "text-foreground" : opt.value === "profile" ? "text-ios-green" : "text-ios-blue"
+                        : "text-foreground"
+                    )}>
                       {opt.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ))
-          )}
-        </div>
+                    </p>
+                    <p className="text-caption-1 text-muted-foreground">{opt.desc}</p>
+                  </div>
+                  {isActive && (
+                    <Check size={18} className={cn(
+                      "flex-shrink-0",
+                      opt.value === "hidden" ? "text-foreground" : opt.value === "profile" ? "text-ios-green" : "text-ios-blue"
+                    )} />
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
     </BottomSheet>
   );

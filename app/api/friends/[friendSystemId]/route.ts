@@ -115,11 +115,17 @@ export async function GET(_request: Request, { params }: Params) {
     visibleIds.add(member.id);
   }
 
-  let currentFront: { memberIds: string[] } | null = null;
+  const sharedMembersById = new Map(sharedMembers.map((m) => [m.id, m]));
+
+  let currentFront: { members: { id: string; name: string; avatarUrl: string | null; color: string | null }[] } | null = null;
   if (activeFront) {
     const frontMemberIds = parseMemberIds(activeFront.memberIds).filter((id) => visibleIds.has(id));
-    if (frontMemberIds.length > 0) {
-      currentFront = { memberIds: frontMemberIds };
+    const frontMembers = frontMemberIds
+      .map((id) => sharedMembersById.get(id))
+      .filter((m): m is NonNullable<typeof m> => Boolean(m))
+      .map((m) => ({ id: m.id, name: m.name, avatarUrl: m.avatarUrl, color: m.color }));
+    if (frontMembers.length > 0) {
+      currentFront = { members: frontMembers };
     }
   }
 
