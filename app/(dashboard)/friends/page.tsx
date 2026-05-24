@@ -9,6 +9,9 @@ import {
   Ban,
   Users as UsersIcon,
   Mail,
+  Shield,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { LargeTitle } from "@/components/layout/NavBar";
 import { GlassCard } from "@/components/glass/GlassCard";
@@ -101,6 +104,7 @@ export default function FriendsPage() {
   const [inviteMessage, setInviteMessage] = useState("");
   const [sending, setSending] = useState(false);
   const [inviteError, setInviteError] = useState("");
+  const [sharingFriend, setSharingFriend] = useState<{ id: string; name: string } | null>(null);
 
   async function sendRequest(e: React.FormEvent) {
     e.preventDefault();
@@ -211,23 +215,31 @@ export default function FriendsPage() {
               </div>
             ) : (
               friends.map((f) => (
-                <a
-                  key={f.friendshipId}
-                  href={`/systems/${f.id}`}
-                  className="flex items-center gap-3 px-4 py-3 border-b border-border/50 last:border-0 active:bg-muted/50 ios-transition"
-                >
-                  <SystemAvatar system={f} />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-body font-semibold text-foreground truncate">
-                      {f.name}
-                    </p>
-                    {f.description && (
-                      <p className="text-caption-1 text-muted-foreground truncate">
-                        {f.description}
+                <div key={f.friendshipId} className="flex items-center border-b border-border/50 last:border-0">
+                  <a
+                    href={`/systems/${f.id}`}
+                    className="flex-1 flex items-center gap-3 px-4 py-3 active:bg-muted/50 ios-transition min-w-0"
+                  >
+                    <SystemAvatar system={f} />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-body font-semibold text-foreground truncate">
+                        {f.name}
                       </p>
-                    )}
-                  </div>
-                </a>
+                      {f.description && (
+                        <p className="text-caption-1 text-muted-foreground truncate">
+                          {f.description}
+                        </p>
+                      )}
+                    </div>
+                  </a>
+                  <button
+                    onClick={() => setSharingFriend({ id: f.id, name: f.name })}
+                    className="flex-shrink-0 mr-3 w-8 h-8 rounded-full bg-secondary flex items-center justify-center ios-press text-muted-foreground"
+                    aria-label={t("sharing.title")}
+                  >
+                    <Shield size={15} />
+                  </button>
+                </div>
               ))
             )
           ) : tab === "received" ? (
@@ -383,6 +395,142 @@ export default function FriendsPage() {
           </Button>
         </form>
       </BottomSheet>
+
+      {/* Per-friend sharing settings sheet */}
+      {sharingFriend && (
+        <SharingSheet
+          friend={sharingFriend}
+          onClose={() => setSharingFriend(null)}
+        />
+      )}
     </div>
+  );
+}
+
+// ─── Sharing settings sheet ───────────────────────────────────────────────────
+
+type SharingMember = {
+  id: string;
+  name: string;
+  isArchived: boolean;
+  visibility: "hidden" | "profile" | "full";
+};
+
+type SharingPayload = {
+  friend: { id: string; name: string };
+  members: SharingMember[];
+};
+
+function SharingSheet({
+  friend,
+  onClose,
+}: {
+  friend: { id: string; name: string };
+  onClose: () => void;
+}) {
+  const { t } = useLanguage();
+  const { data, isLoading } = useSWR<SharingPayload>(
+    `/api/friends/sharing/${friend.id}`,
+    apiFetcher
+  );
+  const [saving, setSaving] = useState<string | null>(null);
+
+  async function setVisibility(memberId: string, visibility: "hidden" | "profile" | "full") {
+    setSaving(memberId);
+    try {
+      await fetch(`/api/friends/sharing/${friend.id}`, {
+        method: "PUT",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ memberId, visibility }),
+      });
+      void mutate(`/api/friends/sharing/${friend.id}`);
+    } finally {
+      setSaving(null);
+    }
+  }
+
+  const activeMembers = (data?.members ?? []).filter((m) => !m.isArchived);
+
+  const visibilityOptions: { value: SharingMember["visibility"]; label: string; icon: React.ReactNode }[] = [
+    { value: "hidden", label: t("sharing.hidden"), icon: <EyeOff size={14} /> },
+    { value: "profile", label: t("sharing.profile"), icon: <Eye size={14} /> },
+    { value: "full", label: t("sharing.full"), icon: <Eye size={14} className="text-ios-blue" /> },
+  ];
+
+  return (
+    <BottomSheet
+      open
+      onClose={onClose}
+      title={t("sharing.title")}
+    >
+      <div className="flex flex-col gap-3">
+        <p className="text-caption-1 text-muted-foreground text-center -mt-1">
+          {t("sharing.subtitle", { name: friend.name })}
+        </p>
+
+        <div className="rounded-ios-lg overflow-hidden border border-border/50">
+          {isLoading ? (
+            <div className="p-4 flex flex-col gap-3">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="flex items-center gap-3">
+                  <Skeleton className="w-9 h-9 rounded-full" />
+                  <div className="flex-1 flex flex-col gap-1.5">
+                    <Skeleton className="h-4 w-28" />
+                  </div>
+                  <Skeleton className="h-7 w-48 rounded-full" />
+                </div>
+              ))}
+            </div>
+          ) : activeMembers.length === 0 ? (
+            <p className="py-8 text-center text-muted-foreground text-subheadline">
+              {t("members.noMembers")}
+            </p>
+          ) : (
+            activeMembers.map((m, idx) => (
+              <div
+                key={m.id}
+                className={cn(
+                  "flex items-center gap-3 px-4 py-3",
+                  idx < activeMembers.length - 1 && "border-b border-border/50"
+                )}
+              >
+                <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center flex-shrink-0">
+                  <span className="text-caption-1 font-semibold text-muted-foreground">
+                    {m.name[0].toUpperCase()}
+                  </span>
+                </div>
+                <p className="flex-1 text-body font-medium text-foreground truncate min-w-0">
+                  {m.name}
+                </p>
+                {/* Segmented visibility control */}
+                <div className="flex rounded-full border border-border/60 overflow-hidden flex-shrink-0">
+                  {visibilityOptions.map((opt) => (
+                    <button
+                      key={opt.value}
+                      onClick={() => setVisibility(m.id, opt.value)}
+                      disabled={saving === m.id}
+                      className={cn(
+                        "px-2.5 py-1 text-caption-2 font-semibold flex items-center gap-1 ios-transition disabled:opacity-50",
+                        m.visibility === opt.value
+                          ? opt.value === "hidden"
+                            ? "bg-muted text-foreground"
+                            : opt.value === "full"
+                              ? "bg-ios-blue text-white"
+                              : "bg-ios-green/80 text-white"
+                          : "text-muted-foreground bg-transparent"
+                      )}
+                    >
+                      {opt.icon}
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+    </BottomSheet>
   );
 }

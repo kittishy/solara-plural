@@ -494,6 +494,20 @@ export const translations = {
       since: 'Since',
       viewProfile: 'View system profile',
     },
+    systems: {
+      notFound: 'System not found',
+      sharedMembers: 'Shared members',
+    },
+    sharing: {
+      title: 'Sharing settings',
+      subtitle: 'Choose which of your members {name} can see',
+      hidden: 'Hidden',
+      profile: 'Profile',
+      full: 'Full',
+      hiddenDesc: 'Not visible',
+      profileDesc: 'Name and basic info',
+      fullDesc: 'All details',
+    },
   },
   'pt-BR': {
     language: {
@@ -904,6 +918,20 @@ export const translations = {
       since: 'Desde',
       viewProfile: 'Ver perfil do sistema',
     },
+    systems: {
+      notFound: 'Sistema não encontrado',
+      sharedMembers: 'Membros compartilhados',
+    },
+    sharing: {
+      title: 'Configurações de compartilhamento',
+      subtitle: 'Escolha quais membros {name} pode ver',
+      hidden: 'Oculto',
+      profile: 'Perfil',
+      full: 'Completo',
+      hiddenDesc: 'Não visível',
+      profileDesc: 'Nome e informações básicas',
+      fullDesc: 'Todos os detalhes',
+    },
   },
   es: {
     language: {
@@ -1313,6 +1341,20 @@ export const translations = {
       details: 'Detalles',
       since: 'Desde',
       viewProfile: 'Ver perfil del sistema',
+    },
+    systems: {
+      notFound: 'Sistema no encontrado',
+      sharedMembers: 'Miembros compartidos',
+    },
+    sharing: {
+      title: 'Configuración de compartir',
+      subtitle: 'Elige qué miembros puede ver {name}',
+      hidden: 'Oculto',
+      profile: 'Perfil',
+      full: 'Completo',
+      hiddenDesc: 'No visible',
+      profileDesc: 'Nombre e información básica',
+      fullDesc: 'Todos los detalles',
     },
   },
 } as const;

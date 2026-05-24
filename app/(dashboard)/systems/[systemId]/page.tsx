@@ -7,6 +7,7 @@ import { GlassCard } from "@/components/glass/GlassCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import DynamicAvatarImage from "@/components/ui/DynamicAvatarImage";
 import { apiFetcher } from "@/lib/swr";
+import { useLanguage } from "@/components/providers/LanguageProvider";
 
 type FriendSystemData = {
   id: string;
@@ -31,6 +32,7 @@ export default function ExternalSystemPage({
   params: { systemId: string };
 }) {
   const router = useRouter();
+  const { t } = useLanguage();
   const { data, isLoading } = useSWR<FriendSystemData>(
     `/api/friends/${params.systemId}`,
     apiFetcher
@@ -47,8 +49,8 @@ export default function ExternalSystemPage({
 
   if (!data) {
     return (
-      <div className="px-4 pt-14 text-center">
-        <p className="text-muted-foreground">Sistema não encontrado</p>
+      <div className="px-4 pt-20 text-center">
+        <p className="text-muted-foreground">{t("systems.notFound")}</p>
       </div>
     );
   }
@@ -62,7 +64,7 @@ export default function ExternalSystemPage({
             className="flex items-center gap-1 text-ios-blue ios-press -ml-1"
           >
             <ArrowLeft size={18} strokeWidth={2.5} />
-            <span className="text-body">Voltar</span>
+            <span className="text-body">{t("common.back")}</span>
           </button>
         </div>
       </div>
@@ -92,7 +94,7 @@ export default function ExternalSystemPage({
       {data.sharedMembers && data.sharedMembers.length > 0 && (
         <div className="px-4 mb-6">
           <p className="text-footnote font-semibold text-muted-foreground uppercase tracking-wide mb-2 px-1">
-            Membros compartilhados
+            {t("systems.sharedMembers")}
           </p>
           <GlassCard padding="none" className="overflow-hidden">
             {data.sharedMembers.map((m) => (
