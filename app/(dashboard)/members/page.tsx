@@ -1,6 +1,6 @@
 "use client";
 
-import useSWR from "swr";
+import useSWR, { mutate } from "swr";
 import Link from "next/link";
 import { Plus, Search, Check } from "lucide-react";
 import { useState } from "react";
@@ -9,6 +9,7 @@ import { GlassCard } from "@/components/glass/GlassCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { BottomSheet } from "@/components/glass/BottomSheet";
 import { apiFetcher, swrKeys, revalidateMembersAndFront } from "@/lib/swr";
 import DynamicAvatarImage from "@/components/ui/DynamicAvatarImage";
 import { useLanguage } from "@/components/providers/LanguageProvider";
@@ -31,21 +32,20 @@ export default function MembersPage() {
   const { data: members, isLoading } = useSWR<Member[]>(swrKeys.members, apiFetcher);
   const { data: currentFront } = useSWR<FrontEntry | null>(swrKeys.front, apiFetcher);
   const [search, setSearch] = useState("");
-  const [toggling, setToggling] = useState<string | null>(null);
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [updating, setUpdating] = useState(false);
 
-  const frontingIds = new Set(currentFront?.memberIds ?? []);
+  const frontingIds = currentFront?.memberIds ?? [];
+  const frontingSet = new Set(frontingIds);
 
-  async function toggleFront(e: React.MouseEvent, memberId: string) {
-    e.preventDefault();
-    e.stopPropagation();
-    if (toggling) return;
-    setToggling(memberId);
+  async function toggleMember(memberId: string) {
+    if (updating) return;
+    setUpdating(true);
     try {
-      const currentIds = currentFront?.memberIds ?? [];
-      const isFronting = frontingIds.has(memberId);
+      const isFronting = frontingSet.has(memberId);
       const newIds = isFronting
-        ? currentIds.filter((id) => id !== memberId)
-        : [...currentIds, memberId];
+        ? frontingIds.filter((id) => id !== memberId)
+        : [...frontingIds, memberId];
       if (newIds.length === 0) {
         await fetch("/api/front", { method: "DELETE", credentials: "same-origin" });
       } else {
@@ -57,8 +57,22 @@ export default function MembersPage() {
         });
       }
       revalidateMembersAndFront();
+      void mutate(swrKeys.frontHistory);
     } finally {
-      setToggling(null);
+      setUpdating(false);
+    }
+  }
+
+  async function endFront() {
+    if (updating) return;
+    setUpdating(true);
+    try {
+      await fetch("/api/front", { method: "DELETE", credentials: "same-origin" });
+      revalidateMembersAndFront();
+      void mutate(swrKeys.frontHistory);
+      setSheetOpen(false);
+    } finally {
+      setUpdating(false);
     }
   }
 
@@ -126,7 +140,7 @@ export default function MembersPage() {
             </div>
           ) : (
             filtered.map((member) => {
-              const isFronting = frontingIds.has(member.id);
+              const isFronting = frontingSet.has(member.id);
               return (
                 <div
                   key={member.id}
@@ -173,11 +187,10 @@ export default function MembersPage() {
                     )}
                   </Link>
                   <button
-                    onClick={(e) => toggleFront(e, member.id)}
-                    disabled={toggling === member.id}
-                    aria-label={isFronting ? t("members.fronting") : t("front.startFrontCta")}
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); setSheetOpen(true); }}
+                    aria-label={t("front.whoIsFronting")}
                     className={cn(
-                      "flex-shrink-0 mr-3 w-8 h-8 rounded-full flex items-center justify-center ios-transition disabled:opacity-40",
+                      "flex-shrink-0 mr-3 w-8 h-8 rounded-full flex items-center justify-center ios-transition",
                       isFronting
                         ? "bg-ios-green text-white"
                         : "bg-secondary text-muted-foreground"
@@ -191,6 +204,106 @@ export default function MembersPage() {
           )}
         </GlassCard>
       </div>
+
+      {/* Front picker sheet — same as front/page.tsx */}
+      <BottomSheet
+        open={sheetOpen}
+        onClose={() => setSheetOpen(false)}
+        title={t("front.whoIsFronting")}
+      >
+        <div className="flex flex-col gap-3">
+          {frontingIds.length > 0 && (
+            <p className="text-caption-1 text-ios-blue font-semibold text-center -mt-1">
+              {frontingIds.length === 1
+                ? t("front.selected", { n: frontingIds.length })
+                : t("front.selectedPlural", { n: frontingIds.length })}
+            </p>
+          )}
+
+          <div className="rounded-ios-lg overflow-hidden border border-border/50">
+            {isLoading ? (
+              <div className="p-4 flex flex-col gap-3">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="flex items-center gap-3">
+                    <Skeleton className="w-11 h-11 rounded-full" />
+                    <div className="flex-1 flex flex-col gap-1.5">
+                      <Skeleton className="h-4 w-28" />
+                      <Skeleton className="h-3 w-16" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : list.length === 0 ? (
+              <div className="py-10 text-center flex flex-col items-center gap-2">
+                <p className="text-body text-muted-foreground">{t("members.noMembers")}</p>
+                <Link
+                  href="/members/new"
+                  onClick={() => setSheetOpen(false)}
+                  className="text-subheadline text-ios-blue font-semibold ios-press"
+                >
+                  {t("front.createMemberFirst")}
+                </Link>
+              </div>
+            ) : (
+              list.map((m, idx) => {
+                const isActive = frontingSet.has(m.id);
+                return (
+                  <button
+                    key={m.id}
+                    onClick={() => toggleMember(m.id)}
+                    disabled={updating}
+                    className={cn(
+                      "w-full flex items-center gap-3 px-4 py-3.5 text-left ios-transition disabled:opacity-60",
+                      idx < list.length - 1 && "border-b border-border/50",
+                      isActive ? "bg-ios-blue/8" : "active:bg-muted/50"
+                    )}
+                  >
+                    <div
+                      className="w-11 h-11 rounded-full overflow-hidden flex items-center justify-center flex-shrink-0"
+                      style={{ background: m.color ? `${m.color}22` : "#8E8E9322" }}
+                    >
+                      {m.avatarUrl ? (
+                        <DynamicAvatarImage src={m.avatarUrl} alt={m.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="text-subheadline font-semibold" style={{ color: m.color ?? "#8E8E93" }}>
+                          {m.name[0].toUpperCase()}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className={cn("text-body font-semibold truncate", isActive ? "text-ios-blue" : "text-foreground")}>
+                        {m.name}
+                      </p>
+                      {m.pronouns && (
+                        <p className="text-caption-1 text-muted-foreground truncate">{m.pronouns}</p>
+                      )}
+                    </div>
+                    <div
+                      className={cn(
+                        "w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ios-transition",
+                        isActive ? "bg-ios-blue" : "border-2 border-border"
+                      )}
+                    >
+                      {isActive && <Check size={14} className="text-white" strokeWidth={3} />}
+                    </div>
+                  </button>
+                );
+              })
+            )}
+          </div>
+
+          {frontingIds.length > 0 && (
+            <Button
+              variant="outline"
+              className="w-full text-ios-red border-ios-red/30 hover:bg-ios-red/5 mt-1"
+              onClick={endFront}
+              disabled={updating}
+            >
+              {updating ? t("front.ending2") : t("front.endFront2")}
+            </Button>
+          )}
+        </div>
+      </BottomSheet>
     </div>
   );
 }
