@@ -27,11 +27,11 @@ import { useLanguage } from "@/components/providers/LanguageProvider";
 export default function SettingsPage() {
   const { data: session } = useSession();
   const { theme } = useTheme();
-  useLanguage();
+  const { t } = useLanguage();
   const [signingOut, setSigningOut] = useState(false);
 
   const themeLabel =
-    theme === "light" ? "Claro" : theme === "dark" ? "Escuro" : "Sistema";
+    theme === "light" ? "Light" : theme === "dark" ? "Dark" : "System";
 
   async function handleSignOut() {
     setSigningOut(true);
@@ -52,7 +52,7 @@ export default function SettingsPage() {
   return (
     <div className="animate-fade-in">
       <div className="px-4 pt-14 pb-2">
-        <LargeTitle className="px-0">Configurações</LargeTitle>
+        <LargeTitle className="px-0">{t("settings.title")}</LargeTitle>
       </div>
 
       {/* Profile */}
@@ -70,7 +70,7 @@ export default function SettingsPage() {
                   {session?.user?.name ?? "Sistema"}
                 </p>
                 <p className="text-caption-1 text-muted-foreground truncate">
-                  {session?.user?.email ?? "Editar perfil"}
+                  {session?.user?.email ?? t("settings.profile")}
                 </p>
               </div>
               <svg
@@ -96,12 +96,12 @@ export default function SettingsPage() {
       {/* Appearance */}
       <div className="px-4 mb-6">
         <p className="text-footnote font-semibold text-muted-foreground uppercase tracking-wide mb-2 px-1">
-          Aparência
+          {t("settings.appearance")}
         </p>
         <GroupedSection>
           <Link href="/settings/theme">
             <GroupedRow
-              label="Tema & cores"
+              label={t("settings.themeColors")}
               icon={<Palette size={18} />}
               value={themeLabel}
               chevron
@@ -112,7 +112,7 @@ export default function SettingsPage() {
             <span className="w-8 h-8 flex items-center justify-center text-ios-blue flex-shrink-0">
               <Globe size={18} />
             </span>
-            <span className="flex-1 text-body text-foreground">Idioma</span>
+            <span className="flex-1 text-body text-foreground">{t("settings.language")}</span>
             <LanguageSelector />
           </div>
         </GroupedSection>
@@ -121,12 +121,12 @@ export default function SettingsPage() {
       {/* Customization */}
       <div className="px-4 mb-6">
         <p className="text-footnote font-semibold text-muted-foreground uppercase tracking-wide mb-2 px-1">
-          Personalização
+          {t("settings.customization")}
         </p>
         <GroupedSection>
           <Link href="/settings/custom-fields">
             <GroupedRow
-              label="Campos customizados"
+              label={t("settings.customFields")}
               icon={<ListPlus size={18} />}
               chevron
               className="cursor-pointer"
@@ -138,12 +138,12 @@ export default function SettingsPage() {
       {/* Account */}
       <div className="px-4 mb-6">
         <p className="text-footnote font-semibold text-muted-foreground uppercase tracking-wide mb-2 px-1">
-          Conta
+          {t("settings.account")}
         </p>
         <GroupedSection>
           <Link href="/settings/profile">
             <GroupedRow
-              label="Perfil"
+              label={t("settings.profile")}
               icon={<User size={18} />}
               chevron
               className="cursor-pointer"
@@ -151,7 +151,7 @@ export default function SettingsPage() {
           </Link>
           <Link href="/settings/notifications">
             <GroupedRow
-              label="Notificações"
+              label={t("settings.notifications")}
               icon={<Bell size={18} />}
               chevron
               className="cursor-pointer"
@@ -159,7 +159,7 @@ export default function SettingsPage() {
           </Link>
           <Link href="/settings/privacy">
             <GroupedRow
-              label="Privacidade"
+              label={t("settings.privacy")}
               icon={<Shield size={18} />}
               chevron
               className="cursor-pointer"
@@ -171,7 +171,7 @@ export default function SettingsPage() {
       {/* Data */}
       <div className="px-4 mb-6">
         <p className="text-footnote font-semibold text-muted-foreground uppercase tracking-wide mb-2 px-1">
-          Dados
+          {t("settings.data")}
         </p>
         <GroupedSection>
           <button
@@ -182,12 +182,12 @@ export default function SettingsPage() {
               <Download size={18} />
             </span>
             <span className="flex-1 text-left text-body text-foreground">
-              Exportar dados
+              {t("settings.exportData")}
             </span>
           </button>
           <Link href="/settings/import">
             <GroupedRow
-              label="Importar dados"
+              label={t("settings.importData")}
               icon={<Upload size={18} />}
               chevron
               className="cursor-pointer"
@@ -201,7 +201,7 @@ export default function SettingsPage() {
         <GroupedSection>
           <Link href="/settings/delete-account">
             <GroupedRow
-              label="Excluir conta"
+              label={t("settings.deleteAccount")}
               icon={<Trash2 size={18} className="text-ios-red" />}
               chevron
               className="cursor-pointer"
@@ -219,7 +219,7 @@ export default function SettingsPage() {
           disabled={signingOut}
         >
           <LogOut size={18} />
-          {signingOut ? "Saindo..." : "Sair da conta"}
+          {signingOut ? t("settings.signingOut") : t("settings.signOut")}
         </Button>
       </div>
     </div>

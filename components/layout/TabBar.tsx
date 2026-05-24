@@ -17,30 +17,33 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BottomSheet } from "@/components/glass/BottomSheet";
+import { useLanguage } from "@/components/providers/LanguageProvider";
 
-const tabs = [
-  { href: "/", icon: Home, label: "Início" },
-  { href: "/members", icon: Users, label: "Membros" },
-  { href: "/front", icon: Layers, label: "Frente" },
-  { href: "/journal", icon: BookOpen, label: "Diário" },
-];
-
-const moreItems = [
-  { href: "/chat", icon: MessageCircle, label: "Chat" },
-  { href: "/friends", icon: Users, label: "Amigos" },
-  { href: "/partners", icon: Heart, label: "Parcerias" },
-  { href: "/notes", icon: FileText, label: "Notas" },
-  { href: "/notifications", icon: Bell, label: "Notificações" },
-  { href: "/settings", icon: Settings, label: "Configurações" },
-];
-
-const moreHrefs = moreItems.map((item) => item.href);
+const tabHrefs = ["/", "/members", "/front", "/journal"];
+const moreHrefList = ["/chat", "/friends", "/partners", "/notes", "/notifications", "/settings"];
 
 export function TabBar() {
   const pathname = usePathname();
   const [sheetOpen, setSheetOpen] = useState(false);
+  const { t } = useLanguage();
 
-  const isMaisActive = moreHrefs.some((href) => pathname.startsWith(href));
+  const tabs = [
+    { href: "/", icon: Home, label: t("nav.home") },
+    { href: "/members", icon: Users, label: t("nav.members") },
+    { href: "/front", icon: Layers, label: t("front.title") },
+    { href: "/journal", icon: BookOpen, label: t("journal.title") },
+  ];
+
+  const moreItems = [
+    { href: "/chat", icon: MessageCircle, label: t("nav.chat") },
+    { href: "/friends", icon: Users, label: t("nav.friends") },
+    { href: "/partners", icon: Heart, label: t("nav.partners") },
+    { href: "/notes", icon: FileText, label: t("notes.title") },
+    { href: "/notifications", icon: Bell, label: t("nav.notifications") },
+    { href: "/settings", icon: Settings, label: t("nav.settings") },
+  ];
+
+  const isMaisActive = moreHrefList.some((href) => pathname.startsWith(href));
 
   return (
     <>
@@ -85,7 +88,7 @@ export function TabBar() {
             );
           })}
 
-          {/* Mais tab */}
+          {/* More tab */}
           <button
             type="button"
             onClick={() => setSheetOpen(true)}
@@ -107,7 +110,7 @@ export function TabBar() {
                 isMaisActive && "font-semibold"
               )}
             >
-              Mais
+              {t("nav.more")}
             </span>
           </button>
         </nav>
@@ -116,7 +119,7 @@ export function TabBar() {
       <BottomSheet
         open={sheetOpen}
         onClose={() => setSheetOpen(false)}
-        title="Mais"
+        title={t("nav.more")}
       >
         <div className="grid grid-cols-2 gap-3">
           {moreItems.map(({ href, icon: Icon, label }) => (

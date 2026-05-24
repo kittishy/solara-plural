@@ -7,8 +7,9 @@ import {
   Plus,
   Send,
   Hash,
-  X,
   Menu,
+  Trash2,
+  AlertTriangle,
 } from "lucide-react";
 import { LargeTitle } from "@/components/layout/NavBar";
 import { GlassCard } from "@/components/glass/GlassCard";
@@ -20,12 +21,7 @@ import { apiFetcher, swrKeys } from "@/lib/swr";
 import DynamicAvatarImage from "@/components/ui/DynamicAvatarImage";
 import { cn } from "@/lib/utils";
 
-type Channel = {
-  id: string;
-  name: string;
-  sortOrder?: number;
-};
-
+type Channel = { id: string; name: string; sortOrder?: number };
 type Message = {
   id: string;
   content: string;
@@ -36,26 +32,38 @@ type Message = {
   memberColor: string | null;
   memberAvatarUrl: string | null;
 };
-
-type Member = {
-  id: string;
-  name: string;
-  color: string | null;
-  avatarUrl: string | null;
-};
+type Member = { id: string; name: string; color: string | null; avatarUrl: string | null };
 
 function formatTime(value: string | number | Date) {
-  return new Date(value).toLocaleTimeString("pt-BR", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  return new Date(value).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+}
+
+function formatDateLabel(value: string | number | Date) {
+  const d = new Date(value);
+  const today = new Date();
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+
+  if (d.toDateString() === today.toDateString()) return "Hoje";
+  if (d.toDateString() === yesterday.toDateString()) return "Ontem";
+  return d.toLocaleDateString("pt-BR", { day: "numeric", month: "long", year: "numeric" });
+}
+
+function shouldShowTimeSeparator(prev: Message, curr: Message) {
+  const gap = new Date(curr.createdAt).getTime() - new Date(prev.createdAt).getTime();
+  return gap > 30 * 60 * 1000; // 30 minutes
+}
+
+function shouldShowDateSeparator(prev: Message | null, curr: Message) {
+  if (!prev) return true;
+  return new Date(prev.createdAt).toDateString() !== new Date(curr.createdAt).toDateString();
 }
 
 export default function ChatPage() {
-  const { data: channelsData, isLoading: loadingChannels } = useSWR<{
-    channels: Channel[];
-  }>("/api/chat/channels", apiFetcher);
-
+  const { data: channelsData, isLoading: loadingChannels } = useSWR<{ channels: Channel[] }>(
+    "/api/chat/channels",
+    apiFetcher
+  );
   const { data: membersList } = useSWR<Member[]>(swrKeys.members, apiFetcher);
 
   const channels = channelsData?.channels ?? [];
@@ -67,17 +75,18 @@ export default function ChatPage() {
   const [messageText, setMessageText] = useState("");
   const [sending, setSending] = useState(false);
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
+  const [deletingChannelId, setDeletingChannelId] = useState<string | null>(null);
+  const [confirmDeleteChannel, setConfirmDeleteChannel] = useState<Channel | null>(null);
+  const [deletingMsgId, setDeletingMsgId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (channels.length > 0 && !activeChannelId) {
       setActiveChannelId(channels[0].id);
     }
-  }, [channels, activeChannelId]);
+  }, [channels.length, activeChannelId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const { data: messagesData, isLoading: loadingMessages } = useSWR<{
-    messages: Message[];
-  }>(
+  const { data: messagesData, isLoading: loadingMessages } = useSWR<{ messages: Message[] }>(
     activeChannelId ? `/api/chat?channelId=${activeChannelId}` : null,
     apiFetcher,
     { refreshInterval: 5000 }
@@ -113,6 +122,40 @@ export default function ChatPage() {
     }
   }
 
+  async function deleteChannel(channel: Channel) {
+    setDeletingChannelId(channel.id);
+    try {
+      const res = await fetch(`/api/chat/channels/${channel.id}`, {
+        method: "DELETE",
+        credentials: "same-origin",
+      });
+      const json = await res.json();
+      if (res.ok && json.success) {
+        void mutate("/api/chat/channels");
+        if (activeChannelId === channel.id) {
+          const remaining = channels.filter((c) => c.id !== channel.id);
+          setActiveChannelId(remaining[0]?.id ?? null);
+        }
+      }
+    } finally {
+      setDeletingChannelId(null);
+      setConfirmDeleteChannel(null);
+    }
+  }
+
+  async function deleteMessage(msgId: string) {
+    setDeletingMsgId(msgId);
+    try {
+      await fetch(`/api/chat/${msgId}`, {
+        method: "DELETE",
+        credentials: "same-origin",
+      });
+      void mutate(`/api/chat?channelId=${activeChannelId}`);
+    } finally {
+      setDeletingMsgId(null);
+    }
+  }
+
   async function sendMessage(e: React.FormEvent) {
     e.preventDefault();
     if (!messageText.trim() || !activeChannelId) return;
@@ -137,30 +180,35 @@ export default function ChatPage() {
     }
   }
 
-  const activeMember = (membersList ?? []).find(
-    (m) => m.id === selectedMemberId
-  );
+  const activeMember = (membersList ?? []).find((m) => m.id === selectedMemberId);
 
   return (
-    <div className="animate-fade-in flex flex-col h-[100dvh]">
+    /* Fixed container that fills viewport minus the tab bar (~80px from bottom) */
+    <div
+      className="fixed inset-x-0 top-0 flex flex-col animate-fade-in bg-[var(--ios-bg)]"
+      style={{ bottom: "80px" }}
+    >
       {/* Header */}
-      <div className="sticky top-0 z-30 glass border-b border-border/40">
-        <div className="flex items-center justify-between px-4 h-12">
+      <div className="shrink-0 glass border-b border-border/40">
+        <div className="flex items-center justify-between px-4 h-12 pt-[env(safe-area-inset-top,0px)]">
           <button
             type="button"
             onClick={() => setShowSidebar(true)}
-            className="flex items-center gap-1 ios-press"
+            className="flex items-center gap-1.5 text-ios-blue ios-press"
+            aria-label="Canais"
           >
-            <Menu size={20} className="text-ios-blue" />
+            <Menu size={20} />
+            <span className="text-body font-medium">Canais</span>
           </button>
-          <h1 className="text-headline font-semibold text-foreground flex items-center gap-1.5">
-            <Hash size={14} />
+          <h1 className="text-headline font-semibold text-foreground flex items-center gap-1.5 absolute left-1/2 -translate-x-1/2">
+            <Hash size={14} className="text-muted-foreground" />
             {activeChannel?.name ?? "Chat"}
           </h1>
           <button
             type="button"
             onClick={() => setShowNewChannel(true)}
             className="ios-press"
+            aria-label="Novo canal"
           >
             <Plus size={20} className="text-ios-blue" />
           </button>
@@ -168,12 +216,12 @@ export default function ChatPage() {
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-3 py-4">
+      <div className="flex-1 overflow-y-auto px-3 py-3">
         {loadingMessages ? (
-          <div className="flex flex-col gap-3">
-            {[1, 2, 3].map((i) => (
+          <div className="flex flex-col gap-4 pt-2">
+            {[1, 2, 3, 4].map((i) => (
               <div key={i} className="flex gap-3">
-                <Skeleton className="w-8 h-8 rounded-full" />
+                <Skeleton className="w-9 h-9 rounded-full flex-shrink-0" />
                 <div className="flex-1 flex flex-col gap-1.5">
                   <Skeleton className="h-3 w-20" />
                   <Skeleton className="h-4 w-3/4" />
@@ -182,73 +230,109 @@ export default function ChatPage() {
             ))}
           </div>
         ) : messages.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
-            <MessageCircle size={36} className="text-muted-foreground/40 mb-2" />
-            <p className="text-subheadline">Sem mensagens ainda</p>
+          <div className="flex flex-col items-center justify-center h-full gap-3 pb-8 text-muted-foreground">
+            <MessageCircle size={40} className="text-muted-foreground/30" />
+            <div className="text-center">
+              <p className="text-body font-semibold">Ainda é silêncio por aqui</p>
+              <p className="text-subheadline mt-0.5">Qual de vocês quer começar?</p>
+            </div>
           </div>
         ) : (
-          <div className="flex flex-col gap-3">
-            {messages.map((msg) => (
-              <div key={msg.id} className="flex gap-3 px-2">
-                <div
-                  className="w-9 h-9 rounded-full overflow-hidden flex items-center justify-center flex-shrink-0"
-                  style={{
-                    background: msg.memberColor
-                      ? `${msg.memberColor}22`
-                      : "#8E8E9322",
-                  }}
-                >
-                  {msg.memberAvatarUrl ? (
-                    <DynamicAvatarImage
-                      src={msg.memberAvatarUrl}
-                      alt={msg.memberName ?? "?"}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <span
-                      className="text-caption-1 font-semibold"
-                      style={{ color: msg.memberColor ?? "#8E8E93" }}
-                    >
-                      {(msg.memberName ?? "?")[0].toUpperCase()}
-                    </span>
+          <div className="flex flex-col gap-0.5">
+            {messages.map((msg, idx) => {
+              const prev = idx > 0 ? messages[idx - 1] : null;
+              const showDate = shouldShowDateSeparator(prev, msg);
+              const showTimeSep = !showDate && prev != null && shouldShowTimeSeparator(prev, msg);
+
+              return (
+                <div key={msg.id}>
+                  {/* Date separator */}
+                  {showDate && (
+                    <div className="flex items-center gap-3 my-4">
+                      <div className="flex-1 h-px bg-border/50" />
+                      <span className="text-caption-1 text-muted-foreground font-semibold px-1">
+                        {formatDateLabel(msg.createdAt)}
+                      </span>
+                      <div className="flex-1 h-px bg-border/50" />
+                    </div>
                   )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-baseline gap-2">
-                    <span
-                      className="text-subheadline font-semibold"
-                      style={{ color: msg.memberColor ?? undefined }}
+
+                  {/* Time gap separator */}
+                  {showTimeSep && (
+                    <div className="flex items-center justify-center my-3">
+                      <span className="text-caption-2 text-muted-foreground/60 bg-muted/40 px-2.5 py-0.5 rounded-full">
+                        {formatTime(msg.createdAt)}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Message row */}
+                  <div className="group flex gap-3 px-1 py-1.5 rounded-ios-sm active:bg-muted/30 ios-transition">
+                    <div
+                      className="w-9 h-9 rounded-full overflow-hidden flex items-center justify-center flex-shrink-0 mt-0.5"
+                      style={{ background: msg.memberColor ? `${msg.memberColor}22` : "#8E8E9322" }}
                     >
-                      {msg.memberName ?? "Sistema"}
-                    </span>
-                    <span className="text-caption-2 text-muted-foreground">
-                      {formatTime(msg.createdAt)}
-                    </span>
+                      {msg.memberAvatarUrl ? (
+                        <DynamicAvatarImage
+                          src={msg.memberAvatarUrl}
+                          alt={msg.memberName ?? "?"}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <span
+                          className="text-caption-1 font-semibold"
+                          style={{ color: msg.memberColor ?? "#8E8E93" }}
+                        >
+                          {(msg.memberName ?? "?")[0].toUpperCase()}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-baseline gap-2 mb-0.5">
+                        <span
+                          className="text-subheadline font-semibold"
+                          style={{ color: msg.memberColor ?? undefined }}
+                        >
+                          {msg.memberName ?? "Sistema"}
+                        </span>
+                        <span className="text-caption-2 text-muted-foreground">
+                          {formatTime(msg.createdAt)}
+                        </span>
+                      </div>
+                      <p className="text-body text-foreground whitespace-pre-wrap break-words leading-snug">
+                        {msg.content}
+                      </p>
+                    </div>
+                    {/* Delete button — visible on hover/focus */}
+                    <button
+                      type="button"
+                      onClick={() => deleteMessage(msg.id)}
+                      disabled={deletingMsgId === msg.id}
+                      className="opacity-0 group-hover:opacity-100 focus:opacity-100 w-7 h-7 rounded-full bg-ios-red/10 text-ios-red flex items-center justify-center flex-shrink-0 ios-press disabled:opacity-30 transition-opacity mt-0.5"
+                      aria-label="Apagar mensagem"
+                    >
+                      <Trash2 size={13} />
+                    </button>
                   </div>
-                  <p className="text-body text-foreground whitespace-pre-wrap break-words">
-                    {msg.content}
-                  </p>
                 </div>
-              </div>
-            ))}
+              );
+            })}
             <div ref={messagesEndRef} />
           </div>
         )}
       </div>
 
-      {/* Input */}
+      {/* Input bar */}
       {activeChannelId && (
-        <div className="border-t border-border/40 glass px-3 py-2 safe-bottom">
-          {/* Member picker */}
-          <div className="flex gap-1.5 mb-2 overflow-x-auto pb-1">
+        <div className="shrink-0 border-t border-border/40 glass px-3 pt-2 pb-3">
+          {/* Member selector chips */}
+          <div className="flex gap-1.5 mb-2 overflow-x-auto pb-0.5 scrollbar-none">
             <button
               type="button"
               onClick={() => setSelectedMemberId(null)}
               className={cn(
-                "px-3 py-1 rounded-full text-caption-1 font-semibold whitespace-nowrap ios-press",
-                !selectedMemberId
-                  ? "bg-ios-blue text-white"
-                  : "bg-secondary text-muted-foreground"
+                "px-3 py-1 rounded-full text-caption-1 font-semibold whitespace-nowrap ios-press flex-shrink-0",
+                !selectedMemberId ? "bg-ios-blue text-white" : "bg-secondary text-muted-foreground"
               )}
             >
               Sistema
@@ -258,20 +342,10 @@ export default function ChatPage() {
                 key={m.id}
                 type="button"
                 onClick={() => setSelectedMemberId(m.id)}
-                className={cn(
-                  "px-3 py-1 rounded-full text-caption-1 font-semibold whitespace-nowrap ios-press"
-                )}
+                className="px-3 py-1 rounded-full text-caption-1 font-semibold whitespace-nowrap ios-press flex-shrink-0"
                 style={{
-                  background:
-                    selectedMemberId === m.id
-                      ? m.color ?? "#007AFF"
-                      : m.color
-                        ? `${m.color}22`
-                        : "#E5E5EA",
-                  color:
-                    selectedMemberId === m.id
-                      ? "white"
-                      : m.color ?? "#000000",
+                  background: selectedMemberId === m.id ? (m.color ?? "#007AFF") : (m.color ? `${m.color}22` : "#E5E5EA"),
+                  color: selectedMemberId === m.id ? "white" : (m.color ?? "#000000"),
                 }}
               >
                 {m.name}
@@ -279,7 +353,7 @@ export default function ChatPage() {
             ))}
           </div>
 
-          <form onSubmit={sendMessage} className="flex gap-2">
+          <form onSubmit={sendMessage} className="flex gap-2 items-center">
             <input
               type="text"
               value={messageText}
@@ -291,7 +365,7 @@ export default function ChatPage() {
             <button
               type="submit"
               disabled={!messageText.trim() || sending}
-              className="w-10 h-10 rounded-full bg-ios-blue text-white flex items-center justify-center ios-press disabled:opacity-40"
+              className="w-10 h-10 rounded-full bg-ios-blue text-white flex items-center justify-center ios-press disabled:opacity-40 flex-shrink-0"
               aria-label="Enviar"
             >
               <Send size={16} />
@@ -300,48 +374,64 @@ export default function ChatPage() {
         </div>
       )}
 
-      {/* Sidebar (channels) */}
-      <BottomSheet
-        open={showSidebar}
-        onClose={() => setShowSidebar(false)}
-        title="Canais"
-      >
+      {/* Channels sidebar sheet */}
+      <BottomSheet open={showSidebar} onClose={() => setShowSidebar(false)} title="Canais">
         <div className="flex flex-col gap-1">
           {loadingChannels ? (
-            <Skeleton className="h-10 w-full" />
+            <div className="flex flex-col gap-2">
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+            </div>
           ) : channels.length === 0 ? (
             <p className="text-center text-muted-foreground text-subheadline py-4">
               Nenhum canal — crie um
             </p>
           ) : (
             channels.map((ch) => (
-              <button
+              <div
                 key={ch.id}
-                onClick={() => {
-                  setActiveChannelId(ch.id);
-                  setShowSidebar(false);
-                }}
                 className={cn(
-                  "flex items-center gap-2 px-3 py-2.5 rounded-ios-sm text-left ios-press",
-                  activeChannelId === ch.id
-                    ? "bg-ios-blue/15 text-ios-blue"
-                    : "text-foreground active:bg-muted"
+                  "flex items-center gap-2 px-3 py-2.5 rounded-ios-sm",
+                  activeChannelId === ch.id ? "bg-ios-blue/15" : ""
                 )}
               >
-                <Hash size={16} />
-                <span className="text-body font-medium">{ch.name}</span>
-              </button>
+                <button
+                  onClick={() => { setActiveChannelId(ch.id); setShowSidebar(false); }}
+                  className={cn(
+                    "flex-1 flex items-center gap-2 text-left ios-press",
+                    activeChannelId === ch.id ? "text-ios-blue" : "text-foreground"
+                  )}
+                >
+                  <Hash size={16} />
+                  <span className="text-body font-medium">{ch.name}</span>
+                </button>
+                {channels.length > 1 && (
+                  <button
+                    onClick={() => setConfirmDeleteChannel(ch)}
+                    disabled={deletingChannelId === ch.id}
+                    className="w-8 h-8 rounded-full bg-ios-red/10 text-ios-red flex items-center justify-center ios-press disabled:opacity-40"
+                    aria-label={`Excluir ${ch.name}`}
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                )}
+              </div>
             ))
           )}
+          <div className="mt-2 pt-2 border-t border-border/50">
+            <button
+              onClick={() => { setShowSidebar(false); setShowNewChannel(true); }}
+              className="w-full flex items-center gap-2 px-3 py-2.5 rounded-ios-sm text-ios-blue ios-press"
+            >
+              <Plus size={16} />
+              <span className="text-body font-medium">Novo canal</span>
+            </button>
+          </div>
         </div>
       </BottomSheet>
 
-      {/* New channel */}
-      <BottomSheet
-        open={showNewChannel}
-        onClose={() => setShowNewChannel(false)}
-        title="Novo canal"
-      >
+      {/* New channel sheet */}
+      <BottomSheet open={showNewChannel} onClose={() => setShowNewChannel(false)} title="Novo canal">
         <form onSubmit={createChannel} className="flex flex-col gap-4">
           <Input
             value={newChannelName}
@@ -350,14 +440,41 @@ export default function ChatPage() {
             maxLength={50}
             autoFocus
           />
-          <Button
-            type="submit"
-            disabled={creating || !newChannelName.trim()}
-            className="w-full"
-          >
+          <Button type="submit" disabled={creating || !newChannelName.trim()} className="w-full">
             {creating ? "Criando..." : "Criar canal"}
           </Button>
         </form>
+      </BottomSheet>
+
+      {/* Confirm delete channel sheet */}
+      <BottomSheet
+        open={confirmDeleteChannel !== null}
+        onClose={() => setConfirmDeleteChannel(null)}
+        title="Excluir canal?"
+      >
+        {confirmDeleteChannel && (
+          <div className="flex flex-col gap-4">
+            <div className="flex items-start gap-3 p-3 rounded-ios-lg bg-ios-red/5 border border-ios-red/15">
+              <AlertTriangle size={20} className="text-ios-red flex-shrink-0 mt-0.5" />
+              <p className="text-body text-foreground">
+                Excluir <strong>#{confirmDeleteChannel.name}</strong>? Todas as mensagens serão perdidas permanentemente.
+              </p>
+            </div>
+            <div className="flex flex-col gap-2">
+              <Button
+                variant="destructive"
+                onClick={() => deleteChannel(confirmDeleteChannel)}
+                disabled={deletingChannelId === confirmDeleteChannel.id}
+                className="w-full"
+              >
+                {deletingChannelId === confirmDeleteChannel.id ? "Excluindo..." : "Sim, excluir canal"}
+              </Button>
+              <Button variant="ghost" onClick={() => setConfirmDeleteChannel(null)} className="w-full">
+                Cancelar
+              </Button>
+            </div>
+          </div>
+        )}
       </BottomSheet>
     </div>
   );
