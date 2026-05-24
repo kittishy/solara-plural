@@ -8,6 +8,7 @@ import { GlassCard } from "@/components/glass/GlassCard";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { apiFetcher, swrKeys } from "@/lib/swr";
+import { useLanguage } from "@/components/providers/LanguageProvider";
 
 type Note = {
   id: string;
@@ -20,20 +21,21 @@ type Note = {
 
 function formatDate(value: string | number | Date) {
   const d = new Date(value);
-  return d.toLocaleDateString("pt-BR", {
+  return d.toLocaleDateString(undefined, {
     day: "numeric",
     month: "short",
   });
 }
 
 export default function NotesPage() {
+  const { t } = useLanguage();
   const { data, isLoading } = useSWR<Note[]>(swrKeys.notes, apiFetcher);
   const notes = data ?? [];
 
   return (
     <div className="animate-fade-in">
       <div className="px-4 pt-14 pb-2 flex items-end justify-between">
-        <LargeTitle className="px-0">Notas</LargeTitle>
+        <LargeTitle className="px-0">{t("notes.title")}</LargeTitle>
         <Link href="/notes/new">
           <Button size="icon" className="mb-1">
             <Plus size={20} />
@@ -58,16 +60,16 @@ export default function NotesPage() {
               <FileText size={36} className="text-muted-foreground/40" />
               <div>
                 <p className="text-body font-semibold text-foreground">
-                  Sem notas ainda
+                  {t("notes.noNotes")}
                 </p>
                 <p className="text-subheadline text-muted-foreground mt-1">
-                  Crie sua primeira nota
+                  {t("notes.createFirst")}
                 </p>
               </div>
               <Link href="/notes/new">
                 <Button variant="outline" size="sm">
                   <Plus size={16} />
-                  Nova nota
+                  {t("notes.new")}
                 </Button>
               </Link>
             </div>
@@ -81,7 +83,7 @@ export default function NotesPage() {
                 <div className="flex items-center justify-between gap-2">
                   <p className="text-body font-semibold text-foreground truncate flex items-center gap-1.5">
                     {note.isPrivate ? <Lock size={12} /> : null}
-                    {note.title || "Sem título"}
+                    {note.title || t("notes.untitled")}
                   </p>
                   <span className="text-caption-1 text-muted-foreground flex-shrink-0">
                     {formatDate(note.updatedAt)}

@@ -10,6 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { apiFetcher, swrKeys } from "@/lib/swr";
 import { requestAndSavePushToken } from "@/lib/notifications/browser";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/components/providers/LanguageProvider";
 
 type Notification = {
   id: string;
@@ -35,10 +36,11 @@ function formatRelative(value: string | number | Date) {
   if (day > 0) return `${day}d`;
   if (hr > 0) return `${hr}h`;
   if (min > 0) return `${min}min`;
-  return "agora";
+  return "now";
 }
 
 export default function NotificationsPage() {
+  const { t } = useLanguage();
   const { data, isLoading } = useSWR<NotificationsPayload>(
     swrKeys.notifications,
     apiFetcher
@@ -105,10 +107,19 @@ export default function NotificationsPage() {
   const notifications = data?.notifications ?? [];
   const unreadCount = data?.unreadCount ?? 0;
 
+  const pushStatusLabel =
+    permission === "granted"
+      ? t("notifications.pushEnabled")
+      : permission === "denied"
+        ? t("notifications.pushBlocked")
+        : permission === "unsupported"
+          ? "Not supported"
+          : t("notifications.pushDisabled");
+
   return (
     <div className="animate-fade-in">
       <div className="px-4 pt-14 pb-2">
-        <LargeTitle className="px-0">Notificações</LargeTitle>
+        <LargeTitle className="px-0">{t("notifications.title")}</LargeTitle>
       </div>
 
       {/* Permission card */}
@@ -124,20 +135,14 @@ export default function NotificationsPage() {
             )}
             <div className="flex-1">
               <p className="text-body font-semibold text-foreground">
-                {permission === "granted"
-                  ? "Push ativado"
-                  : permission === "denied"
-                    ? "Push bloqueado"
-                    : permission === "unsupported"
-                      ? "Não suportado"
-                      : "Push desativado"}
+                {pushStatusLabel}
               </p>
               <p className="text-caption-1 text-muted-foreground">
                 {permission === "granted"
-                  ? "Você receberá notificações em tempo real"
+                  ? "You will receive real-time notifications"
                   : permission === "denied"
-                    ? "Habilite nas configurações do navegador"
-                    : "Receba notificações em tempo real"}
+                    ? "Enable in browser settings"
+                    : "Receive real-time notifications"}
               </p>
             </div>
             {permission === "default" && (
@@ -146,7 +151,7 @@ export default function NotificationsPage() {
                 onClick={enablePush}
                 disabled={enabling}
               >
-                {enabling ? "..." : "Ativar"}
+                {enabling ? "..." : t("notifications.enable")}
               </Button>
             )}
           </div>
@@ -167,7 +172,7 @@ export default function NotificationsPage() {
             className="w-full"
           >
             <CheckCheck size={16} />
-            {marking ? "Marcando..." : `Marcar ${unreadCount} como lidas`}
+            {marking ? "..." : t("notifications.markAllRead", { n: unreadCount })}
           </Button>
         </div>
       )}
@@ -190,7 +195,7 @@ export default function NotificationsPage() {
           ) : notifications.length === 0 ? (
             <div className="py-12 text-center text-muted-foreground text-subheadline">
               <Bell size={32} className="mx-auto text-muted-foreground/40 mb-2" />
-              Nada por aqui ainda
+              {t("notifications.empty")}
             </div>
           ) : (
             notifications.map((n) => {

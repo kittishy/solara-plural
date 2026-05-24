@@ -188,7 +188,7 @@ export default function FrontPage() {
                     )}
                     <p className="text-caption-1 text-muted-foreground flex items-center gap-1 mt-0.5">
                       <Clock size={11} />
-                      {t("front.sinceTime" as Parameters<typeof t>[0], { time: formatTime(currentFront!.startedAt) })}
+                      {t("members.sinceTime", { time: formatTime(currentFront!.startedAt) })}
                     </p>
                   </div>
                   <Badge variant="success">{t("members.fronting")}</Badge>
@@ -253,8 +253,8 @@ export default function FrontPage() {
           {frontingIds.length > 0 && (
             <p className="text-caption-1 text-ios-blue font-semibold text-center -mt-1">
               {frontingIds.length === 1
-                ? t("front.selected" as Parameters<typeof t>[0], { n: frontingIds.length })
-                : t("front.selectedPlural" as Parameters<typeof t>[0], { n: frontingIds.length })}
+                ? t("front.selected", { n: frontingIds.length })
+                : t("front.selectedPlural", { n: frontingIds.length })}
             </p>
           )}
 

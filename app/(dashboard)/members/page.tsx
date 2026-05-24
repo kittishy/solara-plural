@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { apiFetcher, swrKeys } from "@/lib/swr";
 import DynamicAvatarImage from "@/components/ui/DynamicAvatarImage";
+import { useLanguage } from "@/components/providers/LanguageProvider";
 
 type Member = {
   id: string;
@@ -23,6 +24,7 @@ type Member = {
 };
 
 export default function MembersPage() {
+  const { t } = useLanguage();
   const { data: members, isLoading } = useSWR<Member[]>(
     swrKeys.members,
     apiFetcher
@@ -37,7 +39,7 @@ export default function MembersPage() {
   return (
     <div className="animate-fade-in">
       <div className="px-4 pt-14 pb-2 flex items-end justify-between">
-        <LargeTitle className="px-0">Membros</LargeTitle>
+        <LargeTitle className="px-0">{t("members.title")}</LargeTitle>
         <Link href="/members/new">
           <Button size="icon" className="mb-1">
             <Plus size={20} />
@@ -52,7 +54,7 @@ export default function MembersPage() {
           className="absolute left-7 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none"
         />
         <Input
-          placeholder="Buscar membro..."
+          placeholder={t("members.searchPlaceholder")}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="pl-9"
@@ -80,13 +82,13 @@ export default function MembersPage() {
           ) : filtered.length === 0 ? (
             <div className="py-12 text-center flex flex-col items-center gap-3">
               <p className="text-muted-foreground text-subheadline">
-                {search ? "Nenhum membro encontrado" : "Nenhum membro ainda"}
+                {search ? t("members.noMembersFound") : t("members.noMembers")}
               </p>
               {!search && (
                 <Link href="/members/new">
                   <Button variant="outline" size="sm">
                     <Plus size={16} />
-                    Adicionar membro
+                    {t("members.addMember")}
                   </Button>
                 </Link>
               )}
