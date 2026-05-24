@@ -14,6 +14,7 @@ import { BottomSheet } from "@/components/glass/BottomSheet";
 import { apiFetcher, swrKeys } from "@/lib/swr";
 import DynamicAvatarImage from "@/components/ui/DynamicAvatarImage";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/components/providers/LanguageProvider";
 
 type PartnerSystem = {
   id: string;
@@ -28,9 +29,15 @@ type PartnerSystem = {
 type PartnersPayload = {
   partners: {
     partnershipId: string;
+    id: string;
+    name: string;
+    accountType?: string;
+    description?: string | null;
+    avatarMode?: string;
+    avatarEmoji?: string;
+    avatarUrl?: string | null;
     relationshipLabel?: string | null;
     partneredSince?: string | null;
-    other: PartnerSystem;
   }[];
   incomingRequests: {
     requestId: string;
@@ -72,6 +79,7 @@ function SystemAvatar({ system, size = 44 }: { system: PartnerSystem; size?: num
 }
 
 export default function PartnersPage() {
+  const { t } = useLanguage();
   const { data, isLoading } = useSWR<PartnersPayload>(
     swrKeys.partners,
     apiFetcher
@@ -100,7 +108,7 @@ export default function PartnersPage() {
       });
       const json = await res.json();
       if (!res.ok || !json.success) {
-        setError(json.error ?? "Erro ao enviar pedido");
+        setError(json.error ?? t("partners.sendError"));
         return;
       }
       setInviteEmail("");
@@ -127,15 +135,15 @@ export default function PartnersPage() {
   const outgoing = data?.outgoingRequests ?? [];
 
   const tabs = [
-    { id: "current", label: "Parcerias", count: partners.length },
-    { id: "received", label: "Recebidos", count: incoming.length },
-    { id: "sent", label: "Enviados", count: outgoing.length },
+    { id: "current", label: t("partners.current"), count: partners.length },
+    { id: "received", label: t("partners.received"), count: incoming.length },
+    { id: "sent", label: t("partners.sent"), count: outgoing.length },
   ] as const;
 
   return (
     <div className="animate-fade-in">
       <div className="px-4 pt-14 pb-2 flex items-end justify-between">
-        <LargeTitle className="px-0">Parcerias</LargeTitle>
+        <LargeTitle className="px-0">{t("partners.title")}</LargeTitle>
         <Button size="icon" className="mb-1" onClick={() => setShowInvite(true)}>
           <Heart size={20} />
         </Button>
@@ -143,20 +151,20 @@ export default function PartnersPage() {
 
       <div className="px-4 mb-4">
         <div className="flex gap-1 p-1 rounded-ios-md bg-secondary">
-          {tabs.map((t) => (
+          {tabs.map((tabItem) => (
             <button
-              key={t.id}
-              onClick={() => setTab(t.id)}
+              key={tabItem.id}
+              onClick={() => setTab(tabItem.id)}
               className={cn(
                 "flex-1 px-3 py-1.5 rounded-ios-sm text-caption-1 font-semibold ios-transition",
-                tab === t.id
+                tab === tabItem.id
                   ? "bg-white dark:bg-ios-gray-3/30 text-foreground shadow-sm"
                   : "text-muted-foreground"
               )}
             >
-              {t.label}
-              {t.count > 0 && (
-                <span className="ml-1 text-ios-pink">{t.count}</span>
+              {tabItem.label}
+              {tabItem.count > 0 && (
+                <span className="ml-1 text-ios-pink">{tabItem.count}</span>
               )}
             </button>
           ))}
@@ -178,7 +186,7 @@ export default function PartnersPage() {
             partners.length === 0 ? (
               <div className="py-12 text-center text-muted-foreground text-subheadline">
                 <Heart size={32} className="mx-auto text-muted-foreground/40 mb-2" />
-                Nenhuma parceria ainda
+                {t("partners.noPartners")}
               </div>
             ) : (
               partners.map((p) => (
@@ -187,10 +195,10 @@ export default function PartnersPage() {
                   href={`/partners/${p.partnershipId}`}
                   className="flex items-center gap-3 px-4 py-3.5 border-b border-border/50 last:border-0 active:bg-muted/50 ios-transition"
                 >
-                  <SystemAvatar system={p.other} />
+                  <SystemAvatar system={p} />
                   <div className="flex-1 min-w-0">
                     <p className="text-body font-semibold text-foreground truncate">
-                      {p.other.name}
+                      {p.name}
                     </p>
                     {p.relationshipLabel && (
                       <p className="text-caption-1 text-ios-pink">
@@ -204,7 +212,7 @@ export default function PartnersPage() {
           ) : tab === "received" ? (
             incoming.length === 0 ? (
               <div className="py-12 text-center text-muted-foreground text-subheadline">
-                Nenhum pedido recebido
+                {t("partners.noReceived")}
               </div>
             ) : (
               incoming.map((r) => (
@@ -219,21 +227,21 @@ export default function PartnersPage() {
                     </p>
                     {r.message && (
                       <p className="text-caption-1 text-muted-foreground truncate">
-                        “{r.message}”
+                        "{r.message}"
                       </p>
                     )}
                   </div>
                   <button
                     onClick={() => respondRequest(r.requestId, "decline")}
                     className="w-9 h-9 rounded-full bg-secondary flex items-center justify-center ios-press"
-                    aria-label="Recusar"
+                    aria-label={t("partners.reject")}
                   >
                     <X size={16} />
                   </button>
                   <button
                     onClick={() => respondRequest(r.requestId, "accept")}
                     className="w-9 h-9 rounded-full bg-ios-pink text-white flex items-center justify-center ios-press"
-                    aria-label="Aceitar"
+                    aria-label={t("partners.accept")}
                   >
                     <Check size={16} strokeWidth={3} />
                   </button>
@@ -243,7 +251,7 @@ export default function PartnersPage() {
           ) : (
             outgoing.length === 0 ? (
               <div className="py-12 text-center text-muted-foreground text-subheadline">
-                Nenhum pedido enviado
+                {t("partners.noSent")}
               </div>
             ) : (
               outgoing.map((r) => (
@@ -257,14 +265,14 @@ export default function PartnersPage() {
                       {r.to.name}
                     </p>
                     <p className="text-caption-1 text-muted-foreground">
-                      Aguardando resposta
+                      {t("partners.waitingReply")}
                     </p>
                   </div>
                   <button
                     onClick={() => respondRequest(r.requestId, "decline")}
                     className="text-subheadline text-ios-red ios-press"
                   >
-                    Cancelar
+                    {t("partners.cancel")}
                   </button>
                 </div>
               ))
@@ -276,11 +284,11 @@ export default function PartnersPage() {
       <BottomSheet
         open={showInvite}
         onClose={() => setShowInvite(false)}
-        title="Pedir parceria"
+        title={t("partners.requestTitle")}
       >
         <form onSubmit={sendRequest} className="flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="partner-email">E-mail do sistema</Label>
+            <Label htmlFor="partner-email">{t("partners.emailLabel")}</Label>
             <div className="relative">
               <Mail
                 size={16}
@@ -291,7 +299,7 @@ export default function PartnersPage() {
                 type="email"
                 value={inviteEmail}
                 onChange={(e) => setInviteEmail(e.target.value)}
-                placeholder="parceria@email.com"
+                placeholder={t("partners.emailPlaceholder")}
                 required
                 className="pl-9"
               />
@@ -299,7 +307,7 @@ export default function PartnersPage() {
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="partner-message">Mensagem (opcional)</Label>
+            <Label htmlFor="partner-message">{t("partners.messageLabel")}</Label>
             <textarea
               id="partner-message"
               value={inviteMessage}
@@ -320,7 +328,7 @@ export default function PartnersPage() {
             className="w-full"
           >
             <Heart size={16} />
-            {sending ? "Enviando..." : "Enviar pedido"}
+            {sending ? t("partners.sending") : t("partners.sendRequest")}
           </Button>
         </form>
       </BottomSheet>
