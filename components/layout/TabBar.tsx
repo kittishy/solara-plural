@@ -19,8 +19,8 @@ import { cn } from "@/lib/utils";
 import { BottomSheet } from "@/components/glass/BottomSheet";
 import { useLanguage } from "@/components/providers/LanguageProvider";
 
-const tabHrefs = ["/", "/members", "/front", "/chat"];
-const moreHrefList = ["/journal", "/friends", "/partners", "/notes", "/notifications", "/settings"];
+const tabHrefs = ["/", "/members", "/front", "/journal"];
+const moreHrefList = ["/chat", "/friends", "/partners", "/notes", "/notifications", "/settings"];
 
 export function TabBar() {
   const pathname = usePathname();
@@ -31,11 +31,11 @@ export function TabBar() {
     { href: "/", icon: Home, label: t("nav.home") },
     { href: "/members", icon: Users, label: t("nav.members") },
     { href: "/front", icon: Layers, label: t("front.title") },
-    { href: "/chat", icon: MessageCircle, label: t("nav.chat") },
+    { href: "/journal", icon: BookOpen, label: t("journal.title") },
   ];
 
   const moreItems = [
-    { href: "/journal", icon: BookOpen, label: t("journal.title") },
+    { href: "/chat", icon: MessageCircle, label: t("nav.chat") },
     { href: "/friends", icon: Users, label: t("nav.friends") },
     { href: "/partners", icon: Heart, label: t("nav.partners") },
     { href: "/notes", icon: FileText, label: t("notes.title") },
