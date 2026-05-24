@@ -2,7 +2,7 @@
 
 import useSWR, { mutate } from "swr";
 import { useState } from "react";
-import { Clock, Plus, Check, Square, CheckSquare, Link as LinkIcon } from "lucide-react";
+import { Clock, Plus, Check } from "lucide-react";
 import Link from "next/link";
 import { LargeTitle } from "@/components/layout/NavBar";
 import { GlassCard } from "@/components/glass/GlassCard";
@@ -13,6 +13,7 @@ import { BottomSheet } from "@/components/glass/BottomSheet";
 import { apiFetcher, swrKeys, revalidateMembersAndFront } from "@/lib/swr";
 import DynamicAvatarImage from "@/components/ui/DynamicAvatarImage";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/components/providers/LanguageProvider";
 
 type Member = {
   id: string;
@@ -32,12 +33,12 @@ type FrontEntry = {
 
 function formatTime(value: string | number | Date) {
   const d = new Date(value);
-  return d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+  return d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
 }
 
 function formatDate(value: string | number | Date) {
   const d = new Date(value);
-  return d.toLocaleDateString("pt-BR", { day: "numeric", month: "short" });
+  return d.toLocaleDateString(undefined, { day: "numeric", month: "short" });
 }
 
 function MemberAvatar({ member, size = 12 }: { member: Member; size?: number }) {
@@ -68,6 +69,7 @@ function MemberAvatar({ member, size = 12 }: { member: Member; size?: number }) 
 }
 
 export default function FrontPage() {
+  const { t } = useLanguage();
   const { data: currentFront, isLoading: loadingFront } = useSWR<FrontEntry | null>(
     swrKeys.front,
     apiFetcher
@@ -134,7 +136,7 @@ export default function FrontPage() {
   return (
     <div className="animate-fade-in">
       <div className="px-4 pt-14 pb-2 flex items-end justify-between">
-        <LargeTitle className="px-0">Frente</LargeTitle>
+        <LargeTitle className="px-0">{t("front.title")}</LargeTitle>
         <Button size="icon" className="mb-1" onClick={() => setSheetOpen(true)}>
           <Plus size={20} />
         </Button>
@@ -143,7 +145,7 @@ export default function FrontPage() {
       {/* Currently fronting */}
       <div className="px-4 mb-4">
         <p className="text-footnote font-semibold text-muted-foreground uppercase tracking-wide mb-2 px-1">
-          Agora
+          {t("front.now")}
         </p>
         <GlassCard padding="none" className="overflow-hidden">
           {loadingFront ? (
@@ -163,10 +165,10 @@ export default function FrontPage() {
                 <Plus size={20} className="text-muted-foreground" />
               </div>
               <p className="text-subheadline text-muted-foreground">
-                Ninguém na frente agora
+                {t("front.noOneFronting")}
               </p>
               <p className="text-caption-1 text-ios-blue font-semibold">
-                Iniciar frente
+                {t("front.startFrontCta")}
               </p>
             </button>
           ) : (
@@ -186,10 +188,10 @@ export default function FrontPage() {
                     )}
                     <p className="text-caption-1 text-muted-foreground flex items-center gap-1 mt-0.5">
                       <Clock size={11} />
-                      desde {formatTime(currentFront!.startedAt)}
+                      {t("front.sinceTime" as Parameters<typeof t>[0], { time: formatTime(currentFront!.startedAt) })}
                     </p>
                   </div>
-                  <Badge variant="success">Frente</Badge>
+                  <Badge variant="success">{t("members.fronting")}</Badge>
                 </div>
               );
             })
@@ -201,16 +203,16 @@ export default function FrontPage() {
       <div className="px-4 mb-6">
         <div className="flex items-center justify-between mb-2 px-1">
           <p className="text-footnote font-semibold text-muted-foreground uppercase tracking-wide">
-            Histórico
+            {t("front.history")}
           </p>
           <Link href="/front/history" className="text-subheadline text-ios-blue ios-press">
-            Ver tudo
+            {t("front.seeAll")}
           </Link>
         </div>
         <GlassCard padding="none" className="overflow-hidden">
           {history.length === 0 ? (
             <div className="py-6 text-center text-muted-foreground text-subheadline">
-              Sem histórico ainda
+              {t("front.noHistory")}
             </div>
           ) : (
             history.slice(0, 8).map((entry) => {
@@ -244,13 +246,15 @@ export default function FrontPage() {
       <BottomSheet
         open={sheetOpen}
         onClose={() => setSheetOpen(false)}
-        title="Quem está na frente?"
+        title={t("front.whoIsFronting")}
       >
         <div className="flex flex-col gap-3">
           {/* Selected count */}
           {frontingIds.length > 0 && (
             <p className="text-caption-1 text-ios-blue font-semibold text-center -mt-1">
-              {frontingIds.length} {frontingIds.length === 1 ? "membro selecionado" : "membros selecionados"}
+              {frontingIds.length === 1
+                ? t("front.selected" as Parameters<typeof t>[0], { n: frontingIds.length })
+                : t("front.selectedPlural" as Parameters<typeof t>[0], { n: frontingIds.length })}
             </p>
           )}
 
@@ -270,13 +274,13 @@ export default function FrontPage() {
               </div>
             ) : memberList.length === 0 ? (
               <div className="py-10 text-center flex flex-col items-center gap-2">
-                <p className="text-body text-muted-foreground">Nenhum membro criado ainda</p>
+                <p className="text-body text-muted-foreground">{t("members.noMembers")}</p>
                 <Link
                   href="/members/new"
                   onClick={() => setSheetOpen(false)}
                   className="text-subheadline text-ios-blue font-semibold ios-press"
                 >
-                  Criar primeiro membro
+                  {t("front.createMemberFirst")}
                 </Link>
               </div>
             ) : (
@@ -349,7 +353,7 @@ export default function FrontPage() {
               onClick={endFront}
               disabled={updating}
             >
-              {updating ? "Encerrando..." : "Encerrar frente"}
+              {updating ? t("front.ending2") : t("front.endFront2")}
             </Button>
           )}
         </div>
