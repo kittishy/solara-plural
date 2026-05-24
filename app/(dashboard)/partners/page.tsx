@@ -227,7 +227,7 @@ export default function PartnersPage() {
                     </p>
                     {r.message && (
                       <p className="text-caption-1 text-muted-foreground truncate">
-                        "{r.message}"
+                        &ldquo;{r.message}&rdquo;
                       </p>
                     )}
                   </div>
