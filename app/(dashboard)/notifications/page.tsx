@@ -68,13 +68,13 @@ export default function NotificationsPage() {
     const result = await requestAndSavePushToken();
     if (!result.success) {
       const messages: Record<string, string> = {
-        notifications_unsupported: "Seu navegador não suporta notificações",
-        push_unsupported: "Push não é suportado neste navegador",
-        permission_not_granted: "Permissão negada",
-        web_push_not_configured: "Push ainda não está configurado no servidor",
-        subscription_save_failed: "Falha ao salvar inscrição",
+        notifications_unsupported: t("notifications.errors.unsupported"),
+        push_unsupported: t("notifications.errors.pushUnsupported"),
+        permission_not_granted: t("notifications.errors.denied"),
+        web_push_not_configured: t("notifications.errors.notConfigured"),
+        subscription_save_failed: t("notifications.errors.saveFailed"),
       };
-      setPushError(messages[result.reason] ?? "Erro desconhecido");
+      setPushError(messages[result.reason] ?? t("common.error"));
     } else {
       setPermission("granted");
     }
@@ -113,7 +113,7 @@ export default function NotificationsPage() {
       : permission === "denied"
         ? t("notifications.pushBlocked")
         : permission === "unsupported"
-          ? "Not supported"
+          ? t("notifications.pushUnsupported")
           : t("notifications.pushDisabled");
 
   return (
@@ -139,10 +139,10 @@ export default function NotificationsPage() {
               </p>
               <p className="text-caption-1 text-muted-foreground">
                 {permission === "granted"
-                  ? "You will receive real-time notifications"
+                  ? t("notifications.pushEnabledDesc")
                   : permission === "denied"
-                    ? "Enable in browser settings"
-                    : "Receive real-time notifications"}
+                    ? t("notifications.pushBlockedDesc")
+                    : t("notifications.pushDisabledDesc")}
               </p>
             </div>
             {permission === "default" && (

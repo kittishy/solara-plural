@@ -20,6 +20,7 @@ import { BottomSheet } from "@/components/glass/BottomSheet";
 import { apiFetcher, swrKeys } from "@/lib/swr";
 import DynamicAvatarImage from "@/components/ui/DynamicAvatarImage";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/components/providers/LanguageProvider";
 
 type SystemSummary = {
   id: string;
@@ -86,6 +87,7 @@ function SystemAvatar({
 }
 
 export default function FriendsPage() {
+  const { t } = useLanguage();
   const { data, isLoading } = useSWR<FriendsPayload>(
     swrKeys.friends,
     apiFetcher
@@ -116,7 +118,7 @@ export default function FriendsPage() {
       });
       const json = await res.json();
       if (!res.ok || !json.success) {
-        setInviteError(json.error ?? "Erro ao enviar pedido");
+        setInviteError(json.error ?? t("friends.sendError"));
         return;
       }
       setInviteEmail("");
@@ -152,16 +154,16 @@ export default function FriendsPage() {
   const blockedByMe = data?.blocks?.blockedByMe ?? [];
 
   const tabs = [
-    { id: "friends", label: "Amigos", count: friends.length },
-    { id: "received", label: "Recebidos", count: incoming.length },
-    { id: "sent", label: "Enviados", count: outgoing.length },
-    { id: "blocked", label: "Bloqueados", count: blockedByMe.length },
+    { id: "friends", label: t("friends.friends"), count: friends.length },
+    { id: "received", label: t("friends.received"), count: incoming.length },
+    { id: "sent", label: t("friends.sent"), count: outgoing.length },
+    { id: "blocked", label: t("friends.blocked"), count: blockedByMe.length },
   ] as const;
 
   return (
     <div className="animate-fade-in">
       <div className="px-4 pt-14 pb-2 flex items-end justify-between">
-        <LargeTitle className="px-0">Amigos</LargeTitle>
+        <LargeTitle className="px-0">{t("friends.title")}</LargeTitle>
         <Button size="icon" className="mb-1" onClick={() => setShowInvite(true)}>
           <UserPlus size={20} />
         </Button>
@@ -205,7 +207,7 @@ export default function FriendsPage() {
           ) : tab === "friends" ? (
             friends.length === 0 ? (
               <div className="py-12 text-center text-muted-foreground text-subheadline">
-                Nenhum amigo ainda
+                {t("friends.noFriends")}
               </div>
             ) : (
               friends.map((f) => (
@@ -231,7 +233,7 @@ export default function FriendsPage() {
           ) : tab === "received" ? (
             incoming.length === 0 ? (
               <div className="py-12 text-center text-muted-foreground text-subheadline">
-                Nenhum pedido recebido
+                {t("friends.noReceived")}
               </div>
             ) : (
               incoming.map((r) => (
@@ -253,14 +255,14 @@ export default function FriendsPage() {
                   <button
                     onClick={() => respondRequest(r.friendshipId, "decline")}
                     className="w-9 h-9 rounded-full bg-secondary flex items-center justify-center ios-press"
-                    aria-label="Recusar"
+                    aria-label={t("friends.reject")}
                   >
                     <X size={16} />
                   </button>
                   <button
                     onClick={() => respondRequest(r.friendshipId, "accept")}
                     className="w-9 h-9 rounded-full bg-ios-blue text-white flex items-center justify-center ios-press"
-                    aria-label="Aceitar"
+                    aria-label={t("friends.accept")}
                   >
                     <Check size={16} strokeWidth={3} />
                   </button>
@@ -270,7 +272,7 @@ export default function FriendsPage() {
           ) : tab === "sent" ? (
             outgoing.length === 0 ? (
               <div className="py-12 text-center text-muted-foreground text-subheadline">
-                Nenhum pedido enviado
+                {t("friends.noSent")}
               </div>
             ) : (
               outgoing.map((r) => (
@@ -284,14 +286,14 @@ export default function FriendsPage() {
                       {r.to.name}
                     </p>
                     <p className="text-caption-1 text-muted-foreground">
-                      Aguardando resposta
+                      {t("friends.waitingReply")}
                     </p>
                   </div>
                   <button
                     onClick={() => respondRequest(r.friendshipId, "decline")}
                     className="text-subheadline text-ios-red ios-press"
                   >
-                    Cancelar
+                    {t("friends.cancel")}
                   </button>
                 </div>
               ))
@@ -299,7 +301,7 @@ export default function FriendsPage() {
           ) : (
             blockedByMe.length === 0 ? (
               <div className="py-12 text-center text-muted-foreground text-subheadline">
-                Ninguém bloqueado
+                {t("friends.noBlocked")}
               </div>
             ) : (
               blockedByMe.map((b) => (
@@ -317,7 +319,7 @@ export default function FriendsPage() {
                     onClick={() => unblock(b.system.id)}
                     className="text-subheadline text-ios-blue ios-press"
                   >
-                    Desbloquear
+                    {t("friends.unblock")}
                   </button>
                 </div>
               ))
@@ -330,11 +332,11 @@ export default function FriendsPage() {
       <BottomSheet
         open={showInvite}
         onClose={() => setShowInvite(false)}
-        title="Convidar amigo"
+        title={t("friends.inviteTitle")}
       >
         <form onSubmit={sendRequest} className="flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="invite-email">E-mail do sistema</Label>
+            <Label htmlFor="invite-email">{t("friends.emailLabel")}</Label>
             <div className="relative">
               <Mail
                 size={16}
@@ -345,7 +347,7 @@ export default function FriendsPage() {
                 type="email"
                 value={inviteEmail}
                 onChange={(e) => setInviteEmail(e.target.value)}
-                placeholder="amigo@email.com"
+                placeholder={t("friends.emailPlaceholder")}
                 required
                 className="pl-9"
               />
@@ -353,14 +355,14 @@ export default function FriendsPage() {
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="invite-message">Mensagem (opcional)</Label>
+            <Label htmlFor="invite-message">{t("friends.messageLabel")}</Label>
             <textarea
               id="invite-message"
               value={inviteMessage}
               onChange={(e) => setInviteMessage(e.target.value)}
               rows={3}
               maxLength={500}
-              placeholder="Oi! Quer ser meu amigo no Solara?"
+              placeholder={t("friends.messagePlaceholder")}
               className="min-h-[80px] px-4 py-3 rounded-ios-sm bg-[var(--ios-bg-secondary)] text-body resize-y focus:outline-none focus:ring-2 focus:ring-ios-blue"
             />
           </div>
@@ -377,7 +379,7 @@ export default function FriendsPage() {
             className="w-full"
           >
             <UsersIcon size={16} />
-            {sending ? "Enviando..." : "Enviar pedido"}
+            {sending ? t("friends.sending") : t("friends.sendRequest")}
           </Button>
         </form>
       </BottomSheet>

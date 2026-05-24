@@ -20,6 +20,7 @@ import { BottomSheet } from "@/components/glass/BottomSheet";
 import { apiFetcher, swrKeys } from "@/lib/swr";
 import DynamicAvatarImage from "@/components/ui/DynamicAvatarImage";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/components/providers/LanguageProvider";
 
 type Channel = { id: string; name: string; sortOrder?: number };
 type Message = {
@@ -34,21 +35,6 @@ type Message = {
 };
 type Member = { id: string; name: string; color: string | null; avatarUrl: string | null };
 
-function formatTime(value: string | number | Date) {
-  return new Date(value).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
-}
-
-function formatDateLabel(value: string | number | Date) {
-  const d = new Date(value);
-  const today = new Date();
-  const yesterday = new Date(today);
-  yesterday.setDate(yesterday.getDate() - 1);
-
-  if (d.toDateString() === today.toDateString()) return "Hoje";
-  if (d.toDateString() === yesterday.toDateString()) return "Ontem";
-  return d.toLocaleDateString("pt-BR", { day: "numeric", month: "long", year: "numeric" });
-}
-
 function shouldShowTimeSeparator(prev: Message, curr: Message) {
   const gap = new Date(curr.createdAt).getTime() - new Date(prev.createdAt).getTime();
   return gap > 30 * 60 * 1000; // 30 minutes
@@ -60,6 +46,22 @@ function shouldShowDateSeparator(prev: Message | null, curr: Message) {
 }
 
 export default function ChatPage() {
+  const { t, language } = useLanguage();
+
+  function formatTime(value: string | number | Date) {
+    return new Date(value).toLocaleTimeString(language, { hour: "2-digit", minute: "2-digit" });
+  }
+
+  function formatDateLabel(value: string | number | Date) {
+    const d = new Date(value);
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    if (d.toDateString() === today.toDateString()) return t("chat.today");
+    if (d.toDateString() === yesterday.toDateString()) return t("chat.yesterday");
+    return d.toLocaleDateString(language, { day: "numeric", month: "long", year: "numeric" });
+  }
+
   const { data: channelsData, isLoading: loadingChannels } = useSWR<{ channels: Channel[] }>(
     "/api/chat/channels",
     apiFetcher
@@ -195,10 +197,10 @@ export default function ChatPage() {
             type="button"
             onClick={() => setShowSidebar(true)}
             className="flex items-center gap-1.5 text-ios-blue ios-press"
-            aria-label="Canais"
+            aria-label={t("chat.channels")}
           >
             <Menu size={20} />
-            <span className="text-body font-medium">Canais</span>
+            <span className="text-body font-medium">{t("chat.channels")}</span>
           </button>
           <h1 className="text-headline font-semibold text-foreground flex items-center gap-1.5 absolute left-1/2 -translate-x-1/2">
             <Hash size={14} className="text-muted-foreground" />
@@ -233,8 +235,8 @@ export default function ChatPage() {
           <div className="flex flex-col items-center justify-center h-full gap-3 pb-8 text-muted-foreground">
             <MessageCircle size={40} className="text-muted-foreground/30" />
             <div className="text-center">
-              <p className="text-body font-semibold">Ainda é silêncio por aqui</p>
-              <p className="text-subheadline mt-0.5">Qual de vocês quer começar?</p>
+              <p className="text-body font-semibold">{t("chat.emptyTitle")}</p>
+              <p className="text-subheadline mt-0.5">{t("chat.emptySubtitle")}</p>
             </div>
           </div>
         ) : (
@@ -293,7 +295,7 @@ export default function ChatPage() {
                           className="text-subheadline font-semibold"
                           style={{ color: msg.memberColor ?? undefined }}
                         >
-                          {msg.memberName ?? "Sistema"}
+                          {msg.memberName ?? t("chat.system")}
                         </span>
                         <span className="text-caption-2 text-muted-foreground">
                           {formatTime(msg.createdAt)}
@@ -309,7 +311,7 @@ export default function ChatPage() {
                       onClick={() => deleteMessage(msg.id)}
                       disabled={deletingMsgId === msg.id}
                       className="opacity-0 group-hover:opacity-100 focus:opacity-100 w-7 h-7 rounded-full bg-ios-red/10 text-ios-red flex items-center justify-center flex-shrink-0 ios-press disabled:opacity-30 transition-opacity mt-0.5"
-                      aria-label="Apagar mensagem"
+                      aria-label={t("chat.deleteMessage")}
                     >
                       <Trash2 size={13} />
                     </button>
@@ -335,7 +337,7 @@ export default function ChatPage() {
                 !selectedMemberId ? "bg-ios-blue text-white" : "bg-secondary text-muted-foreground"
               )}
             >
-              Sistema
+              {t("chat.system")}
             </button>
             {(membersList ?? []).map((m) => (
               <button
@@ -358,7 +360,7 @@ export default function ChatPage() {
               type="text"
               value={messageText}
               onChange={(e) => setMessageText(e.target.value)}
-              placeholder={`Mensagem como ${activeMember?.name ?? "sistema"}...`}
+              placeholder={t("chat.messagePlaceholderAs", { name: activeMember?.name ?? t("chat.system") })}
               maxLength={4000}
               className="flex-1 h-10 px-4 rounded-full bg-secondary text-body focus:outline-none focus:ring-2 focus:ring-ios-blue"
             />
@@ -375,7 +377,7 @@ export default function ChatPage() {
       )}
 
       {/* Channels sidebar sheet */}
-      <BottomSheet open={showSidebar} onClose={() => setShowSidebar(false)} title="Canais">
+      <BottomSheet open={showSidebar} onClose={() => setShowSidebar(false)} title={t("chat.channels")}>
         <div className="flex flex-col gap-1">
           {loadingChannels ? (
             <div className="flex flex-col gap-2">
@@ -384,7 +386,7 @@ export default function ChatPage() {
             </div>
           ) : channels.length === 0 ? (
             <p className="text-center text-muted-foreground text-subheadline py-4">
-              Nenhum canal — crie um
+              {t("chat.noChannels")}
             </p>
           ) : (
             channels.map((ch) => (
@@ -424,24 +426,24 @@ export default function ChatPage() {
               className="w-full flex items-center gap-2 px-3 py-2.5 rounded-ios-sm text-ios-blue ios-press"
             >
               <Plus size={16} />
-              <span className="text-body font-medium">Novo canal</span>
+              <span className="text-body font-medium">{t("chat.newChannel")}</span>
             </button>
           </div>
         </div>
       </BottomSheet>
 
       {/* New channel sheet */}
-      <BottomSheet open={showNewChannel} onClose={() => setShowNewChannel(false)} title="Novo canal">
+      <BottomSheet open={showNewChannel} onClose={() => setShowNewChannel(false)} title={t("chat.newChannel")}>
         <form onSubmit={createChannel} className="flex flex-col gap-4">
           <Input
             value={newChannelName}
             onChange={(e) => setNewChannelName(e.target.value)}
-            placeholder="Nome do canal"
+            placeholder={t("chat.channelName")}
             maxLength={50}
             autoFocus
           />
           <Button type="submit" disabled={creating || !newChannelName.trim()} className="w-full">
-            {creating ? "Criando..." : "Criar canal"}
+            {creating ? t("chat.creating") : t("chat.createChannel")}
           </Button>
         </form>
       </BottomSheet>
@@ -450,14 +452,14 @@ export default function ChatPage() {
       <BottomSheet
         open={confirmDeleteChannel !== null}
         onClose={() => setConfirmDeleteChannel(null)}
-        title="Excluir canal?"
+        title={t("chat.confirmDeleteTitle")}
       >
         {confirmDeleteChannel && (
           <div className="flex flex-col gap-4">
             <div className="flex items-start gap-3 p-3 rounded-ios-lg bg-ios-red/5 border border-ios-red/15">
               <AlertTriangle size={20} className="text-ios-red flex-shrink-0 mt-0.5" />
               <p className="text-body text-foreground">
-                Excluir <strong>#{confirmDeleteChannel.name}</strong>? Todas as mensagens serão perdidas permanentemente.
+                {t("chat.confirmDeleteChannel", { name: confirmDeleteChannel.name })}
               </p>
             </div>
             <div className="flex flex-col gap-2">
@@ -467,10 +469,10 @@ export default function ChatPage() {
                 disabled={deletingChannelId === confirmDeleteChannel.id}
                 className="w-full"
               >
-                {deletingChannelId === confirmDeleteChannel.id ? "Excluindo..." : "Sim, excluir canal"}
+                {deletingChannelId === confirmDeleteChannel.id ? t("chat.deleting") : t("chat.confirmDeleteBtn")}
               </Button>
               <Button variant="ghost" onClick={() => setConfirmDeleteChannel(null)} className="w-full">
-                Cancelar
+                {t("common.cancel")}
               </Button>
             </div>
           </div>
