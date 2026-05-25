@@ -4,7 +4,9 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, AlertTriangle } from "lucide-react";
-import { signOut } from "next-auth/react";
+import { signOut, useSession } from "next-auth/react";
+import { localizePathname } from "@/lib/i18n";
+import { useLanguage } from "@/components/providers/LanguageProvider";
 import { GlassCard } from "@/components/glass/GlassCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,12 +14,20 @@ import { Label } from "@/components/ui/label";
 
 export default function DeleteAccountPage() {
   const router = useRouter();
+  const { data: session } = useSession();
+  const { language } = useLanguage();
   const [confirmation, setConfirmation] = useState("");
-  const [password, setPassword] = useState("");
+  const [confirmEmail, setConfirmEmail] = useState("");
+  const [acknowledged, setAcknowledged] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
-  const canSubmit = confirmation === "EXCLUIR" && password.length > 0;
+  const accountEmail = session?.user?.email?.trim().toLowerCase() ?? "";
+  const canSubmit =
+    confirmation.trim().toUpperCase() === "EXCLUIR" &&
+    confirmEmail.trim().toLowerCase() === accountEmail &&
+    acknowledged &&
+    accountEmail.length > 0;
 
   async function handleDelete() {
     if (!canSubmit) return;
@@ -25,17 +35,20 @@ export default function DeleteAccountPage() {
     setSubmitting(true);
     try {
       const res = await fetch("/api/account/deletion", {
-        method: "POST",
+        method: "DELETE",
         credentials: "same-origin",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password }),
+        body: JSON.stringify({
+          confirmEmail,
+          acknowledgeRecoveryWindow: acknowledged,
+        }),
       });
       const json = await res.json();
       if (!res.ok || !json.success) {
-        setError(json.error ?? "Erro ao processar exclusão");
+        setError(json.error ?? "Erro ao processar exclusao");
         return;
       }
-      await signOut({ callbackUrl: "/login" });
+      await signOut({ callbackUrl: localizePathname("/login", language) });
     } finally {
       setSubmitting(false);
     }
@@ -64,25 +77,28 @@ export default function DeleteAccountPage() {
             <div className="w-12 h-12 rounded-full bg-ios-red/15 flex items-center justify-center">
               <AlertTriangle size={24} className="text-ios-red" />
             </div>
-            <h2 className="text-title-3 text-foreground">Atenção</h2>
+            <h2 className="text-title-3 text-foreground">Atencao</h2>
             <p className="text-body text-muted-foreground">
-              Isso vai excluir permanentemente sua conta, todos os membros, notas,
-              histórico de front, parcerias, amizades e qualquer dado associado.
+              Isso vai agendar a exclusao da sua conta, todos os membros, notas,
+              historico de front, parcerias, amizades e qualquer dado associado.
               <br />
               <br />
-              <strong className="text-foreground">Esta ação não pode ser desfeita.</strong>
+              <strong className="text-foreground">
+                Voce tera 72 horas para cancelar antes da remocao permanente.
+              </strong>
             </p>
           </div>
         </GlassCard>
 
         <GlassCard padding="lg" className="flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="password">Confirme sua senha</Label>
+            <Label htmlFor="confirmEmail">Confirme seu email</Label>
             <Input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              id="confirmEmail"
+              type="email"
+              value={confirmEmail}
+              onChange={(e) => setConfirmEmail(e.target.value)}
+              placeholder={session?.user?.email ?? "email@exemplo.com"}
             />
           </div>
 
@@ -98,6 +114,19 @@ export default function DeleteAccountPage() {
             />
           </div>
 
+          <label className="flex items-start gap-3 rounded-ios-sm bg-secondary p-3 ios-press">
+            <input
+              type="checkbox"
+              checked={acknowledged}
+              onChange={(e) => setAcknowledged(e.target.checked)}
+              className="mt-1 h-4 w-4 accent-ios-red"
+            />
+            <span className="text-subheadline text-muted-foreground">
+              Entendo que a conta fica em recuperacao por 72 horas e depois
+              pode ser removida permanentemente.
+            </span>
+          </label>
+
           {error && (
             <p className="text-subheadline text-ios-red text-center">{error}</p>
           )}
@@ -108,7 +137,7 @@ export default function DeleteAccountPage() {
             disabled={!canSubmit || submitting}
             className="w-full"
           >
-            {submitting ? "Excluindo..." : "Excluir minha conta para sempre"}
+            {submitting ? "Agendando..." : "Agendar exclusao da conta"}
           </Button>
 
           <Button

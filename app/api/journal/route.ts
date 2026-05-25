@@ -4,6 +4,7 @@ import { eq, desc } from 'drizzle-orm';
 import { requireAuth, ok, err, parseJsonRecord } from '@/lib/api/helpers';
 import { createId } from '@paralleldrive/cuid2';
 import { revalidatePath } from 'next/cache';
+import { resolveOwnedMemberIds } from '@/lib/api/member-ownership';
 
 export async function GET() {
   const auth = await requireAuth();
@@ -40,10 +41,12 @@ export async function POST(request: Request) {
   const content = typeof body.content === 'string' ? body.content.trim() : '';
   if (!content) return err('Content is required');
 
-  const frontingMemberIds =
-    Array.isArray(body.frontingMemberIds) && body.frontingMemberIds.every((v: unknown) => typeof v === 'string')
-      ? JSON.stringify(body.frontingMemberIds)
-      : null;
+  const frontingMembers = await resolveOwnedMemberIds(auth.systemId, body.frontingMemberIds, 'frontingMemberIds');
+  if (!frontingMembers.ok) return err(frontingMembers.error, 400);
+
+  const frontingMemberIds = frontingMembers.memberIds.length > 0
+    ? JSON.stringify(frontingMembers.memberIds)
+    : null;
 
   const now = new Date();
   const entry = await db.insert(systemJournal).values({

@@ -29,14 +29,14 @@ interface LanguageContextValue {
 
 const LanguageContext = createContext<LanguageContextValue | null>(null);
 
-function getNestedValue(obj: Record<string, unknown>, key: string): string {
+function getNestedValue(obj: Record<string, unknown> | undefined, key: string): string | undefined {
   const parts = key.split(".");
   let current: unknown = obj;
   for (const part of parts) {
-    if (current == null || typeof current !== "object") return key;
+    if (current == null || typeof current !== "object") return undefined;
     current = (current as Record<string, unknown>)[part];
   }
-  return typeof current === "string" ? current : key;
+  return typeof current === "string" ? current : undefined;
 }
 
 function detectLanguage(): Language {

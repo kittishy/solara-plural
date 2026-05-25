@@ -3,6 +3,7 @@ import { systemNotes } from '@/lib/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { requireAuth, ok, err, parseJsonRecord } from '@/lib/api/helpers';
 import { revalidatePath } from 'next/cache';
+import { resolveOptionalOwnedMemberId } from '@/lib/api/member-ownership';
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -31,12 +32,19 @@ export async function PUT(request: Request, { params }: Params) {
   const content = typeof body.content === 'string' ? body.content.trim() : '';
   if (!content) return err('Content is required');
 
+  let memberId: string | null | undefined;
+  if (Object.prototype.hasOwnProperty.call(body, 'memberId')) {
+    const member = await resolveOptionalOwnedMemberId(auth.systemId, body.memberId);
+    if (!member.ok) return err(member.error, 400);
+    memberId = member.memberId;
+  }
+
   const updated = await db.update(systemNotes)
     .set({
       title: typeof body.title === 'string' ? body.title.trim() || null : null,
       content,
       category: typeof body.category === 'string' ? body.category : null,
-      memberId: typeof body.memberId === 'string' ? body.memberId : null,
+      memberId,
       isPrivate: typeof body.isPrivate === 'boolean' ? (body.isPrivate ? 1 : 0) : undefined,
       updatedAt: new Date(),
     })

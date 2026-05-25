@@ -1,6 +1,6 @@
 import { db } from '@/lib/db';
 import { members } from '@/lib/db/schema';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, count } from 'drizzle-orm';
 import { requireAuth, ok, err, parseJsonRecord } from '@/lib/api/helpers';
 import { createId } from '@paralleldrive/cuid2';
 import { revalidatePath } from 'next/cache';
@@ -8,33 +8,46 @@ import { saveMemberCustomFieldValues } from '@/lib/member-custom-fields';
 import { parseStoredTags, readOptionalString, readTags } from '@/lib/members/fields';
 
 // GET /api/members — list all members for current system
-export async function GET() {
+export async function GET(request: Request) {
   const auth = await requireAuth();
   if (auth.error) return auth.error;
 
-  const result = await db.query.members.findMany({
-    columns: {
-      id: true,
-      name: true,
-      pronouns: true,
-      role: true,
-      tags: true,
-      color: true,
-      avatarUrl: true,
-    },
-    where: and(
-      eq(members.systemId, auth.systemId),
-      eq(members.isArchived, 0)
-    ),
-    orderBy: (m, { asc }) => [asc(m.name)],
-  });
+  const url = new URL(request.url);
+  const limit = Math.min(Math.max(parseInt(url.searchParams.get('limit') ?? '60', 10) || 60, 1), 100);
+  const offset = Math.max(parseInt(url.searchParams.get('offset') ?? '0', 10) || 0, 0);
 
-  const parsed = result.map((m) => ({
+  const where = and(
+    eq(members.systemId, auth.systemId),
+    eq(members.isArchived, 0)
+  );
+
+  const [result, totalRow] = await Promise.all([
+    db.query.members.findMany({
+      columns: {
+        id: true,
+        name: true,
+        pronouns: true,
+        role: true,
+        tags: true,
+        color: true,
+        avatarUrl: true,
+      },
+      where,
+      orderBy: (m, { asc }) => [asc(m.name)],
+      limit,
+      offset,
+    }),
+    db.select({ value: count() }).from(members).where(where),
+  ]);
+
+  const total = totalRow[0]?.value ?? 0;
+
+  const data = result.map((m) => ({
     ...m,
     tags: parseStoredTags(m.tags),
   }));
 
-  return ok(parsed, 200, {
+  return ok({ data, total }, 200, {
     headers: {
       'Cache-Control': 'private, max-age=0, s-maxage=30, stale-while-revalidate=120',
     },

@@ -3,14 +3,14 @@
 import useSWR, { mutate } from "swr";
 import Link from "next/link";
 import { Plus, Search, Minus, Sun, X } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { LargeTitle } from "@/components/layout/NavBar";
 import { GlassCard } from "@/components/glass/GlassCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { BottomSheet } from "@/components/glass/BottomSheet";
-import { apiFetcher, swrKeys, revalidateMembersAndFront } from "@/lib/swr";
+import { apiFetcher, swrKeys } from "@/lib/swr";
 import DynamicAvatarImage from "@/components/ui/DynamicAvatarImage";
 import { useLanguage } from "@/components/providers/LanguageProvider";
 import { cn } from "@/lib/utils";
@@ -27,17 +27,43 @@ type Member = {
 
 type FrontEntry = { memberIds: string[] };
 
+const PAGE_SIZE = 60;
+
 export default function MembersPage() {
   const { t } = useLanguage();
-  const { data: members, isLoading } = useSWR<Member[]>(swrKeys.members, apiFetcher);
+  const [page, setPage] = useState(0);
+  const [allMembers, setAllMembers] = useState<Member[]>([]);
+  const { data, isLoading } = useSWR<{ data: Member[]; total: number }>(
+    `/api/members?limit=${PAGE_SIZE}&offset=${page * PAGE_SIZE}`,
+    apiFetcher
+  );
   const { data: currentFront } = useSWR<FrontEntry | null>(swrKeys.front, apiFetcher);
   const [search, setSearch] = useState("");
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
   const [updating, setUpdating] = useState(false);
 
+  // Accumulate members as new pages arrive
+  useEffect(() => {
+    if (data?.data) {
+      setAllMembers((prev) => {
+        if (page === 0) return data.data;
+        const existingIds = new Set(prev.map((m) => m.id));
+        const newItems = data.data.filter((m) => !existingIds.has(m.id));
+        return newItems.length > 0 ? [...prev, ...newItems] : prev;
+      });
+    }
+  }, [data, page]);
+
+  const total = data?.total ?? 0;
   const frontingIds = currentFront?.memberIds ?? [];
   const frontingSet = new Set(frontingIds);
   const selectedIsFronting = selectedMember ? frontingSet.has(selectedMember.id) : false;
+
+  function revalidateAfterFrontChange() {
+    void mutate((key) => typeof key === "string" && key.startsWith("/api/members"));
+    void mutate(swrKeys.front);
+    void mutate(swrKeys.frontHistory);
+  }
 
   function openSheet(e: React.MouseEvent, member: Member) {
     e.preventDefault();
@@ -59,8 +85,7 @@ export default function MembersPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ memberIds: [...frontingIds, selectedMember.id] }),
       });
-      revalidateMembersAndFront();
-      void mutate(swrKeys.frontHistory);
+      revalidateAfterFrontChange();
       closeSheet();
     } finally {
       setUpdating(false);
@@ -82,8 +107,7 @@ export default function MembersPage() {
           body: JSON.stringify({ memberIds: newIds }),
         });
       }
-      revalidateMembersAndFront();
-      void mutate(swrKeys.frontHistory);
+      revalidateAfterFrontChange();
       closeSheet();
     } finally {
       setUpdating(false);
@@ -100,28 +124,30 @@ export default function MembersPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ memberIds: [selectedMember.id] }),
       });
-      revalidateMembersAndFront();
-      void mutate(swrKeys.frontHistory);
+      revalidateAfterFrontChange();
       closeSheet();
     } finally {
       setUpdating(false);
     }
   }
 
-  const list = members ?? [];
-  const filtered = list.filter((m) =>
-    m.name?.toLowerCase().includes(search.toLowerCase())
+  const q = search.toLowerCase();
+  const filtered = allMembers.filter((m) =>
+    m.name?.toLowerCase().includes(q) ||
+    m.pronouns?.toLowerCase().includes(q) ||
+    m.role?.toLowerCase().includes(q) ||
+    (m.tags ?? []).some(t => t.toLowerCase().includes(q))
   );
 
   return (
     <div className="animate-fade-in">
       <div className="px-4 pt-14 pb-2 flex items-end justify-between">
         <LargeTitle className="px-0">{t("members.title")}</LargeTitle>
-        <Link href="/members/new">
-          <Button size="icon" className="mb-1">
+        <Button asChild size="icon" className="mb-1">
+          <Link href="/members/new">
             <Plus size={20} />
-          </Button>
-        </Link>
+          </Link>
+        </Button>
       </div>
 
       {/* Search */}
@@ -162,12 +188,12 @@ export default function MembersPage() {
                 {search ? t("members.noMembersFound") : t("members.noMembers")}
               </p>
               {!search && (
-                <Link href="/members/new">
-                  <Button variant="outline" size="sm">
+                <Button asChild variant="outline" size="sm">
+                  <Link href="/members/new">
                     <Plus size={16} />
                     {t("members.addMember")}
-                  </Button>
-                </Link>
+                  </Link>
+                </Button>
               )}
             </div>
           ) : (
@@ -237,6 +263,18 @@ export default function MembersPage() {
                 </div>
               );
             })
+          )}
+          {!isLoading && allMembers.length < total && (
+            <div className="px-4 py-3 border-t border-border/50">
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full"
+                onClick={() => setPage((p) => p + 1)}
+              >
+                {t("members.loadMore", { remaining: total - allMembers.length })}
+              </Button>
+            </div>
           )}
         </GlassCard>
       </div>

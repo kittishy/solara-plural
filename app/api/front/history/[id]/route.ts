@@ -6,14 +6,14 @@ import { parseDatetimeLocalValue, serializeMemberIds } from '@/lib/front';
 import { revalidatePath } from 'next/cache';
 
 type RouteContext = {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 };
 
 export async function PUT(request: Request, { params }: RouteContext) {
   const auth = await requireAuth();
   if (auth.error) return auth.error;
 
-  const { id } = params;
+  const { id } = await params;
   const existing = await db.query.frontEntries.findFirst({
     where: and(eq(frontEntries.id, id), eq(frontEntries.systemId, auth.systemId)),
   });

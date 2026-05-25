@@ -9,6 +9,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { GlassCard } from "@/components/glass/GlassCard";
 
+function getResetPasswordErrorMessage(code: unknown) {
+  if (code === "RATE_LIMITED") return "Muitas tentativas. Aguarde um pouco e tente novamente.";
+  if (code === "INVALID_TOKEN") return "Link invalido ou expirado. Solicite uma nova redefinicao.";
+  if (code === "WEAK_PASSWORD") return "Use uma senha com pelo menos 8 caracteres.";
+  return "Erro ao redefinir senha";
+}
+
 function ResetPasswordForm() {
   const searchParams = useSearchParams();
   const token = searchParams.get("token") ?? "";
@@ -39,9 +46,10 @@ function ResetPasswordForm() {
         body: JSON.stringify({ token, password }),
       });
 
-      if (!res.ok) {
-        const json = await res.json();
-        setError(json.error ?? "Erro ao redefinir senha");
+      const json = await res.json().catch(() => null);
+
+      if (!res.ok || !json?.success) {
+        setError(json?.error ?? getResetPasswordErrorMessage(json?.code));
         return;
       }
 
@@ -63,9 +71,9 @@ function ResetPasswordForm() {
           <p className="text-body text-foreground">
             Senha redefinida com sucesso!
           </p>
-          <Link href="/login">
-            <Button size="sm">Entrar</Button>
-          </Link>
+          <Button asChild size="sm">
+            <Link href="/login">Entrar</Link>
+          </Button>
         </div>
       </GlassCard>
     );

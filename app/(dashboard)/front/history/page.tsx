@@ -1,11 +1,17 @@
 "use client";
 
-import useSWR from "swr";
-import { ArrowLeft, Clock } from "lucide-react";
+import useSWR, { mutate } from "swr";
+import { useState } from "react";
+import { ArrowLeft, Clock, Plus, Pencil, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { GlassCard } from "@/components/glass/GlassCard";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
+import { BottomSheet } from "@/components/glass/BottomSheet";
 import { apiFetcher, swrKeys } from "@/lib/swr";
+import { useLanguage } from "@/components/providers/LanguageProvider";
 
 type Member = {
   id: string;
@@ -21,26 +27,34 @@ type FrontEntry = {
   note?: string | null;
 };
 
-function formatDateTime(value: string | number | Date) {
-  return new Date(value).toLocaleString("pt-BR", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
-function formatDuration(start: Date, end: Date) {
-  const ms = end.getTime() - start.getTime();
-  const min = Math.floor(ms / 60000);
-  const h = Math.floor(min / 60);
-  const m = min % 60;
-  if (h > 0) return `${h}h ${m}m`;
-  return `${m}m`;
-}
+const nowLocal = () => {
+  const d = new Date();
+  d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+  return d.toISOString().slice(0, 16);
+};
 
 export default function FrontHistoryPage() {
+  const { t, language } = useLanguage();
+
+  function formatDateTime(value: string | number | Date) {
+    return new Date(value).toLocaleString(language, {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  }
+
+  function formatDuration(start: Date, end: Date) {
+    const ms = end.getTime() - start.getTime();
+    const min = Math.floor(ms / 60000);
+    const h = Math.floor(min / 60);
+    const m = min % 60;
+    if (h > 0) return `${h}h ${m}m`;
+    return `${m}m`;
+  }
+
   const { data: history, isLoading } = useSWR<FrontEntry[]>(
     swrKeys.frontHistory,
     apiFetcher
@@ -50,20 +64,112 @@ export default function FrontHistoryPage() {
   const memberById = new Map((members ?? []).map((m) => [m.id, m]));
   const entries = history ?? [];
 
+  const [showEntryForm, setShowEntryForm] = useState(false);
+  const [editEntry, setEditEntry] = useState<FrontEntry | null>(null);
+  const [formMemberIds, setFormMemberIds] = useState<string[]>([]);
+  const [formStartedAt, setFormStartedAt] = useState(nowLocal());
+  const [formEndedAt, setFormEndedAt] = useState(nowLocal());
+  const [formNote, setFormNote] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [formError, setFormError] = useState("");
+
+  function openNewForm() {
+    setEditEntry(null);
+    setFormMemberIds([]);
+    setFormStartedAt(nowLocal());
+    setFormEndedAt(nowLocal());
+    setFormNote("");
+    setFormError("");
+    setShowEntryForm(true);
+  }
+
+  function openEditForm(entry: FrontEntry) {
+    setEditEntry(entry);
+    setFormMemberIds(entry.memberIds);
+    const started = new Date(entry.startedAt);
+    started.setMinutes(started.getMinutes() - started.getTimezoneOffset());
+    setFormStartedAt(started.toISOString().slice(0, 16));
+    if (entry.endedAt) {
+      const ended = new Date(entry.endedAt);
+      ended.setMinutes(ended.getMinutes() - ended.getTimezoneOffset());
+      setFormEndedAt(ended.toISOString().slice(0, 16));
+    } else {
+      setFormEndedAt(nowLocal());
+    }
+    setFormNote(entry.note ?? "");
+    setFormError("");
+    setShowEntryForm(true);
+  }
+
+  async function saveEntry(e: React.FormEvent) {
+    e.preventDefault();
+    setFormError("");
+    if (formMemberIds.length === 0) {
+      setFormError("Select at least one member");
+      return;
+    }
+    if (new Date(formEndedAt) < new Date(formStartedAt)) {
+      setFormError("End time must be after start time");
+      return;
+    }
+    setSaving(true);
+    try {
+      const body = {
+        memberIds: formMemberIds,
+        startedAt: formStartedAt,
+        endedAt: formEndedAt,
+        note: formNote.trim() || undefined,
+      };
+      const url = editEntry
+        ? `/api/front/history/${editEntry.id}`
+        : "/api/front/history";
+      const method = editEntry ? "PUT" : "POST";
+      const res = await fetch(url, {
+        method,
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) {
+        const json = await res.json();
+        setFormError(json.error ?? "Failed to save entry");
+        return;
+      }
+      setShowEntryForm(false);
+      void mutate(swrKeys.frontHistory);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function toggleMemberInForm(id: string) {
+    setFormMemberIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
+  }
+
   return (
     <div className="animate-fade-in pb-8">
       <div className="sticky top-0 z-40 glass border-b border-border/40">
-        <div className="flex items-center px-4 h-11">
+        <div className="flex items-center justify-between px-4 h-11">
           <Link
             href="/front"
             className="flex items-center gap-1 text-ios-blue ios-press -ml-1"
           >
             <ArrowLeft size={18} strokeWidth={2.5} />
-            <span className="text-body">Frente</span>
+            <span className="text-body">{t("front.title")}</span>
           </Link>
           <h1 className="text-headline font-semibold text-foreground absolute left-1/2 -translate-x-1/2">
-            Histórico
+            {t("front.history")}
           </h1>
+          <button
+            type="button"
+            onClick={openNewForm}
+            className="text-ios-blue ios-press"
+            aria-label={t("front.addEntry")}
+          >
+            <Plus size={20} />
+          </button>
         </div>
       </div>
 
@@ -83,11 +189,11 @@ export default function FrontHistoryPage() {
             </div>
           ) : entries.length === 0 ? (
             <div className="py-12 text-center text-muted-foreground text-subheadline">
-              Sem histórico
+              {t("front.noHistory")}
             </div>
           ) : (
             entries.map((entry) => {
-              const memberNames = entry.memberIds
+              const entryMembers = entry.memberIds
                 .map((id) => memberById.get(id))
                 .filter(Boolean) as Member[];
               const duration =
@@ -96,12 +202,12 @@ export default function FrontHistoryPage() {
               return (
                 <div
                   key={entry.id}
-                  className="flex items-start gap-3 px-4 py-3.5 border-b border-border/50 last:border-0"
+                  className="group flex items-start gap-3 px-4 py-3.5 border-b border-border/50 last:border-0"
                 >
                   <Clock size={16} className="text-muted-foreground flex-shrink-0 mt-1" />
                   <div className="flex-1 min-w-0">
                     <div className="flex flex-wrap items-center gap-1.5 mb-1">
-                      {memberNames.map((m) => (
+                      {entryMembers.map((m) => (
                         <span
                           key={m.id}
                           className="px-2 py-0.5 rounded-full text-caption-1 font-semibold"
@@ -125,12 +231,102 @@ export default function FrontHistoryPage() {
                       </p>
                     )}
                   </div>
+                  <div className="flex gap-1 flex-shrink-0 mt-0.5">
+                    <button
+                      type="button"
+                      onClick={() => openEditForm(entry)}
+                      className="w-7 h-7 rounded-full bg-secondary flex items-center justify-center ios-press opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
+                      aria-label={t("members.edit")}
+                    >
+                      <Pencil size={13} />
+                    </button>
+                  </div>
                 </div>
               );
             })
           )}
         </GlassCard>
       </div>
+
+      <BottomSheet
+        open={showEntryForm}
+        onClose={() => setShowEntryForm(false)}
+        title={editEntry ? t("front.editEntry") : t("front.addEntry")}
+      >
+        <form onSubmit={saveEntry} className="flex flex-col gap-4">
+          <div className="flex flex-col gap-1.5">
+            <Label>{t("front.members")}</Label>
+            <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto p-2 rounded-ios-md bg-secondary">
+              {(members ?? []).map((m) => {
+                const selected = formMemberIds.includes(m.id);
+                return (
+                  <button
+                    key={m.id}
+                    type="button"
+                    onClick={() => toggleMemberInForm(m.id)}
+                    className={`px-3 py-1.5 rounded-full text-caption-1 font-semibold ios-transition ${
+                      selected
+                        ? "bg-ios-blue/20 text-ios-blue"
+                        : "bg-muted text-muted-foreground"
+                    }`}
+                  >
+                    {m.name}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="fe-start">{t("front.startTime")}</Label>
+            <Input
+              id="fe-start"
+              type="datetime-local"
+              value={formStartedAt}
+              onChange={(e) => setFormStartedAt(e.target.value)}
+              required
+            />
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="fe-end">{t("front.endTime")}</Label>
+            <Input
+              id="fe-end"
+              type="datetime-local"
+              value={formEndedAt}
+              onChange={(e) => setFormEndedAt(e.target.value)}
+              required
+            />
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="fe-note">{t("front.note")}</Label>
+            <Input
+              id="fe-note"
+              value={formNote}
+              onChange={(e) => setFormNote(e.target.value)}
+              placeholder={t("front.notePlaceholder")}
+              maxLength={500}
+            />
+          </div>
+
+          {formError && (
+            <p className="text-subheadline text-ios-red text-center">{formError}</p>
+          )}
+
+          <Button type="submit" disabled={saving} className="w-full">
+            {saving ? t("common.saving") : editEntry ? t("common.save") : t("front.addEntry")}
+          </Button>
+          <Button
+            variant="ghost"
+            type="button"
+            onClick={() => setShowEntryForm(false)}
+            className="w-full"
+          >
+            {t("common.cancel")}
+          </Button>
+        </form>
+      </BottomSheet>
     </div>
   );
 }

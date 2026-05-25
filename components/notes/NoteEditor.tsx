@@ -27,6 +27,7 @@ export function NoteEditor({ noteId }: NoteEditorProps) {
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [category, setCategory] = useState("");
+  const [memberId, setMemberId] = useState<string | null>(null);
   const [isPrivate, setIsPrivate] = useState(false);
 
   useEffect(() => {
@@ -42,6 +43,7 @@ export function NoteEditor({ noteId }: NoteEditorProps) {
           setTitle(json.data.title ?? "");
           setContent(json.data.content ?? "");
           setCategory(json.data.category ?? "");
+          setMemberId(typeof json.data.memberId === "string" ? json.data.memberId : null);
           setIsPrivate(json.data.isPrivate === 1 || json.data.isPrivate === true);
         }
       } finally {
@@ -67,6 +69,7 @@ export function NoteEditor({ noteId }: NoteEditorProps) {
         title: title.trim() || null,
         content: content.trim(),
         category: category.trim() || null,
+        memberId,
         isPrivate,
       };
       const res = await fetch(

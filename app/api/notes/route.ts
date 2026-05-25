@@ -4,6 +4,7 @@ import { eq, and, desc } from 'drizzle-orm';
 import { requireAuth, ok, err, parseJsonRecord } from '@/lib/api/helpers';
 import { createId } from '@paralleldrive/cuid2';
 import { revalidatePath } from 'next/cache';
+import { resolveOptionalOwnedMemberId } from '@/lib/api/member-ownership';
 
 // GET /api/notes
 export async function GET() {
@@ -15,7 +16,9 @@ export async function GET() {
       id: true,
       title: true,
       content: true,
+      memberId: true,
       category: true,
+      isPrivate: true,
       updatedAt: true,
     },
     where: eq(systemNotes.systemId, auth.systemId),
@@ -41,11 +44,14 @@ export async function POST(request: Request) {
   const content = typeof body.content === 'string' ? body.content.trim() : '';
   if (!content) return err('Content is required');
 
+  const member = await resolveOptionalOwnedMemberId(auth.systemId, body.memberId);
+  if (!member.ok) return err(member.error, 400);
+
   const now = new Date();
   const note = await db.insert(systemNotes).values({
     id:        createId(),
     systemId:  auth.systemId,
-    memberId:  typeof body.memberId === 'string' ? body.memberId : null,
+    memberId:  member.memberId,
     title:     typeof body.title === 'string' ? body.title.trim() || null : null,
     content,
     category:  typeof body.category === 'string' ? body.category : null,

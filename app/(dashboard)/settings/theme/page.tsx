@@ -238,6 +238,37 @@ export default function ThemeSettingsPage() {
               </p>
             </div>
 
+            {/* Upload */}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-caption-1 text-muted-foreground font-medium flex items-center gap-1.5">
+                <Image size={13} />
+                Ou faça upload
+              </label>
+              <label className="flex items-center justify-center gap-2 py-3 rounded-ios-md bg-secondary ios-press cursor-pointer">
+                <Image size={16} className="text-ios-blue" />
+                <span className="text-body text-ios-blue font-medium">Escolher arquivo</span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    const reader = new FileReader();
+                    reader.onload = (ev) => {
+                      const dataUrl = ev.target?.result as string;
+                      setWallpaperInput(dataUrl);
+                      setAppearance((prev) => ({ ...prev, wallpaperUrl: dataUrl }));
+                    };
+                    reader.readAsDataURL(file);
+                  }}
+                />
+              </label>
+              <p className="text-caption-2 text-muted-foreground px-0.5">
+                PNG, JPG ou WebP
+              </p>
+            </div>
+
             <div className="flex flex-col gap-3">
               {/* Dim slider */}
               <div className="flex flex-col gap-1.5">

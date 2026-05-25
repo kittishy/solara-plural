@@ -64,7 +64,7 @@ export default function ChatPage() {
     return d.toLocaleDateString(language, { day: "numeric", month: "long", year: "numeric" });
   }
 
-  const { data: channelsData, isLoading: loadingChannels } = useSWR<{ channels: Channel[] }>(
+  const { data: channelsData, isLoading: loadingChannels, error: channelsError } = useSWR<{ channels: Channel[] }>(
     "/api/chat/channels",
     apiFetcher
   );
@@ -99,6 +99,7 @@ export default function ChatPage() {
 
   const messages = messagesData?.messages ?? [];
   const activeChannel = channels.find((c) => c.id === activeChannelId);
+  const chatUnavailableMessage = channelsError instanceof Error ? channelsError.message : "";
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -222,7 +223,19 @@ export default function ChatPage() {
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto px-3 py-3">
-        {loadingMessages ? (
+        {chatUnavailableMessage ? (
+          <div className="flex h-full flex-col items-center justify-center gap-3 pb-8 text-center text-muted-foreground">
+            <AlertTriangle size={40} className="text-ios-red/60" />
+            <div>
+              <p className="text-body font-semibold text-foreground">
+                Chat indisponivel
+              </p>
+              <p className="text-subheadline mt-0.5">
+                {chatUnavailableMessage}
+              </p>
+            </div>
+          </div>
+        ) : loadingMessages ? (
           <div className="flex flex-col gap-4 pt-2">
             {[1, 2, 3, 4].map((i) => (
               <div key={i} className="flex gap-3">
@@ -328,7 +341,7 @@ export default function ChatPage() {
       </div>
 
       {/* Input bar — Telegram style */}
-      {activeChannelId && (
+      {!chatUnavailableMessage && activeChannelId && (
         <div className="shrink-0 border-t border-border/40 glass px-3 pt-2 pb-3">
           <form onSubmit={sendMessage} className="flex items-center gap-2">
             {/* Member avatar — tap to open picker */}

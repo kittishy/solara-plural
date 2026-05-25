@@ -15,6 +15,9 @@ import {
   LogOut,
   Palette,
   ListPlus,
+  RefreshCw,
+  AlertTriangle,
+  GitFork,
 } from "lucide-react";
 import { LargeTitle } from "@/components/layout/NavBar";
 import { GroupedSection, GroupedRow } from "@/components/glass/GlassCard";
@@ -23,19 +26,52 @@ import { Button } from "@/components/ui/button";
 import { useTheme } from "next-themes";
 import { LanguageSelector } from "@/components/language/LanguageSelector";
 import { useLanguage } from "@/components/providers/LanguageProvider";
+import { localizePathname } from "@/lib/i18n";
+import { BottomSheet } from "@/components/glass/BottomSheet";
 
 export default function SettingsPage() {
   const { data: session } = useSession();
   const { theme } = useTheme();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const [signingOut, setSigningOut] = useState(false);
+  const [showAccountType, setShowAccountType] = useState(false);
+  const [switchingType, setSwitchingType] = useState(false);
+  const [typeError, setTypeError] = useState("");
+
+  const currentType: "system" | "singlet" = (session?.user as { accountType?: "system" | "singlet" } | undefined)?.accountType ?? "system";
+
+  async function handleSwitchType() {
+    const targetType = currentType === "system" ? "singlet" : "system";
+    setSwitchingType(true);
+    setTypeError("");
+    try {
+      const res = await fetch("/api/account/type", {
+        method: "PUT",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          accountType: targetType,
+          acknowledgeDataRisk: true,
+        }),
+      });
+      if (!res.ok) {
+        const json = await res.json();
+        setTypeError(json.error ?? "Erro ao alterar tipo de conta");
+        return;
+      }
+      setShowAccountType(false);
+      window.location.reload();
+    } finally {
+      setSwitchingType(false);
+    }
+  }
 
   const themeLabel =
     theme === "light" ? "Light" : theme === "dark" ? "Dark" : "System";
 
   async function handleSignOut() {
     setSigningOut(true);
-    await signOut({ callbackUrl: "/login" });
+    await signOut({ callbackUrl: localizePathname("/login", language) });
   }
 
   async function handleExport() {
@@ -132,6 +168,14 @@ export default function SettingsPage() {
               className="cursor-pointer"
             />
           </Link>
+          <Link href="/settings/integrations">
+            <GroupedRow
+              label="Integrações"
+              icon={<GitFork size={18} />}
+              chevron
+              className="cursor-pointer"
+            />
+          </Link>
         </GroupedSection>
       </div>
 
@@ -165,6 +209,14 @@ export default function SettingsPage() {
               className="cursor-pointer"
             />
           </Link>
+          <GroupedRow
+            label={t("settings.accountType")}
+            value={currentType === "singlet" ? t("settings.singlet") : t("settings.system")}
+            icon={<RefreshCw size={18} />}
+            chevron
+            className="cursor-pointer"
+            onClick={() => setShowAccountType(true)}
+          />
         </GroupedSection>
       </div>
 
@@ -222,6 +274,47 @@ export default function SettingsPage() {
           {signingOut ? t("settings.signingOut") : t("settings.signOut")}
         </Button>
       </div>
+
+      <BottomSheet
+        open={showAccountType}
+        onClose={() => setShowAccountType(false)}
+        title={t("settings.accountType")}
+      >
+        <div className="flex flex-col gap-4">
+          <div className="flex items-start gap-3 p-3 rounded-ios-lg bg-ios-blue/5 border border-ios-blue/15">
+            <RefreshCw size={20} className="text-ios-blue flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-body font-semibold text-foreground">
+                {currentType === "singlet" ? t("settings.system") : t("settings.singlet")}
+              </p>
+              <p className="text-subheadline text-muted-foreground mt-1">
+                {currentType === "singlet"
+                  ? "Upgrade to a full system account with member management, front tracking, and all features."
+                  : "Switch to a simplified singlet profile. Members and front history are preserved."}
+              </p>
+            </div>
+          </div>
+
+          {typeError && (
+            <p className="text-subheadline text-ios-red text-center">{typeError}</p>
+          )}
+
+          <Button
+            onClick={handleSwitchType}
+            disabled={switchingType}
+            className="w-full"
+          >
+            {switchingType ? t("common.saving") : t("common.confirm")}
+          </Button>
+          <Button
+            variant="ghost"
+            onClick={() => setShowAccountType(false)}
+            className="w-full"
+          >
+            {t("common.cancel")}
+          </Button>
+        </div>
+      </BottomSheet>
     </div>
   );
 }

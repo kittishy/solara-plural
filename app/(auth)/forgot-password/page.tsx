@@ -59,11 +59,11 @@ export default function ForgotPasswordPage() {
             <p className="text-body text-foreground">
               E-mail enviado! Verifique sua caixa de entrada.
             </p>
-            <Link href="/login">
-              <Button variant="ghost" size="sm">
+            <Button asChild variant="ghost" size="sm">
+              <Link href="/login">
                 Voltar ao login
-              </Button>
-            </Link>
+              </Link>
+            </Button>
           </div>
         </GlassCard>
       ) : (

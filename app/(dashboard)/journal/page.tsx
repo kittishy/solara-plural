@@ -45,11 +45,11 @@ export default function JournalPage() {
     <div className="animate-fade-in">
       <div className="px-4 pt-14 pb-2 flex items-end justify-between">
         <LargeTitle className="px-0">Diário</LargeTitle>
-        <Link href="/journal/new">
-          <Button size="icon" className="mb-1">
+        <Button asChild size="icon" className="mb-1">
+          <Link href="/journal/new">
             <Plus size={20} />
-          </Button>
-        </Link>
+          </Link>
+        </Button>
       </div>
 
       <div className="px-4">
@@ -81,12 +81,12 @@ export default function JournalPage() {
                   Registre seus pensamentos
                 </p>
               </div>
-              <Link href="/journal/new">
-                <Button variant="outline" size="sm">
+              <Button asChild variant="outline" size="sm">
+                <Link href="/journal/new">
                   <Plus size={16} />
                   Nova entrada
-                </Button>
-              </Link>
+                </Link>
+              </Button>
             </div>
           ) : (
             entries.map((entry) => (

@@ -3,12 +3,14 @@
 import useSWR from "swr";
 import Link from "next/link";
 import { Plus, FileText, Lock } from "lucide-react";
+import { useState } from "react";
 import { LargeTitle } from "@/components/layout/NavBar";
 import { GlassCard } from "@/components/glass/GlassCard";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { apiFetcher, swrKeys } from "@/lib/swr";
 import { useLanguage } from "@/components/providers/LanguageProvider";
+import { cn } from "@/lib/utils";
 
 type Note = {
   id: string;
@@ -29,19 +31,56 @@ function formatDate(value: string | number | Date) {
 
 export default function NotesPage() {
   const { t } = useLanguage();
+  const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
   const { data, isLoading } = useSWR<Note[]>(swrKeys.notes, apiFetcher);
   const notes = data ?? [];
+
+  const categories = Array.from(new Set(notes.map((n) => n.category).filter(Boolean) as string[]));
+  const filtered = categoryFilter
+    ? notes.filter((n) => n.category === categoryFilter)
+    : notes;
 
   return (
     <div className="animate-fade-in">
       <div className="px-4 pt-14 pb-2 flex items-end justify-between">
         <LargeTitle className="px-0">{t("notes.title")}</LargeTitle>
-        <Link href="/notes/new">
-          <Button size="icon" className="mb-1">
+        <Button asChild size="icon" className="mb-1">
+          <Link href="/notes/new">
             <Plus size={20} />
-          </Button>
-        </Link>
+          </Link>
+        </Button>
       </div>
+
+      {/* Category filter */}
+      {categories.length > 0 && (
+        <div className="px-4 mb-3 flex gap-1.5 overflow-x-auto scrollbar-none">
+          <button
+            onClick={() => setCategoryFilter(null)}
+            className={cn(
+              "px-3 py-1.5 rounded-full text-caption-1 font-semibold whitespace-nowrap ios-transition",
+              categoryFilter === null
+                ? "bg-ios-blue text-white"
+                : "bg-secondary text-muted-foreground"
+            )}
+          >
+            {t("common.all")}
+          </button>
+          {categories.map((cat) => (
+            <button
+              key={cat}
+              onClick={() => setCategoryFilter(cat)}
+              className={cn(
+                "px-3 py-1.5 rounded-full text-caption-1 font-semibold whitespace-nowrap ios-transition",
+                categoryFilter === cat
+                  ? "bg-ios-blue text-white"
+                  : "bg-ios-blue/10 text-ios-blue"
+              )}
+            >
+              {cat}
+            </button>
+          ))}
+        </div>
+      )}
 
       <div className="px-4">
         <GlassCard padding="none" className="overflow-hidden">
@@ -55,26 +94,26 @@ export default function NotesPage() {
                 </div>
               ))}
             </div>
-          ) : notes.length === 0 ? (
+          ) : filtered.length === 0 ? (
             <div className="py-12 text-center flex flex-col items-center gap-3">
               <FileText size={36} className="text-muted-foreground/40" />
               <div>
                 <p className="text-body font-semibold text-foreground">
-                  {t("notes.noNotes")}
+                  {categoryFilter ? `Nenhuma nota em "${categoryFilter}"` : t("notes.noNotes")}
                 </p>
                 <p className="text-subheadline text-muted-foreground mt-1">
                   {t("notes.createFirst")}
                 </p>
               </div>
-              <Link href="/notes/new">
-                <Button variant="outline" size="sm">
+              <Button asChild variant="outline" size="sm">
+                <Link href="/notes/new">
                   <Plus size={16} />
                   {t("notes.new")}
-                </Button>
-              </Link>
+                </Link>
+              </Button>
             </div>
           ) : (
-            notes.map((note) => (
+            filtered.map((note) => (
               <Link
                 key={note.id}
                 href={`/notes/${note.id}`}

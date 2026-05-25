@@ -16,9 +16,9 @@ type PushResult = {
 function getVapidConfig() {
   const publicKey = process.env.NEXT_PUBLIC_WEB_PUSH_VAPID_PUBLIC_KEY;
   const privateKey = process.env.WEB_PUSH_VAPID_PRIVATE_KEY;
-  const subject = process.env.WEB_PUSH_VAPID_SUBJECT || 'mailto:solara.julia.a@gmail.com';
+  const subject = process.env.WEB_PUSH_VAPID_SUBJECT;
 
-  if (!publicKey || !privateKey) return null;
+  if (!publicKey || !privateKey || !subject) return null;
   return { publicKey, privateKey, subject };
 }
 
@@ -60,4 +60,3 @@ export async function sendPushMessages(messages: PushMessage[]): Promise<PushRes
 export function shouldRevokePushSubscription(errorCode: string | null): boolean {
   return errorCode === 'web_push_404' || errorCode === 'web_push_410';
 }
-

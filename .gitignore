@@ -49,6 +49,9 @@ Gemfile.lock
 vendor/bundle/
 .bundle/
 
+# quarantined migrations (agent artifacts)
+drizzle/migrations/quarantined/
+
 # local skills (agent reference, not for git)
 /.skills/
 /.agents/
@@ -58,5 +61,12 @@ vendor/bundle/
 AGENTS.md
 CLAUDE.md
 skills-lock.json
+
+# agent tool artifacts
+callback.txt
+mailmap.txt
+filter_claude.py
+.gemini/
+docs/AGENT_SWARM_REFERENCES.md
 
 

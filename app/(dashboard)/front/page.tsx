@@ -42,9 +42,11 @@ function formatDate(value: string | number | Date) {
 }
 
 function MemberAvatar({ member, size = 12 }: { member: Member; size?: number }) {
+  const sizeClass = size <= 10 ? "w-10 h-10" : "w-12 h-12";
+
   return (
     <div
-      className={`w-${size} h-${size} rounded-full overflow-hidden flex items-center justify-center flex-shrink-0`}
+      className={cn(sizeClass, "rounded-full overflow-hidden flex items-center justify-center flex-shrink-0")}
       style={{ background: member.color ? `${member.color}22` : "#8E8E9322" }}
     >
       {member.avatarUrl ? (
