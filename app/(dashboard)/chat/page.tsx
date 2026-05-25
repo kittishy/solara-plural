@@ -10,6 +10,8 @@ import {
   Menu,
   Trash2,
   AlertTriangle,
+  Smile,
+  Paperclip,
 } from "lucide-react";
 import { LargeTitle } from "@/components/layout/NavBar";
 import { GlassCard } from "@/components/glass/GlassCard";
@@ -80,6 +82,7 @@ export default function ChatPage() {
   const [deletingChannelId, setDeletingChannelId] = useState<string | null>(null);
   const [confirmDeleteChannel, setConfirmDeleteChannel] = useState<Channel | null>(null);
   const [deletingMsgId, setDeletingMsgId] = useState<string | null>(null);
+  const [showMemberPicker, setShowMemberPicker] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -324,57 +327,135 @@ export default function ChatPage() {
         )}
       </div>
 
-      {/* Input bar */}
+      {/* Input bar — Telegram style */}
       {activeChannelId && (
         <div className="shrink-0 border-t border-border/40 glass px-3 pt-2 pb-3">
-          {/* Member selector chips */}
-          <div className="flex gap-1.5 mb-2 overflow-x-auto pb-0.5 scrollbar-none">
+          <form onSubmit={sendMessage} className="flex items-center gap-2">
+            {/* Member avatar — tap to open picker */}
             <button
               type="button"
-              onClick={() => setSelectedMemberId(null)}
-              className={cn(
-                "px-3 py-1 rounded-full text-caption-1 font-semibold whitespace-nowrap ios-press flex-shrink-0",
-                !selectedMemberId ? "bg-ios-blue text-white" : "bg-secondary text-muted-foreground"
+              onClick={() => setShowMemberPicker(true)}
+              className="w-9 h-9 rounded-full overflow-hidden flex items-center justify-center flex-shrink-0 ios-press border-2 border-border/40"
+              style={{ background: activeMember?.color ? `${activeMember.color}22` : "#8E8E9322" }}
+            >
+              {activeMember?.avatarUrl ? (
+                <DynamicAvatarImage
+                  src={activeMember.avatarUrl}
+                  alt={activeMember.name}
+                  className="w-full h-full object-cover"
+                />
+              ) : activeMember ? (
+                <span
+                  className="text-caption-1 font-bold"
+                  style={{ color: activeMember.color ?? "#8E8E93" }}
+                >
+                  {activeMember.name[0].toUpperCase()}
+                </span>
+              ) : (
+                <span className="text-base">☀️</span>
               )}
-            >
-              {t("chat.system")}
             </button>
-            {(membersList ?? []).map((m) => (
-              <button
-                key={m.id}
-                type="button"
-                onClick={() => setSelectedMemberId(m.id)}
-                className="px-3 py-1 rounded-full text-caption-1 font-semibold whitespace-nowrap ios-press flex-shrink-0"
-                style={{
-                  background: selectedMemberId === m.id ? (m.color ?? "#007AFF") : (m.color ? `${m.color}22` : "#E5E5EA"),
-                  color: selectedMemberId === m.id ? "white" : (m.color ?? "#000000"),
-                }}
-              >
-                {m.name}
-              </button>
-            ))}
-          </div>
 
-          <form onSubmit={sendMessage} className="flex gap-2 items-center">
-            <input
-              type="text"
-              value={messageText}
-              onChange={(e) => setMessageText(e.target.value)}
-              placeholder={t("chat.messagePlaceholderAs", { name: activeMember?.name ?? t("chat.system") })}
-              maxLength={4000}
-              className="flex-1 h-10 px-4 rounded-full bg-secondary text-body focus:outline-none focus:ring-2 focus:ring-ios-blue"
-            />
-            <button
-              type="submit"
-              disabled={!messageText.trim() || sending}
-              className="w-10 h-10 rounded-full bg-ios-blue text-white flex items-center justify-center ios-press disabled:opacity-40 flex-shrink-0"
-              aria-label="Enviar"
-            >
-              <Send size={16} />
-            </button>
+            {/* Input pill */}
+            <div className="flex-1 flex items-center gap-1.5 h-10 px-3 rounded-full bg-secondary">
+              <Smile size={18} className="text-muted-foreground flex-shrink-0" />
+              <input
+                type="text"
+                value={messageText}
+                onChange={(e) => setMessageText(e.target.value)}
+                placeholder={t("chat.messagePlaceholderAs", { name: activeMember?.name ?? t("chat.system") })}
+                maxLength={4000}
+                className="flex-1 bg-transparent text-body focus:outline-none min-w-0"
+              />
+              {!messageText.trim() && (
+                <Paperclip size={18} className="text-muted-foreground flex-shrink-0" />
+              )}
+            </div>
+
+            {/* Send button — only when there's text */}
+            {messageText.trim() && (
+              <button
+                type="submit"
+                disabled={sending}
+                className="w-9 h-9 rounded-full bg-ios-blue text-white flex items-center justify-center ios-press disabled:opacity-40 flex-shrink-0"
+                aria-label={t("common.send")}
+              >
+                <Send size={16} />
+              </button>
+            )}
           </form>
         </div>
       )}
+
+      {/* Member picker — "Send as..." */}
+      <BottomSheet
+        open={showMemberPicker}
+        onClose={() => setShowMemberPicker(false)}
+        title={t("chat.sendAs")}
+      >
+        <div className="flex flex-col gap-1">
+          {/* System option */}
+          <button
+            type="button"
+            onClick={() => { setSelectedMemberId(null); setShowMemberPicker(false); }}
+            className={cn(
+              "flex items-center gap-3 px-3 py-3 rounded-ios-lg ios-press ios-transition",
+              !selectedMemberId ? "bg-ios-blue/10" : "hover:bg-secondary"
+            )}
+          >
+            <div className="w-11 h-11 rounded-full bg-secondary flex items-center justify-center flex-shrink-0 text-xl">
+              ☀️
+            </div>
+            <div className="flex-1 text-left min-w-0">
+              <p className={cn("text-body font-semibold", !selectedMemberId ? "text-ios-blue" : "text-foreground")}>
+                {t("chat.system")}
+              </p>
+              <p className="text-caption-1 text-muted-foreground">{t("chat.systemAccount")}</p>
+            </div>
+            {!selectedMemberId && (
+              <div className="w-5 h-5 rounded-full bg-ios-blue flex items-center justify-center flex-shrink-0">
+                <Send size={10} className="text-white" />
+              </div>
+            )}
+          </button>
+
+          {/* Members */}
+          {(membersList ?? []).map((m) => (
+            <button
+              key={m.id}
+              type="button"
+              onClick={() => { setSelectedMemberId(m.id); setShowMemberPicker(false); }}
+              className={cn(
+                "flex items-center gap-3 px-3 py-3 rounded-ios-lg ios-press ios-transition",
+                selectedMemberId === m.id ? "bg-ios-blue/10" : "hover:bg-secondary"
+              )}
+            >
+              <div
+                className="w-11 h-11 rounded-full overflow-hidden flex items-center justify-center flex-shrink-0"
+                style={{ background: m.color ? `${m.color}22` : "#8E8E9322" }}
+              >
+                {m.avatarUrl ? (
+                  <DynamicAvatarImage src={m.avatarUrl} alt={m.name} className="w-full h-full object-cover" />
+                ) : (
+                  <span className="text-subheadline font-bold" style={{ color: m.color ?? "#8E8E93" }}>
+                    {m.name[0].toUpperCase()}
+                  </span>
+                )}
+              </div>
+              <div className="flex-1 text-left min-w-0">
+                <p className={cn("text-body font-semibold truncate", selectedMemberId === m.id ? "text-ios-blue" : "text-foreground")}>
+                  {m.name}
+                </p>
+              </div>
+              {selectedMemberId === m.id && (
+                <div className="w-5 h-5 rounded-full bg-ios-blue flex items-center justify-center flex-shrink-0">
+                  <Send size={10} className="text-white" />
+                </div>
+              )}
+            </button>
+          ))}
+        </div>
+      </BottomSheet>
 
       {/* Channels sidebar sheet */}
       <BottomSheet open={showSidebar} onClose={() => setShowSidebar(false)} title={t("chat.channels")}>
