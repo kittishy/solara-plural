@@ -1,7 +1,7 @@
 "use client";
 
 import useSWR, { mutate } from "swr";
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   MessageCircle,
   Plus,
@@ -11,7 +11,6 @@ import {
   Trash2,
   AlertTriangle,
   Smile,
-  Paperclip,
   Search,
   X,
   ImageUp,
@@ -19,7 +18,6 @@ import {
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { LargeTitle } from "@/components/layout/NavBar";
-import { GlassCard } from "@/components/glass/GlassCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -215,7 +213,7 @@ export default function ChatPage() {
     });
   }
 
-  const handleFileUpload = useCallback(async (file: File) => {
+  async function handleFileUpload(file: File) {
     if (file.size > 20 * 1024 * 1024) {
       return;
     }
@@ -232,7 +230,7 @@ export default function ChatPage() {
     } finally {
       setUploading(false);
     }
-  }, []);
+  }
 
   const activeMember = (membersList ?? []).find((m) => m.id === selectedMemberId);
 

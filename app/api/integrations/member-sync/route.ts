@@ -616,27 +616,31 @@ function planExportToPluralKit(
       const changedFields: string[] = [];
       const patch: Record<string, unknown> = {};
 
-      const candidates: Record<string, string | null> = {
-        name: member.name,
-        display_name: member.name,
-        color: member.color ? member.color.replace('#', '') : null,
-        pronouns: member.pronouns,
-        description: member.description,
-        avatar_url: member.avatarUrl,
-      };
-
-      for (const [field, value] of Object.entries(candidates)) {
-        const current = (member as Record<string, unknown>)[field] ?? null;
-        const next = value ?? null;
-        if (JSON.stringify(current) !== JSON.stringify(next)) {
-          patch[field] = next;
-          changedFields.push(field);
-        }
+      if (member.name) {
+        patch.name = member.name;
+        patch.display_name = member.name;
+        changedFields.push('name', 'display_name');
+      }
+      if (member.color) {
+        patch.color = member.color.replace('#', '');
+        changedFields.push('color');
+      }
+      if (member.pronouns) {
+        patch.pronouns = member.pronouns;
+        changedFields.push('pronouns');
+      }
+      if (member.description) {
+        patch.description = member.description;
+        changedFields.push('description');
+      }
+      if (member.avatarUrl) {
+        patch.avatar_url = member.avatarUrl;
+        changedFields.push('avatar_url');
       }
 
       operations.push({
         ...base,
-        action: changedFields.length > 0 ? 'update' : 'unchanged',
+        action: 'update',
         reason: 'linked',
         externalId: link.externalId,
         memberId: member.id,
@@ -687,63 +691,72 @@ async function applyExportToPluralKit(
   token: string,
   existingLinks: typeof memberExternalLinks.$inferSelect[],
 ) {
+  const headers = {
+    Authorization: token,
+    'User-Agent': SOLARA_USER_AGENT,
+    'Content-Type': 'application/json',
+    Accept: 'application/json',
+  };
+
   for (const op of operations) {
-    if (op.action === 'skip' || op.action === 'unchanged') continue;
+    if (op.action === 'skip') continue;
 
-    const headers = {
-      Authorization: token,
-      'User-Agent': SOLARA_USER_AGENT,
-      'Content-Type': 'application/json',
-      Accept: 'application/json',
-    };
-
-    if (op.action === 'create' && op.member && op.memberId) {
-      const body = await remoteJsonWithBody(
-        `${PLURALKIT_BASE_URL}/systems/@me/members`,
-        { method: 'POST', headers, body: JSON.stringify(op.member) },
-      );
-      const record = toRecord(body);
-      const uuid = readId(record, ['uuid', 'id']);
-      const shortId = typeof record.id === 'string' ? record.id : null;
-
-      if (uuid) {
-        const now = new Date();
-        const linkRow = existingLinks.find(
-          (l) => l.memberId === op.memberId && l.provider === PROVIDERS.PLURALKIT,
+    try {
+      if (op.action === 'create' && op.member && op.memberId) {
+        const body = await remoteJsonWithBody(
+          `${PLURALKIT_BASE_URL}/systems/@me/members`,
+          { method: 'POST', headers, body: JSON.stringify(op.member) },
         );
-        if (linkRow) {
-          await db
-            .update(memberExternalLinks)
-            .set({
+        const record = toRecord(body);
+        const uuid = readId(record, ['uuid', 'id']);
+        const shortId = typeof record.id === 'string' ? record.id : null;
+
+        if (uuid) {
+          const now = new Date();
+          const linkRow = existingLinks.find(
+            (l) => l.memberId === op.memberId && l.provider === PROVIDERS.PLURALKIT,
+          );
+          if (linkRow) {
+            await db
+              .update(memberExternalLinks)
+              .set({
+                externalId: uuid,
+                externalSecondaryId: shortId && shortId !== uuid ? shortId : null,
+                externalName: op.name,
+                lastSyncedAt: now,
+                updatedAt: now,
+              })
+              .where(eq(memberExternalLinks.id, linkRow.id));
+          } else {
+            await db.insert(memberExternalLinks).values({
+              id: createId(),
+              systemId,
+              provider: PROVIDERS.PLURALKIT,
+              memberId: op.memberId,
               externalId: uuid,
               externalSecondaryId: shortId && shortId !== uuid ? shortId : null,
               externalName: op.name,
-              lastSyncedAt: now,
+              createdAt: now,
               updatedAt: now,
-            })
-            .where(eq(memberExternalLinks.id, linkRow.id));
-        } else {
-          await db.insert(memberExternalLinks).values({
-            id: createId(),
-            systemId,
-            provider: PROVIDERS.PLURALKIT,
-            memberId: op.memberId,
-            externalId: uuid,
-            externalSecondaryId: shortId && shortId !== uuid ? shortId : null,
-            externalName: op.name,
-            createdAt: now,
-            updatedAt: now,
-            lastSyncedAt: now,
-          });
+              lastSyncedAt: now,
+            });
+          }
         }
+        continue;
       }
-    }
 
-    if (op.action === 'update' && op.externalId && op.patch && Object.keys(op.patch).length > 0) {
-      await remoteJsonWithBody(
-        `${PLURALKIT_BASE_URL}/systems/@me/members/${op.externalId}`,
-        { method: 'PATCH', headers, body: JSON.stringify(op.patch) },
-      );
+      if (op.action === 'update' && op.externalId && op.patch && Object.keys(op.patch).length > 0) {
+        await remoteJsonWithBody(
+          `${PLURALKIT_BASE_URL}/systems/@me/members/${op.externalId}`,
+          { method: 'PATCH', headers, body: JSON.stringify(op.patch) },
+        );
+      }
+    } catch (error) {
+      if (error instanceof RemoteSyncError && error.status === 404) {
+        // member was deleted from PK — skip and continue
+        continue;
+      }
+      throw error;
     }
   }
 }
