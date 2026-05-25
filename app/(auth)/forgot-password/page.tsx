@@ -1,100 +1,106 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import Link from 'next/link';
-import { LanguageSelector } from '@/components/language/LanguageSelector';
-import { useLanguage } from '@/components/providers/LanguageProvider';
+import { useState } from "react";
+import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { GlassCard } from "@/components/glass/GlassCard";
 
 export default function ForgotPasswordPage() {
-  const { t } = useLanguage();
-  const [email, setEmail] = useState('');
-  const [status, setStatus] = useState('');
-  const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [sent, setSent] = useState(false);
+  const [error, setError] = useState("");
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setStatus('');
-    setError('');
+    setError("");
     setLoading(true);
+    const form = e.currentTarget;
+    const data = new FormData(form);
 
-    const response = await fetch('/api/password-reset/request', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email }),
-    });
-    const result = await response.json().catch(() => null);
+    try {
+      const res = await fetch("/api/password-reset/request", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: data.get("email") }),
+      });
 
-    setLoading(false);
-    if (!response.ok || !result?.success) {
-      const errorKey = result?.code === 'EMAIL_NOT_CONFIGURED'
-        ? 'auth.forgot.notConfigured'
-        : 'auth.forgot.sendFailed';
-      setError(t(errorKey));
-      return;
+      if (!res.ok) {
+        const json = await res.json();
+        setError(json.error ?? "Erro ao enviar e-mail");
+        return;
+      }
+
+      setSent(true);
+    } catch {
+      setError("Erro ao enviar. Tente novamente.");
+    } finally {
+      setLoading(false);
     }
-
-    setStatus(t('auth.forgot.sent'));
   }
 
   return (
-    <div className="w-full max-w-md animate-fade-in">
-      <div className="text-center mb-8">
-        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/15 shadow-glow mb-4">
-          <span className="text-3xl">☀️</span>
-        </div>
-        <h1 className="text-3xl font-bold text-text">Solara Plural</h1>
-        <p className="text-muted mt-2 text-sm">{t('auth.forgot.tagline')}</p>
+    <div className="flex flex-col items-center gap-8 animate-fade-in">
+      <div className="text-center">
+        <h1 className="text-title-1 text-foreground">Recuperar senha</h1>
+        <p className="text-subheadline text-muted-foreground mt-1">
+          Enviaremos um link para o seu e-mail
+        </p>
       </div>
 
-      <div className="card p-8 animate-slide-up" style={{ animationDelay: '80ms' }}>
-        <h2 className="text-xl font-semibold text-text mb-2">{t('auth.forgot.title')}</h2>
-        <p className="text-sm text-muted mb-6">{t('auth.forgot.helper')}</p>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <LanguageSelector />
-
-          <div>
-            <label htmlFor="email" className="label">{t('auth.login.email')}</label>
-            <input
-              id="email"
-              type="email"
-              autoComplete="email"
-              required
-              className="input"
-              placeholder="your@email.com"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-            />
+      {sent ? (
+        <GlassCard className="w-full text-center" padding="lg">
+          <div className="flex flex-col items-center gap-3">
+            <div className="w-16 h-16 rounded-full bg-ios-green/12 flex items-center justify-center">
+              <span className="text-3xl">✉️</span>
+            </div>
+            <p className="text-body text-foreground">
+              E-mail enviado! Verifique sua caixa de entrada.
+            </p>
+            <Link href="/login">
+              <Button variant="ghost" size="sm">
+                Voltar ao login
+              </Button>
+            </Link>
           </div>
+        </GlassCard>
+      ) : (
+        <GlassCard className="w-full" padding="lg">
+          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="email">E-mail</Label>
+              <Input
+                id="email"
+                name="email"
+                type="email"
+                placeholder="seu@email.com"
+                autoComplete="email"
+                required
+              />
+            </div>
 
-          {status && (
-            <p role="status" className="text-success text-sm bg-success/10 border border-success/20 rounded-xl px-3 py-2">
-              {status}
-            </p>
-          )}
+            {error && (
+              <p className="text-subheadline text-ios-red text-center">
+                {error}
+              </p>
+            )}
 
-          {error && (
-            <p role="alert" className="text-error text-sm bg-error/10 border border-error/20 rounded-xl px-3 py-2">
-              {error}
-            </p>
-          )}
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading ? "Enviando..." : "Enviar link"}
+            </Button>
+          </form>
+        </GlassCard>
+      )}
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="btn-primary w-full justify-center mt-2 min-h-[48px] text-base"
-          >
-            {loading ? t('auth.forgot.sending') : t('auth.forgot.send')}
-          </button>
-        </form>
-      </div>
-
-      <p className="text-center text-muted text-sm mt-6">
-        <Link href="/login" className="text-primary hover:text-primary-glow transition-colors duration-150">
-          {t('auth.forgot.backToLogin')}
-        </Link>
-      </p>
+      <Link
+        href="/login"
+        className="flex items-center gap-1 text-ios-blue text-subheadline hover:opacity-80 ios-transition"
+      >
+        <ArrowLeft size={16} />
+        Voltar ao login
+      </Link>
     </div>
   );
 }

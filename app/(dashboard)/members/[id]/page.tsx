@@ -1,453 +1,278 @@
-import { db } from '@/lib/db';
-import { customFields, frontEntries, memberFieldValues, members } from '@/lib/db/schema';
-import { eq, and, asc, desc, like, isNull } from 'drizzle-orm';
-import { notFound } from 'next/navigation';
-import Link from 'next/link';
-import DynamicAvatarImage from '@/components/ui/DynamicAvatarImage';
-import { ScrollToTopOnMount } from '@/components/ui/ScrollToTopOnMount';
-import { requireSystemId } from '@/lib/auth/session';
-import { parseCustomFieldType, parseStoredCustomFieldOptions } from '@/lib/custom-fields';
-import { ensureAccentReadable } from '@/lib/theme';
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { ArrowLeft, Pencil, Clock } from "lucide-react";
+import { db } from "@/lib/db";
+import {
+  members,
+  frontEntries,
+  customFields,
+} from "@/lib/db/schema";
+import { and, eq, desc, isNull } from "drizzle-orm";
+import { requireSystemId } from "@/lib/auth/session";
+import { parseMemberIds } from "@/lib/front";
+import { parseStoredTags } from "@/lib/members/fields";
+import { parseStoredCustomFieldOptions } from "@/lib/custom-fields";
+import { readMemberCustomFieldValues } from "@/lib/member-custom-fields";
+import { GlassCard, GroupedSection } from "@/components/glass/GlassCard";
+import DynamicAvatarImage from "@/components/ui/DynamicAvatarImage";
 
-function formatDuration(start: Date, end: Date): string {
-  const ms = end.getTime() - start.getTime();
-  const mins = Math.floor(ms / 60000);
-  if (mins < 1) return 'less than a minute';
-  if (mins < 60) return `${mins}m`;
-  const hours = Math.floor(mins / 60);
-  const rem = mins % 60;
-  return rem > 0 ? `${hours}h ${rem}m` : `${hours}h`;
+function formatDate(value: Date | number | null) {
+  if (!value) return "—";
+  const d = typeof value === "number" ? new Date(value * 1000) : value;
+  return d.toLocaleDateString("pt-BR", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
 }
 
-function IconChevronLeft() {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
-      stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M15 18l-6-6 6-6" />
-    </svg>
-  );
+function formatDateTime(value: Date | number | null) {
+  if (!value) return "—";
+  const d = typeof value === "number" ? new Date(value * 1000) : value;
+  return d.toLocaleString("pt-BR", {
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
-function IconEdit() {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none"
-      stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-    </svg>
-  );
-}
-
-export default async function MemberProfilePage({ params }: { params: Promise<{ id: string }> }) {
+export default async function MemberDetailPage({
+  params,
+}: {
+  params: { id: string };
+}) {
   const systemId = await requireSystemId();
-  const { id } = await params;
 
-  const [member, frontHistory, isFrontingEntry, profileFields, customValueRows] = await Promise.all([
-    db.query.members.findFirst({
-      columns: {
-        id: true,
-        systemId: true,
-        name: true,
-        pronouns: true,
-        description: true,
-        color: true,
-        role: true,
-        tags: true,
-        notes: true,
-        avatarUrl: true,
-        createdAt: true,
-        updatedAt: true,
-      },
-      where: and(eq(members.id, id), eq(members.systemId, systemId)),
-    }),
+  const member = await db.query.members.findFirst({
+    where: and(eq(members.id, params.id), eq(members.systemId, systemId)),
+  });
+
+  if (!member) notFound();
+
+  const [history, definitions, values, currentFront] = await Promise.all([
     db.query.frontEntries.findMany({
-      columns: {
-        id: true,
-        startedAt: true,
-        endedAt: true,
-        note: true,
-      },
-      where: and(
-        eq(frontEntries.systemId, systemId),
-        like(frontEntries.memberIds, `%"${id}"%`)
-      ),
+      where: eq(frontEntries.systemId, systemId),
       orderBy: [desc(frontEntries.startedAt)],
-      limit: 20,
-    }),
-    db.query.frontEntries.findFirst({
-      columns: { id: true },
-      where: and(
-        eq(frontEntries.systemId, systemId),
-        isNull(frontEntries.endedAt),
-        like(frontEntries.memberIds, `%"${id}"%`)
-      ),
+      limit: 50,
     }),
     db.query.customFields.findMany({
       where: eq(customFields.systemId, systemId),
-      orderBy: [asc(customFields.sortOrder), asc(customFields.createdAt)],
+      orderBy: (f, { asc }) => [asc(f.sortOrder)],
     }),
-    db.query.memberFieldValues.findMany({
-      columns: {
-        fieldId: true,
-        value: true,
-      },
+    readMemberCustomFieldValues(systemId, member.id),
+    db.query.frontEntries.findFirst({
       where: and(
-        eq(memberFieldValues.systemId, systemId),
-        eq(memberFieldValues.memberId, id),
+        eq(frontEntries.systemId, systemId),
+        isNull(frontEntries.endedAt)
       ),
     }),
   ]);
 
-  if (!member) notFound();
+  // Filter front history to only entries that included this member
+  const memberHistory = history
+    .filter((entry) => parseMemberIds(entry.memberIds).includes(member.id))
+    .slice(0, 20);
 
-  const tags = member.tags ? JSON.parse(member.tags) as string[] : [];
-  const accentColor = member.color ?? '#a78bfa';
-  const readableAccent = ensureAccentReadable(accentColor);
-  const isFronting = Boolean(isFrontingEntry);
-  const valuesByFieldId = new Map(customValueRows.map((row) => [row.fieldId, row.value]));
+  const isFronting =
+    currentFront != null &&
+    parseMemberIds(currentFront.memberIds).includes(member.id);
 
-  const completedSessions = frontHistory.filter((e) => e.endedAt);
-  const frontTotalMs = completedSessions.reduce((sum, e) => {
-    const ms = new Date(e.endedAt!).getTime() - new Date(e.startedAt).getTime();
-    return sum + Math.max(0, ms);
-  }, 0);
-  const frontTotalMins = Math.floor(frontTotalMs / 60000);
-  const frontTotalLabel = frontTotalMins < 60
-    ? `${frontTotalMins}m`
-    : frontTotalMins % 60 === 0
-      ? `${Math.floor(frontTotalMins / 60)}h`
-      : `${Math.floor(frontTotalMins / 60)}h ${frontTotalMins % 60}m`;
+  const tags = parseStoredTags(member.tags);
 
-  const customDetails = profileFields
-    .map((field) => {
-      const value = valuesByFieldId.get(field.id);
-      if (!value) return null;
-      return {
-        id: field.id,
-        name: field.name,
-        type: parseCustomFieldType(field.type) ?? 'text',
-        options: parseStoredCustomFieldOptions(field.options),
-        value,
-      };
-    })
-    .filter((field): field is NonNullable<typeof field> => Boolean(field));
+  const memberColor = member.color ?? "#8E8E93";
 
   return (
-    <div className="animate-fade-in space-y-5">
-      <ScrollToTopOnMount />
-      {/* Back nav */}
-      <Link
-        href="/members"
-        className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-muted transition-colors hover:text-text link-glow"
-      >
-        <IconChevronLeft />
-        Members
-      </Link>
-
-      {/* Profile header */}
-      <div
-        className="relative overflow-hidden"
-        style={{ border: '1px solid rgb(var(--theme-border-rgb))', borderRadius: '10px' }}
-      >
-        {/* Banner */}
-        <div
-          className="relative flex flex-col items-center pt-8 pb-6 px-5"
-          style={{
-            background: `linear-gradient(160deg, ${accentColor} 0%, color-mix(in srgb, ${accentColor} 20%, #09070f) 100%)`,
-          }}
-        >
-          {/* Edit button overlay */}
+    <div className="animate-fade-in pb-8">
+      {/* Nav */}
+      <div className="sticky top-0 z-40 glass border-b border-border/40">
+        <div className="flex items-center justify-between px-4 h-11">
+          <Link
+            href="/members"
+            className="flex items-center gap-1 text-ios-blue ios-press -ml-1"
+          >
+            <ArrowLeft size={18} strokeWidth={2.5} />
+            <span className="text-body">Membros</span>
+          </Link>
           <Link
             href={`/members/${member.id}/edit`}
-            className="absolute top-3 right-3 inline-flex items-center gap-1.5 min-h-[36px]
-              border border-white/20 bg-black/50 px-3 py-1.5 text-xs font-black uppercase tracking-wider text-white/90
-              transition-all duration-150 hover:bg-black/70 hover:border-white/40 active:scale-95"
-            style={{ clipPath: 'polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%)' }}
-            aria-label={`Edit ${member.name}`}
+            className="flex items-center gap-1 text-ios-blue ios-press"
           >
-            <IconEdit />
-            Edit
+            <Pencil size={16} />
+            <span className="text-body font-semibold">Editar</span>
           </Link>
-
-          {/* Polaroid avatar */}
-          <div
-            className="rounded-xl shadow-[0_8px_32px_rgba(0,0,0,0.5)] flex-shrink-0 overflow-hidden"
-            style={{
-              padding: '6px 6px 18px 6px',
-              backgroundColor: 'rgba(255,255,255,0.96)',
-              width: 132,
-              height: 156,
-            }}
-            aria-hidden="true"
-          >
-            <div
-              className="w-full rounded-lg overflow-hidden flex items-center justify-center text-4xl font-bold"
-              style={{
-                height: 120,
-                backgroundColor: !member.avatarUrl ? readableAccent : undefined,
-                color: '#09070f',
-              }}
-            >
-              {member.avatarUrl ? (
-                <DynamicAvatarImage
-                  src={member.avatarUrl}
-                  alt=""
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                member.name[0].toUpperCase()
-              )}
-            </div>
-          </div>
-
-          {/* Fronting badge */}
-          {isFronting && (
-            <div className="mt-3 flex items-center gap-2 bg-black/50 px-3 py-1 border border-front/30"
-              style={{ clipPath: 'polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%)' }}
-            >
-              <span className="relative flex h-3 w-3 flex-shrink-0" aria-hidden="true">
-                <span className="animate-pulse-ring-outer absolute inline-flex h-full w-full rounded-full bg-front" />
-                <span className="animate-pulse-ring absolute inline-flex h-full w-full rounded-full bg-front opacity-60" />
-                <span className="relative inline-flex h-3 w-3 rounded-full bg-front" />
-              </span>
-              <span className="text-[10px] font-black uppercase tracking-widest text-front">Currently fronting</span>
-            </div>
-          )}
-        </div>
-
-        {/* Name / pronouns / role / tags — below the banner on surface */}
-        <div className="bg-surface px-5 py-4 space-y-2.5"
-          style={{ borderTop: `2px solid ${readableAccent}` }}
-        >
-          <div>
-            <h1 className="text-2xl font-black text-text leading-none tracking-tight">{member.name}</h1>
-            {member.pronouns && (
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted mt-1">{member.pronouns}</p>
-            )}
-            {member.role && (
-              <span
-                className="mt-2 inline-block text-[10px] font-black uppercase tracking-widest px-2.5 py-1"
-                style={{
-                  background: `color-mix(in srgb, ${readableAccent} 15%, transparent)`,
-                  border: `1px solid color-mix(in srgb, ${readableAccent} 35%, transparent)`,
-                  color: readableAccent,
-                  borderRadius: '4px',
-                }}
-              >
-                {member.role}
-              </span>
-            )}
-          </div>
-
-          {tags.length > 0 && (
-            <div className="flex flex-wrap gap-1.5">
-              {tags.map((tag) => (
-                <span
-                  key={tag}
-                  className="text-[10px] font-black uppercase tracking-wider px-2.5 py-1"
-                  style={{
-                    background: `color-mix(in srgb, ${readableAccent} 12%, transparent)`,
-                    border: `1px solid color-mix(in srgb, ${readableAccent} 30%, transparent)`,
-                    color: readableAccent,
-                    borderRadius: '9999px',
-                  }}
-                >
-                  {tag}
-                </span>
-              ))}
-            </div>
-          )}
         </div>
       </div>
 
-      {/* About */}
-      {member.description && (
+      {/* Header */}
+      <div
+        className="pt-8 pb-5 px-4 flex flex-col items-center gap-3"
+        style={{
+          background: `linear-gradient(to bottom, ${memberColor}11, transparent)`,
+        }}
+      >
         <div
-          className="relative overflow-hidden px-5 py-4"
+          className="w-28 h-28 rounded-full overflow-hidden flex items-center justify-center shadow-ios-md"
           style={{
-            background: 'rgb(var(--theme-surface-rgb))',
-            borderLeft: `3px solid ${readableAccent}`,
-            border: '1px solid rgb(var(--theme-border-rgb))',
-            borderLeftWidth: '3px',
-            borderLeftColor: readableAccent,
-            borderRadius: '10px',
+            background: `${memberColor}22`,
+            border: `3px solid ${memberColor}66`,
           }}
         >
-          <span className="pointer-events-none absolute top-0 right-0 block w-2.5 h-2.5 border-t border-r border-border-strong/50" aria-hidden="true" />
-          <h2 className="section-header mb-3">About</h2>
-          <p className="text-text text-sm leading-relaxed whitespace-pre-wrap">{member.description}</p>
+          {member.avatarUrl ? (
+            <DynamicAvatarImage
+              src={member.avatarUrl}
+              alt={member.name}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <span
+              className="text-5xl font-bold"
+              style={{ color: memberColor }}
+            >
+              {member.name[0].toUpperCase()}
+            </span>
+          )}
         </div>
-      )}
 
-      {/* Private notes */}
-      {member.notes && (
-        <div
-          className="relative overflow-hidden px-5 py-4"
-          style={{
-            background: 'rgb(var(--theme-surface-rgb))',
-            border: '1px solid rgb(var(--theme-border-rgb))',
-            borderLeftWidth: '3px',
-            borderLeftColor: 'rgb(var(--theme-border-strong-rgb))',
-            borderRadius: '10px',
-          }}
-        >
-          <span className="pointer-events-none absolute top-0 right-0 block w-2.5 h-2.5 border-t border-r border-border-strong/50" aria-hidden="true" />
-          <h2 className="section-header mb-3">Private notes</h2>
-          <p className="text-text text-sm leading-relaxed whitespace-pre-wrap">{member.notes}</p>
+        <div className="text-center">
+          <h1 className="text-title-1 text-foreground">{member.name}</h1>
+          {member.pronouns && (
+            <p className="text-subheadline text-muted-foreground mt-0.5">
+              {member.pronouns}
+            </p>
+          )}
+          {isFronting && (
+            <div className="inline-flex items-center gap-1.5 mt-2 px-2.5 py-1 rounded-full bg-ios-green/15">
+              <span className="w-2 h-2 rounded-full bg-ios-green" />
+              <span className="text-caption-1 font-semibold text-ios-green">
+                Na frente agora
+              </span>
+            </div>
+          )}
         </div>
-      )}
 
-      {customDetails.length > 0 && (
-        <section
-          className="relative overflow-hidden px-5 py-4"
-          style={{
-            background: 'rgb(var(--theme-surface-rgb))',
-            border: '1px solid rgb(var(--theme-border-rgb))',
-            borderLeftWidth: '3px',
-            borderLeftColor: readableAccent,
-            borderRadius: '10px',
-          }}
-          aria-labelledby="member-details-heading"
-        >
-          <span className="pointer-events-none absolute top-0 right-0 block w-2.5 h-2.5 border-t border-r border-border-strong/50" aria-hidden="true" />
-          <h2 id="member-details-heading" className="section-header mb-3">
-            Details
-          </h2>
-          <dl className="grid gap-3 sm:grid-cols-2">
-            {customDetails.map((field) => (
-              <div key={field.id} className="rounded-lg border border-border-soft bg-surface-alt/40 px-3 py-2">
-                <dt className="text-xs font-medium text-muted">{field.name}</dt>
-                <dd className="mt-1 text-sm text-text whitespace-pre-wrap">
-                  {formatCustomFieldValue(field)}
-                </dd>
-              </div>
+        {member.role && (
+          <p className="text-callout text-muted-foreground italic">
+            {member.role}
+          </p>
+        )}
+
+        {tags.length > 0 && (
+          <div className="flex flex-wrap justify-center gap-1.5 mt-1">
+            {tags.map((tag) => (
+              <span
+                key={tag}
+                className="px-2.5 py-0.5 rounded-full text-caption-1 font-semibold"
+                style={{
+                  background: `${memberColor}22`,
+                  color: memberColor,
+                }}
+              >
+                {tag}
+              </span>
             ))}
-          </dl>
-        </section>
+          </div>
+        )}
+      </div>
+
+      {/* Description */}
+      {member.description && (
+        <div className="px-4 mb-5">
+          <p className="text-footnote font-semibold text-muted-foreground uppercase tracking-wide mb-2 px-1">
+            Sobre
+          </p>
+          <GlassCard padding="lg">
+            <p className="text-body text-foreground whitespace-pre-wrap">
+              {member.description}
+            </p>
+          </GlassCard>
+        </div>
+      )}
+
+      {/* Custom fields */}
+      {definitions.length > 0 && (
+        <div className="px-4 mb-5">
+          <p className="text-footnote font-semibold text-muted-foreground uppercase tracking-wide mb-2 px-1">
+            Detalhes
+          </p>
+          <GroupedSection>
+            {definitions.map((field) => {
+              const rawValue = values[field.id];
+              if (!rawValue) return null;
+              let display = rawValue;
+              if (field.type === "checkbox") {
+                display = rawValue === "true" ? "Sim" : "Não";
+              } else if (field.type === "select") {
+                const opts = parseStoredCustomFieldOptions(field.options);
+                display =
+                  opts.find((o) => o.value === rawValue)?.label ?? rawValue;
+              } else if (field.type === "date") {
+                display = formatDate(new Date(rawValue));
+              }
+              return (
+                <div
+                  key={field.id}
+                  className="flex items-start justify-between gap-3 px-4 py-3"
+                >
+                  <span className="text-body text-muted-foreground">
+                    {field.name}
+                  </span>
+                  <span className="text-body text-foreground text-right max-w-[60%] truncate">
+                    {display}
+                  </span>
+                </div>
+              );
+            })}
+          </GroupedSection>
+        </div>
+      )}
+
+      {/* Notes */}
+      {member.notes && (
+        <div className="px-4 mb-5">
+          <p className="text-footnote font-semibold text-muted-foreground uppercase tracking-wide mb-2 px-1">
+            Notas
+          </p>
+          <GlassCard padding="lg">
+            <p className="text-body text-foreground whitespace-pre-wrap">
+              {member.notes}
+            </p>
+          </GlassCard>
+        </div>
       )}
 
       {/* Front history */}
-      <div>
-        <div className="flex items-center gap-2 mb-3">
-          <span className="section-header flex-1">Front history</span>
-          {frontHistory.length === 20 && (
-            <span className="text-[10px] font-black uppercase tracking-widest text-subtle">Last 20</span>
+      <div className="px-4 mb-6">
+        <p className="text-footnote font-semibold text-muted-foreground uppercase tracking-wide mb-2 px-1">
+          Histórico na frente
+        </p>
+        <GlassCard padding="none" className="overflow-hidden">
+          {memberHistory.length === 0 ? (
+            <div className="p-5 text-center text-muted-foreground text-subheadline">
+              Sem histórico ainda
+            </div>
+          ) : (
+            memberHistory.map((entry) => (
+              <div
+                key={entry.id}
+                className="flex items-center gap-3 px-4 py-3 border-b border-border/50 last:border-0"
+              >
+                <Clock size={14} className="text-muted-foreground flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-subheadline text-foreground">
+                    {formatDateTime(entry.startedAt)}
+                  </p>
+                  {entry.endedAt && (
+                    <p className="text-caption-1 text-muted-foreground">
+                      até {formatDateTime(entry.endedAt)}
+                    </p>
+                  )}
+                </div>
+              </div>
+            ))
           )}
-        </div>
-
-        {/* Front stats row */}
-        {completedSessions.length > 0 && (
-          <div
-            className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest mb-3 px-3 py-2 w-fit"
-            style={{
-              color: readableAccent,
-              background: `color-mix(in srgb, ${readableAccent} 10%, transparent)`,
-              border: `1px solid color-mix(in srgb, ${readableAccent} 25%, transparent)`,
-              borderRadius: '4px',
-            }}
-          >
-            <span>{completedSessions.length} {completedSessions.length === 1 ? 'session' : 'sessions'}</span>
-            <span style={{ color: 'rgb(var(--theme-border-strong-rgb))' }}>·</span>
-            <span>{frontTotalLabel} total</span>
-          </div>
-        )}
-
-        {frontHistory.length === 0 ? (
-          <div className="rounded-xl border border-border/40 bg-surface px-5 py-8 text-center">
-            <p className="text-muted text-sm">No front history yet</p>
-          </div>
-        ) : (
-          <ul role="list" className="rounded-xl overflow-hidden border border-border/40">
-            {frontHistory.map((entry) => {
-              const start = new Date(entry.startedAt);
-              const end = entry.endedAt ? new Date(entry.endedAt) : null;
-              const isLive = !end;
-
-              return (
-                <li
-                  key={entry.id}
-                  role="listitem"
-                  className="border-b border-border/40 last:border-b-0 bg-surface hover:bg-surface-alt/60 transition-colors duration-150"
-                  style={{ borderLeft: `3px solid ${readableAccent}` }}
-                >
-                  <div className="flex items-start justify-between gap-3 px-4 py-3.5">
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-text">
-                        {start.toLocaleDateString('en-US', {
-                          weekday: 'short',
-                          month: 'short',
-                          day: 'numeric',
-                          year: 'numeric',
-                        })}
-                      </p>
-                      <p className="text-xs text-muted mt-0.5">
-                        {start.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
-                        {end && (
-                          <> → {end.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</>
-                        )}
-                      </p>
-                      {entry.note && (
-                        <p className="text-xs text-muted mt-1 italic">&ldquo;{entry.note}&rdquo;</p>
-                      )}
-                    </div>
-
-                    {isLive ? (
-                      <div className="flex items-center gap-1.5 flex-shrink-0" aria-label="Currently fronting">
-                        <span className="relative flex h-2.5 w-2.5 flex-shrink-0" aria-hidden="true">
-                          <span className="animate-pulse-ring absolute inline-flex h-full w-full rounded-full bg-front opacity-60" />
-                          <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-front" />
-                        </span>
-                        <span className="text-[10px] font-black uppercase tracking-widest text-front">Now</span>
-                      </div>
-                    ) : (
-                      <span
-                        className="text-[10px] font-black uppercase tracking-wider text-muted flex-shrink-0 px-2 py-0.5"
-                        style={{
-                          background: 'rgb(var(--theme-surface-alt-rgb))',
-                          border: '1px solid rgb(var(--theme-border-rgb))',
-                          borderRadius: '4px',
-                        }}
-                      >
-                        {formatDuration(start, end!)}
-                      </span>
-                    )}
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </div>
-
-      {/* Meta */}
-      <div className="px-1 text-[10px] font-black uppercase tracking-widest text-subtle space-y-1">
-        <p>Added {new Date(member.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
-        {member.updatedAt > member.createdAt && (
-          <p>Last updated {new Date(member.updatedAt).toLocaleDateString()}</p>
-        )}
+        </GlassCard>
       </div>
     </div>
   );
-}
-
-function formatCustomFieldValue(field: {
-  type: ReturnType<typeof parseCustomFieldType> | 'text';
-  options: Array<{ label: string; value: string }>;
-  value: string;
-}): string {
-  if (field.type === 'checkbox') return field.value === 'true' ? 'Yes' : 'No';
-  if (field.type === 'select') {
-    return field.options.find((option) => option.value === field.value)?.label ?? field.value;
-  }
-  if (field.type === 'date') {
-    const [year, month, day] = field.value.split('-').map(Number);
-    if (year && month && day) {
-      return new Date(year, month - 1, day).toLocaleDateString('en-US', {
-        month: 'long',
-        day: 'numeric',
-        year: 'numeric',
-      });
-    }
-  }
-  return field.value;
 }

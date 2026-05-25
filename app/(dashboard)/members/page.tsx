@@ -1,40 +1,310 @@
-import { db } from '@/lib/db';
-import { members, frontEntries } from '@/lib/db/schema';
-import { eq, and, isNull } from 'drizzle-orm';
-import { requireSystemAccount } from '@/lib/auth/session';
-import MembersClient from './MembersClient';
+"use client";
 
-export default async function MembersPage() {
-  const systemId = await requireSystemAccount();
+import useSWR, { mutate } from "swr";
+import Link from "next/link";
+import { Plus, Search, Minus, Sun, X } from "lucide-react";
+import { useState } from "react";
+import { LargeTitle } from "@/components/layout/NavBar";
+import { GlassCard } from "@/components/glass/GlassCard";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
+import { BottomSheet } from "@/components/glass/BottomSheet";
+import { apiFetcher, swrKeys, revalidateMembersAndFront } from "@/lib/swr";
+import DynamicAvatarImage from "@/components/ui/DynamicAvatarImage";
+import { useLanguage } from "@/components/providers/LanguageProvider";
+import { cn } from "@/lib/utils";
 
-  // Fetch members and active front in parallel — single round-trip
-  const [allMembers, activeFront] = await Promise.all([
-    db.query.members.findMany({
-      columns: {
-        id: true,
-        name: true,
-        pronouns: true,
-        role: true,
-        tags: true,
-        color: true,
-        avatarUrl: true,
-      },
-      where: and(eq(members.systemId, systemId), eq(members.isArchived, 0)),
-      orderBy: (m, { asc }) => [asc(m.name)],
-    }),
-    db.query.frontEntries.findFirst({
-      where: and(eq(frontEntries.systemId, systemId), isNull(frontEntries.endedAt)),
-    }),
-  ]);
+type Member = {
+  id: string;
+  name: string;
+  pronouns?: string | null;
+  role?: string | null;
+  tags: string[];
+  color?: string | null;
+  avatarUrl?: string | null;
+};
 
-  const parsedMembers = allMembers.map((m) => ({
-    ...m,
-    tags: m.tags ? JSON.parse(m.tags) as string[] : [],
-  }));
+type FrontEntry = { memberIds: string[] };
 
-  const parsedFront = activeFront
-    ? { ...activeFront, memberIds: JSON.parse(activeFront.memberIds) as string[] }
-    : null;
+export default function MembersPage() {
+  const { t } = useLanguage();
+  const { data: members, isLoading } = useSWR<Member[]>(swrKeys.members, apiFetcher);
+  const { data: currentFront } = useSWR<FrontEntry | null>(swrKeys.front, apiFetcher);
+  const [search, setSearch] = useState("");
+  const [selectedMember, setSelectedMember] = useState<Member | null>(null);
+  const [updating, setUpdating] = useState(false);
 
-  return <MembersClient initialMembers={parsedMembers} initialFront={parsedFront} />;
+  const frontingIds = currentFront?.memberIds ?? [];
+  const frontingSet = new Set(frontingIds);
+  const selectedIsFronting = selectedMember ? frontingSet.has(selectedMember.id) : false;
+
+  function openSheet(e: React.MouseEvent, member: Member) {
+    e.preventDefault();
+    e.stopPropagation();
+    setSelectedMember(member);
+  }
+
+  function closeSheet() {
+    setSelectedMember(null);
+  }
+
+  async function addToFront() {
+    if (!selectedMember || updating) return;
+    setUpdating(true);
+    try {
+      await fetch("/api/front", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ memberIds: [...frontingIds, selectedMember.id] }),
+      });
+      revalidateMembersAndFront();
+      void mutate(swrKeys.frontHistory);
+      closeSheet();
+    } finally {
+      setUpdating(false);
+    }
+  }
+
+  async function removeFromFront() {
+    if (!selectedMember || updating) return;
+    setUpdating(true);
+    try {
+      const newIds = frontingIds.filter((id) => id !== selectedMember.id);
+      if (newIds.length === 0) {
+        await fetch("/api/front", { method: "DELETE", credentials: "same-origin" });
+      } else {
+        await fetch("/api/front", {
+          method: "POST",
+          credentials: "same-origin",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ memberIds: newIds }),
+        });
+      }
+      revalidateMembersAndFront();
+      void mutate(swrKeys.frontHistory);
+      closeSheet();
+    } finally {
+      setUpdating(false);
+    }
+  }
+
+  async function setAsOnly() {
+    if (!selectedMember || updating) return;
+    setUpdating(true);
+    try {
+      await fetch("/api/front", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ memberIds: [selectedMember.id] }),
+      });
+      revalidateMembersAndFront();
+      void mutate(swrKeys.frontHistory);
+      closeSheet();
+    } finally {
+      setUpdating(false);
+    }
+  }
+
+  const list = members ?? [];
+  const filtered = list.filter((m) =>
+    m.name?.toLowerCase().includes(search.toLowerCase())
+  );
+
+  return (
+    <div className="animate-fade-in">
+      <div className="px-4 pt-14 pb-2 flex items-end justify-between">
+        <LargeTitle className="px-0">{t("members.title")}</LargeTitle>
+        <Link href="/members/new">
+          <Button size="icon" className="mb-1">
+            <Plus size={20} />
+          </Button>
+        </Link>
+      </div>
+
+      {/* Search */}
+      <div className="px-4 mb-4 relative">
+        <Search
+          size={16}
+          className="absolute left-7 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none"
+        />
+        <Input
+          placeholder={t("members.searchPlaceholder")}
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="pl-9"
+        />
+      </div>
+
+      {/* List */}
+      <div className="px-4">
+        <GlassCard padding="none" className="overflow-hidden">
+          {isLoading ? (
+            <div className="p-4 flex flex-col gap-0">
+              {[1, 2, 3, 4, 5].map((i) => (
+                <div
+                  key={i}
+                  className="flex items-center gap-3 py-3 border-b border-border/50 last:border-0"
+                >
+                  <Skeleton className="w-11 h-11 rounded-full flex-shrink-0" />
+                  <div className="flex-1 flex flex-col gap-2">
+                    <Skeleton className="h-4 w-28" />
+                    <Skeleton className="h-3 w-20" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : filtered.length === 0 ? (
+            <div className="py-12 text-center flex flex-col items-center gap-3">
+              <p className="text-muted-foreground text-subheadline">
+                {search ? t("members.noMembersFound") : t("members.noMembers")}
+              </p>
+              {!search && (
+                <Link href="/members/new">
+                  <Button variant="outline" size="sm">
+                    <Plus size={16} />
+                    {t("members.addMember")}
+                  </Button>
+                </Link>
+              )}
+            </div>
+          ) : (
+            filtered.map((member) => {
+              const isFronting = frontingSet.has(member.id);
+              return (
+                <div
+                  key={member.id}
+                  className="flex items-center border-b border-border/50 last:border-0"
+                >
+                  <Link
+                    href={`/members/${member.id}`}
+                    className="flex-1 flex items-center gap-3 px-4 py-3 active:bg-muted/50 ios-transition min-w-0"
+                  >
+                    <div
+                      className="w-11 h-11 rounded-full overflow-hidden flex items-center justify-center flex-shrink-0"
+                      style={{ background: member.color ? `${member.color}22` : "#8E8E9322" }}
+                    >
+                      {member.avatarUrl ? (
+                        <DynamicAvatarImage
+                          src={member.avatarUrl}
+                          alt={member.name}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <span
+                          className="text-body font-semibold"
+                          style={{ color: member.color ?? "#8E8E93" }}
+                        >
+                          {(member.name ?? "?")[0].toUpperCase()}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-body font-semibold text-foreground truncate">
+                        {member.name}
+                      </p>
+                      {member.pronouns && (
+                        <p className="text-caption-1 text-muted-foreground truncate">
+                          {member.pronouns}
+                        </p>
+                      )}
+                    </div>
+                    {member.color && (
+                      <div
+                        className="w-3 h-3 rounded-full flex-shrink-0"
+                        style={{ background: member.color }}
+                      />
+                    )}
+                  </Link>
+
+                  {/* Front action button */}
+                  <button
+                    onClick={(e) => openSheet(e, member)}
+                    aria-label={t("front.addToFront")}
+                    className={cn(
+                      "flex-shrink-0 mr-3 w-8 h-8 rounded-full flex items-center justify-center ios-transition",
+                      isFronting
+                        ? "bg-ios-green/20 text-ios-green"
+                        : "bg-secondary text-muted-foreground"
+                    )}
+                  >
+                    {isFronting
+                      ? <Minus size={15} strokeWidth={2.5} />
+                      : <Plus size={15} strokeWidth={2.5} />}
+                  </button>
+                </div>
+              );
+            })
+          )}
+        </GlassCard>
+      </div>
+
+      {/* Per-member front action sheet */}
+      <BottomSheet
+        open={selectedMember !== null}
+        onClose={closeSheet}
+        title={selectedMember?.name ?? ""}
+      >
+        <div className="flex flex-col divide-y divide-border/50 rounded-ios-lg overflow-hidden border border-border/50">
+          {/* Add / Remove from front */}
+          {selectedIsFronting ? (
+            <button
+              onClick={removeFromFront}
+              disabled={updating}
+              className="flex items-center gap-4 px-4 py-4 text-left active:bg-muted/40 ios-transition disabled:opacity-50"
+            >
+              <div className="w-9 h-9 rounded-full bg-ios-red/15 flex items-center justify-center flex-shrink-0">
+                <Minus size={18} className="text-ios-red" />
+              </div>
+              <span className="text-body font-medium text-ios-red">
+                {t("front.removeFromFront")}
+              </span>
+            </button>
+          ) : (
+            <button
+              onClick={addToFront}
+              disabled={updating}
+              className="flex items-center gap-4 px-4 py-4 text-left active:bg-muted/40 ios-transition disabled:opacity-50"
+            >
+              <div className="w-9 h-9 rounded-full bg-ios-blue/15 flex items-center justify-center flex-shrink-0">
+                <Plus size={18} className="text-ios-blue" />
+              </div>
+              <span className="text-body font-medium text-ios-blue">
+                {t("front.addToFront")}
+              </span>
+            </button>
+          )}
+
+          {/* Set as only front */}
+          <button
+            onClick={setAsOnly}
+            disabled={updating}
+            className="flex items-center gap-4 px-4 py-4 text-left active:bg-muted/40 ios-transition disabled:opacity-50"
+          >
+            <div className="w-9 h-9 rounded-full bg-secondary flex items-center justify-center flex-shrink-0">
+              <Sun size={18} className="text-foreground" />
+            </div>
+            <span className="text-body font-medium text-foreground">
+              {t("front.setAsOnly")}
+            </span>
+          </button>
+
+          {/* No action */}
+          <button
+            onClick={closeSheet}
+            className="flex items-center gap-4 px-4 py-4 text-left active:bg-muted/40 ios-transition"
+          >
+            <div className="w-9 h-9 rounded-full bg-secondary flex items-center justify-center flex-shrink-0">
+              <X size={18} className="text-muted-foreground" />
+            </div>
+            <span className="text-body font-medium text-muted-foreground">
+              {t("front.noAction")}
+            </span>
+          </button>
+        </div>
+      </BottomSheet>
+    </div>
+  );
 }

@@ -1,42 +1,31 @@
-import type { Metadata, Viewport } from 'next';
-import { Nunito } from 'next/font/google';
-import { LanguageProvider } from '@/components/providers/LanguageProvider';
-import './globals.css';
-
-const nunito = Nunito({
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700'],
-  variable: '--font-nunito',
-  display: 'swap',
-});
+import type { Metadata, Viewport } from "next";
+import "./globals.css";
+import { ThemeProvider } from "@/components/providers/ThemeProvider";
+import { SessionProvider } from "@/components/providers/SessionProvider";
+import { LanguageProvider } from "@/components/providers/LanguageProvider";
+import { ThemeRuntime } from "@/components/providers/ThemeRuntime";
 
 export const metadata: Metadata = {
-  title: 'Solara Plural',
-  description: 'A warm space for plural systems to organize and thrive',
-  manifest: '/manifest.json',
-  applicationName: 'Solara',
+  title: "Solara",
+  description: "App para sistemas plurais",
+  manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
-    title: 'Solara',
-    // 'black-translucent' lets the page paint behind the iOS status bar —
-    // the .app-topbar gradient handles the safe-area inset visually.
-    statusBarStyle: 'black-translucent',
-  },
-  formatDetection: {
-    telephone: false,
+    statusBarStyle: "default",
+    title: "Solara",
   },
 };
 
 export const viewport: Viewport = {
-  viewportFit: 'cover',
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: "cover",
   themeColor: [
-    { media: '(prefers-color-scheme: dark)', color: '#09070f' },
-    { media: '(prefers-color-scheme: light)', color: '#09070f' },
+    { media: "(prefers-color-scheme: light)", color: "#f2f2f7" },
+    { media: "(prefers-color-scheme: dark)", color: "#000000" },
   ],
-  // Allow the page to extend behind the iOS status bar in PWA mode so the
-  // top-bar gradient blends into the system chrome instead of being capped
-  // by an opaque white strip.
-  colorScheme: 'dark',
 };
 
 export default function RootLayout({
@@ -45,58 +34,22 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={nunito.variable} suppressHydrationWarning>
+    <html lang="pt-BR" suppressHydrationWarning>
+      <head>
+        <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
+      </head>
       <body>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              (function () {
-                try {
-                  function h2r(h) { var n=parseInt(h.replace('#',''),16); return [(n>>16)&255,(n>>8)&255,n&255]; }
-                  function mix(h1,h2,t) {
-                    var a=h2r(h1),b=h2r(h2);
-                    return '#'+[0,1,2].map(function(i){return Math.max(0,Math.min(255,Math.round(a[i]+(b[i]-a[i])*t))).toString(16).padStart(2,'0');}).join('');
-                  }
-                  function rgb(h) { var c=h2r(h); return c[0]+' '+c[1]+' '+c[2]; }
-                  function sv(n,h) { var r=document.documentElement.style; r.setProperty(n,h); r.setProperty(n+'-rgb',rgb(h)); }
-                  var raw = localStorage.getItem('solara.customTheme');
-                  if (raw) {
-                    var c = JSON.parse(raw);
-                    var W='#ffffff', B='#000000';
-                    if (c.bg && c.surface && c.primary && c.front && c.text && c.border) {
-                      sv('--theme-bg',c.bg);
-                      sv('--theme-surface',c.surface);
-                      sv('--theme-surface-alt',mix(c.surface,W,0.10));
-                      sv('--theme-surface-raised',mix(c.surface,W,0.20));
-                      sv('--theme-border',c.border);
-                      sv('--theme-border-soft',mix(c.border,c.bg,0.42));
-                      sv('--theme-border-strong',mix(c.border,W,0.20));
-                      sv('--theme-text',c.text);
-                      sv('--theme-muted',mix(c.text,c.bg,0.38));
-                      sv('--theme-subtle',mix(c.text,c.bg,0.60));
-                      sv('--theme-primary',c.primary);
-                      sv('--theme-primary-soft',mix(c.primary,B,0.28));
-                      sv('--theme-primary-glow',mix(c.primary,W,0.18));
-                      sv('--theme-front',c.front);
-                      sv('--theme-front-soft',mix(c.front,B,0.52));
-                    }
-                  }
-                  var language = localStorage.getItem('solara.language');
-                  var pathname = window.location.pathname;
-                  var parts = pathname.split('/').filter(Boolean);
-                  var localeFromPath = parts[0];
-                  if (language === 'pt-BR' || language === 'es' || language === 'en') {
-                    var finalLanguage = (localeFromPath === 'pt-BR' || localeFromPath === 'es' || localeFromPath === 'en')
-                      ? localeFromPath
-                      : language;
-                    document.documentElement.lang = finalLanguage;
-                  }
-                } catch (_) {}
-              })();
-            `,
-          }}
-        />
-        <LanguageProvider>{children}</LanguageProvider>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <SessionProvider>
+            <LanguageProvider>{children}</LanguageProvider>
+            <ThemeRuntime />
+          </SessionProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

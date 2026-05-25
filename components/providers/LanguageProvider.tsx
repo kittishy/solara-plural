@@ -1,139 +1,99 @@
-'use client';
+"use client";
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { usePathname, useRouter } from 'next/navigation';
 import {
-  DEFAULT_LANGUAGE,
-  LANGUAGE_COOKIE_KEY,
-  LANGUAGES,
-  LANGUAGE_STORAGE_KEY,
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  useCallback,
+  type ReactNode,
+} from "react";
+import { useRouter, usePathname } from "next/navigation";
+import {
   type Language,
   type TranslationKey,
-  getLanguageFromPathname,
-  interpolate,
-  isLanguage,
-  localizePathname,
-  normalizePreferredLanguage,
+  DEFAULT_LANGUAGE,
+  LANGUAGE_COOKIE_KEY,
   translations,
-} from '@/lib/i18n';
+  isLanguage,
+  getLanguageFromPathname,
+  localizePathname,
+  interpolate,
+} from "@/lib/i18n";
 
-type TranslationValues = Record<string, string | number>;
-
-type LanguageContextValue = {
+interface LanguageContextValue {
   language: Language;
-  setLanguage: (language: Language) => void;
-  t: (key: TranslationKey, values?: TranslationValues) => string;
-  formatDate: (date: Date | string | number, options?: Intl.DateTimeFormatOptions) => string;
-  formatTime: (date: Date | string | number, options?: Intl.DateTimeFormatOptions) => string;
-};
+  setLanguage: (lang: Language) => void;
+  t: (key: TranslationKey, values?: Record<string, string | number>) => string;
+}
 
 const LanguageContext = createContext<LanguageContextValue | null>(null);
 
-function readInitialLanguage(pathname?: string | null): Language {
-  const pathLanguage = pathname ? getLanguageFromPathname(pathname).language : null;
-  if (pathLanguage) return pathLanguage;
-
-  if (typeof document !== 'undefined') {
-    const cookieEntry = document.cookie
-      .split(';')
-      .map((entry) => entry.trim())
-      .find((entry) => entry.startsWith(`${LANGUAGE_COOKIE_KEY}=`));
-    const cookieValue = cookieEntry?.split('=')[1];
-    const fromCookie = normalizePreferredLanguage(cookieValue);
-    if (fromCookie) return fromCookie;
+function getNestedValue(obj: Record<string, unknown>, key: string): string {
+  const parts = key.split(".");
+  let current: unknown = obj;
+  for (const part of parts) {
+    if (current == null || typeof current !== "object") return key;
+    current = (current as Record<string, unknown>)[part];
   }
-
-  if (typeof window === 'undefined') return DEFAULT_LANGUAGE;
-
-  try {
-    const stored = window.localStorage.getItem(LANGUAGE_STORAGE_KEY);
-    if (isLanguage(stored)) return stored;
-  } catch {
-    // Local storage is optional.
-  }
-
-  return normalizePreferredLanguage(window.navigator.language) ?? DEFAULT_LANGUAGE;
+  return typeof current === "string" ? current : key;
 }
 
-function getTranslation(language: Language, key: TranslationKey) {
-  const segments = key.split('.');
-  let value: unknown = translations[language];
+function detectLanguage(): Language {
+  if (typeof window === "undefined") return DEFAULT_LANGUAGE;
 
-  for (const segment of segments) {
-    if (!value || typeof value !== 'object' || !(segment in value)) {
-      value = translations[DEFAULT_LANGUAGE];
-      for (const fallbackSegment of segments) {
-        if (!value || typeof value !== 'object' || !(fallbackSegment in value)) return key;
-        value = (value as Record<string, unknown>)[fallbackSegment];
-      }
-      break;
-    }
+  const { language: pathLang } = getLanguageFromPathname(window.location.pathname);
+  if (pathLang) return pathLang;
 
-    value = (value as Record<string, unknown>)[segment];
+  const cookies = document.cookie.split(";");
+  for (const cookie of cookies) {
+    const [name, value] = cookie.trim().split("=");
+    if (name === LANGUAGE_COOKIE_KEY && isLanguage(value)) return value;
   }
 
-  return typeof value === 'string' ? value : key;
+  return DEFAULT_LANGUAGE;
 }
 
-export function LanguageProvider({ children }: { children: React.ReactNode }) {
+export function LanguageProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
-  const [language, setLanguageState] = useState<Language>(() => readInitialLanguage(pathname));
+  const [language, setLanguageState] = useState<Language>(DEFAULT_LANGUAGE);
 
   useEffect(() => {
-    const pathLanguage = pathname ? getLanguageFromPathname(pathname).language : null;
-    if (!pathLanguage || pathLanguage === language) return;
-    setLanguageState(pathLanguage);
-  }, [pathname, language]);
+    setLanguageState(detectLanguage());
+  }, [pathname]);
 
-  const setLanguage = useCallback((nextLanguage: Language) => {
-    setLanguageState(nextLanguage);
+  const setLanguage = useCallback(
+    (lang: Language) => {
+      document.cookie = `${LANGUAGE_COOKIE_KEY}=${lang}; path=/; max-age=${60 * 60 * 24 * 365}; samesite=lax`;
+      const bare = getLanguageFromPathname(pathname).pathnameWithoutLanguage;
+      router.push(localizePathname(bare, lang));
+    },
+    [pathname, router]
+  );
 
-    const localizedPath = localizePathname(pathname ?? '/', nextLanguage);
-    const currentSearch = typeof window !== 'undefined' ? window.location.search : '';
-    const nextUrl = currentSearch ? `${localizedPath}${currentSearch}` : localizedPath;
-    router.replace(nextUrl);
-  }, [pathname, router]);
+  const t = useCallback(
+    (key: TranslationKey, values?: Record<string, string | number>): string => {
+      const langTranslations = (translations as Record<string, Record<string, unknown>>)[language];
+      const fallback = (translations as Record<string, Record<string, unknown>>)[DEFAULT_LANGUAGE];
+      const raw =
+        getNestedValue(langTranslations, key) ||
+        getNestedValue(fallback, key) ||
+        key;
+      return interpolate(raw, values);
+    },
+    [language]
+  );
 
-  useEffect(() => {
-    const htmlLang = LANGUAGES.find((item) => item.code === language)?.htmlLang ?? 'en';
-    document.documentElement.lang = htmlLang;
-
-    try {
-      window.localStorage.setItem(LANGUAGE_STORAGE_KEY, language);
-    } catch {
-      // Local storage is optional.
-    }
-
-    document.cookie = `${LANGUAGE_COOKIE_KEY}=${encodeURIComponent(language)}; Max-Age=31536000; Path=/; SameSite=Lax`;
-  }, [language]);
-
-  const value = useMemo<LanguageContextValue>(() => {
-    function t(key: TranslationKey, values?: TranslationValues) {
-      return interpolate(getTranslation(language, key), values);
-    }
-
-    function normalizeDate(date: Date | string | number) {
-      return date instanceof Date ? date : new Date(date);
-    }
-
-    return {
-      language,
-      setLanguage,
-      t,
-      formatDate: (date, options) => normalizeDate(date).toLocaleDateString(language, options),
-      formatTime: (date, options) => normalizeDate(date).toLocaleTimeString(language, options),
-    };
-  }, [language, setLanguage]);
-
-  return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>;
+  return (
+    <LanguageContext.Provider value={{ language, setLanguage, t }}>
+      {children}
+    </LanguageContext.Provider>
+  );
 }
 
-export function useLanguage() {
-  const context = useContext(LanguageContext);
-  if (!context) {
-    throw new Error('useLanguage must be used inside LanguageProvider');
-  }
-  return context;
+export function useLanguage(): LanguageContextValue {
+  const ctx = useContext(LanguageContext);
+  if (!ctx) throw new Error("useLanguage must be used inside <LanguageProvider>");
+  return ctx;
 }
-

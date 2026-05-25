@@ -1,134 +1,125 @@
-import { db } from '@/lib/db';
-import { systemJournal } from '@/lib/db/schema';
-import { eq, desc } from 'drizzle-orm';
-import { requireSystemAccount } from '@/lib/auth/session';
-import Link from 'next/link';
-import { formatDate } from '@/lib/client/format';
+"use client";
 
-// Converted from Client Component to pure Server Component.
-// JournalClient used SWR with revalidateOnMount: false — meaning it never
-// re-fetched independently. All data comes from this server render.
-// Mutations call revalidatePath('/journal'), so navigating back shows fresh data.
+import useSWR from "swr";
+import Link from "next/link";
+import { Plus, BookOpen } from "lucide-react";
+import { LargeTitle } from "@/components/layout/NavBar";
+import { GlassCard } from "@/components/glass/GlassCard";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { apiFetcher, swrKeys } from "@/lib/swr";
 
-function IconPen() {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none"
-      stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M12 20h9" />
-      <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z" />
-    </svg>
-  );
-}
+type JournalEntry = {
+  id: string;
+  title: string | null;
+  content: string;
+  mood: string | null;
+  createdAt: string | number | Date;
+};
 
-function IconChevronRight() {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
-      stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M9 18l6-6-6-6" />
-    </svg>
-  );
-}
+const moodEmoji: Record<string, string> = {
+  great: "😄",
+  good: "🙂",
+  okay: "😐",
+  bad: "😕",
+  terrible: "😞",
+};
 
-export default async function JournalPage() {
-  const systemId = await requireSystemAccount();
-
-  const entries = await db.query.systemJournal.findMany({
-    columns: {
-      id: true,
-      title: true,
-      content: true,
-      mood: true,
-      createdAt: true,
-    },
-    where: eq(systemJournal.systemId, systemId),
-    orderBy: [desc(systemJournal.createdAt)],
-    limit: 30,
+function formatDate(value: string | number | Date) {
+  const d = new Date(value);
+  return d.toLocaleDateString("pt-BR", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
   });
+}
+
+export default function JournalPage() {
+  const { data, isLoading } = useSWR<JournalEntry[]>(
+    swrKeys.journal,
+    apiFetcher
+  );
+  const entries = data ?? [];
 
   return (
-    <div className="animate-fade-in space-y-5">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="page-title">Journal</h1>
-          <p className="text-[10px] font-black uppercase tracking-widest text-muted mt-1">
-            {entries.length} {entries.length !== 1 ? 'entries' : 'entry'} written
-          </p>
-        </div>
-        <Link href="/journal/new" className="btn-primary gap-1.5">
-          <IconPen />
-          New entry
+    <div className="animate-fade-in">
+      <div className="px-4 pt-14 pb-2 flex items-end justify-between">
+        <LargeTitle className="px-0">Diário</LargeTitle>
+        <Link href="/journal/new">
+          <Button size="icon" className="mb-1">
+            <Plus size={20} />
+          </Button>
         </Link>
       </div>
 
-      {entries.length === 0 ? (
-        <div className="card p-12 text-center animate-fade-in">
-          <div className="stagger-children flex flex-col items-center">
-            <div
-              className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 shadow-glow mb-4"
-              aria-hidden="true"
-            >
-              <span className="text-3xl">📖</span>
-            </div>
-            <p className="text-text font-semibold">Your journal is empty</p>
-            <p className="text-muted text-sm mt-2 mb-6">
-              Write freely — for yourself, for the system, for whoever needs to read it later.
-            </p>
-            <Link href="/journal/new" className="btn-primary gap-1.5">
-              <IconPen />
-              Write first entry
-            </Link>
-          </div>
-        </div>
-      ) : (
-        <ul role="list" className="space-y-2">
-          {entries.map((entry) => {
-            const createdAt = entry.createdAt instanceof Date
-              ? entry.createdAt.toISOString()
-              : String(entry.createdAt);
-            return (
-              <li key={entry.id} role="listitem">
-                <Link
-                  href={`/journal/${entry.id}`}
-                  className="group flex gap-0 rounded-xl overflow-hidden border border-border/70 transition-all duration-150
-                    hover:border-primary/40 hover:-translate-y-px hover:shadow-[0_4px_20px_rgba(0,0,0,0.5)]
-                    active:scale-[0.99] active:translate-y-0 active:shadow-none
-                    focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
-                  style={{
-                    background: 'linear-gradient(160deg, rgb(var(--theme-surface-alt-rgb) / 0.4) 0%, var(--theme-surface) 60%)',
-                  }}
+      <div className="px-4">
+        <GlassCard padding="none" className="overflow-hidden">
+          {isLoading ? (
+            <div className="p-4 flex flex-col gap-0">
+              {[1, 2, 3, 4].map((i) => (
+                <div
+                  key={i}
+                  className="flex flex-col gap-2 py-4 border-b border-border/50 last:border-0"
                 >
-                  <div className="w-1 shrink-0 bg-primary/60 group-hover:bg-primary transition-colors" />
-                  <div className="flex flex-1 items-center gap-3 px-4 py-3.5 min-w-0">
-                    {entry.mood && (
-                      <span className="text-xl shrink-0" aria-label={`Mood: ${entry.mood}`}>
-                        {entry.mood}
-                      </span>
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <p className="font-black text-text text-sm leading-snug truncate">
-                        {entry.title ?? formatDate(createdAt)}
-                      </p>
-                      {entry.content && (
-                        <p className="text-muted text-xs mt-0.5 line-clamp-1 leading-snug">
-                          {entry.content.slice(0, 200)}
-                        </p>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <span className="hidden sm:inline-flex text-[10px] font-bold uppercase tracking-wide text-subtle">
-                        {formatDate(createdAt)}
-                      </span>
-                      <span className="text-muted group-hover:text-primary transition-colors">
-                        <IconChevronRight />
-                      </span>
-                    </div>
+                  <div className="flex items-center justify-between">
+                    <Skeleton className="h-4 w-36" />
+                    <Skeleton className="h-6 w-6 rounded-full" />
                   </div>
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
-      )}
+                  <Skeleton className="h-3 w-full" />
+                  <Skeleton className="h-3 w-2/3" />
+                </div>
+              ))}
+            </div>
+          ) : entries.length === 0 ? (
+            <div className="py-12 text-center flex flex-col items-center gap-3">
+              <BookOpen size={36} className="text-muted-foreground/40" />
+              <div>
+                <p className="text-body font-semibold text-foreground">
+                  Diário vazio
+                </p>
+                <p className="text-subheadline text-muted-foreground mt-1">
+                  Registre seus pensamentos
+                </p>
+              </div>
+              <Link href="/journal/new">
+                <Button variant="outline" size="sm">
+                  <Plus size={16} />
+                  Nova entrada
+                </Button>
+              </Link>
+            </div>
+          ) : (
+            entries.map((entry) => (
+              <Link
+                key={entry.id}
+                href={`/journal/${entry.id}`}
+                className="flex flex-col gap-1.5 px-4 py-4 border-b border-border/50 last:border-0 active:bg-muted/50 ios-transition"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-caption-1 text-muted-foreground">
+                    {formatDate(entry.createdAt)}
+                  </p>
+                  {entry.mood && (
+                    <span className="text-base">
+                      {moodEmoji[entry.mood] ?? ""}
+                    </span>
+                  )}
+                </div>
+                {entry.title && (
+                  <p className="text-body font-semibold text-foreground">
+                    {entry.title}
+                  </p>
+                )}
+                {entry.content && (
+                  <p className="text-subheadline text-muted-foreground line-clamp-2">
+                    {entry.content}
+                  </p>
+                )}
+              </Link>
+            ))
+          )}
+        </GlassCard>
+      </div>
     </div>
   );
 }

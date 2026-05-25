@@ -103,6 +103,75 @@ export async function GET(_request: Request, { params }: Params) {
   });
 }
 
+// PATCH /api/friends/sharing/[friendSystemId]
+// Body: { visibility: "hidden" | "profile" | "full" }
+// Sets ALL non-archived members to the given visibility level atomically.
+export async function PATCH(request: Request, { params }: Params) {
+  const auth = await requireAuth();
+  if (auth.error) return auth.error;
+
+  const { friendSystemId } = await params;
+  if (!friendSystemId) return err('Friend account is required.', 400);
+  if (friendSystemId === auth.systemId) return err('Self sharing is not supported.', 400);
+
+  const relationship = await ensureActiveFriendship(auth.systemId, friendSystemId);
+  if ('error' in relationship) return relationship.error;
+
+  const parsed = await parseJsonRecord(request);
+  if (parsed.error) return parsed.error;
+  const body = parsed.data;
+
+  const visibility = parseFriendMemberVisibility(body.visibility);
+  if (!visibility) {
+    return err('Invalid visibility. Use "hidden", "profile", or "full".', 400);
+  }
+
+  const ownedMembers = await db.query.members.findMany({
+    columns: { id: true },
+    where: and(eq(members.systemId, auth.systemId), eq(members.isArchived, 0)),
+  });
+
+  if (visibility === 'hidden') {
+    await db
+      .delete(systemFriendMemberShares)
+      .where(and(
+        eq(systemFriendMemberShares.ownerSystemId, auth.systemId),
+        eq(systemFriendMemberShares.friendSystemId, friendSystemId),
+      ));
+  } else {
+    const fieldVisibility = defaultFieldVisibilityForLevel(visibility);
+    const now = new Date();
+
+    await db.transaction(async (tx) => {
+      await tx
+        .delete(systemFriendMemberShares)
+        .where(and(
+          eq(systemFriendMemberShares.ownerSystemId, auth.systemId),
+          eq(systemFriendMemberShares.friendSystemId, friendSystemId),
+        ));
+
+      if (ownedMembers.length > 0) {
+        await tx
+          .insert(systemFriendMemberShares)
+          .values(ownedMembers.map((member) => ({
+            id: createId(),
+            ownerSystemId: auth.systemId,
+            friendSystemId,
+            memberId: member.id,
+            visibility,
+            fieldVisibility: JSON.stringify(fieldVisibility),
+            createdAt: now,
+            updatedAt: now,
+          })));
+      }
+    });
+  }
+
+  revalidatePath('/friends');
+
+  return ok({ visibility, count: ownedMembers.length });
+}
+
 // PUT /api/friends/sharing/[friendSystemId]
 // Body: {
 //   memberId: string,
