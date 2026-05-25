@@ -4,10 +4,11 @@ import useSWR from "swr";
 import { ArrowLeft, Heart, Calendar, MessageSquare, ListChecks } from "lucide-react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { GlassCard, GroupedSection, GroupedRow } from "@/components/glass/GlassCard";
+import { GroupedSection, GroupedRow } from "@/components/glass/GlassCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import DynamicAvatarImage from "@/components/ui/DynamicAvatarImage";
 import { apiFetcher } from "@/lib/swr";
+import { useLanguage } from "@/components/providers/LanguageProvider";
 
 type Partnership = {
   partnershipId: string;
@@ -25,25 +26,26 @@ type Partnership = {
   };
 };
 
-function formatDate(value: string | null | undefined) {
-  if (!value) return "—";
-  return new Date(value).toLocaleDateString("pt-BR", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
-}
-
 export default function PartnershipDetailPage({
   params,
 }: {
   params: { partnershipId: string };
 }) {
   const router = useRouter();
+  const { t, language } = useLanguage();
   const { data, isLoading } = useSWR<Partnership>(
     `/api/partners/${params.partnershipId}`,
     apiFetcher
   );
+
+  function formatDate(value: string | null | undefined) {
+    if (!value) return "—";
+    return new Date(value).toLocaleDateString(language === "pt-BR" ? "pt-BR" : language === "es" ? "es" : "en", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    });
+  }
 
   if (isLoading) {
     return (
@@ -58,12 +60,9 @@ export default function PartnershipDetailPage({
   if (!data) {
     return (
       <div className="px-4 pt-14 text-center">
-        <p className="text-body text-muted-foreground">Parceria não encontrada</p>
-        <Link
-          href="/partners"
-          className="inline-block mt-4 text-ios-blue ios-press"
-        >
-          Voltar
+        <p className="text-body text-muted-foreground">{t("partners.noPartners")}</p>
+        <Link href="/partners" className="inline-block mt-4 text-ios-blue ios-press">
+          {t("common.back")}
         </Link>
       </div>
     );
@@ -81,7 +80,7 @@ export default function PartnershipDetailPage({
             className="flex items-center gap-1 text-ios-blue ios-press -ml-1"
           >
             <ArrowLeft size={18} strokeWidth={2.5} />
-            <span className="text-body">Parcerias</span>
+            <span className="text-body">{t("partners.title")}</span>
           </button>
         </div>
       </div>
@@ -115,17 +114,17 @@ export default function PartnershipDetailPage({
       {/* Details */}
       <div className="px-4 mb-5">
         <p className="text-footnote font-semibold text-muted-foreground uppercase tracking-wide mb-2 px-1">
-          Detalhes
+          {t("partners.details")}
         </p>
         <GroupedSection>
           <GroupedRow
-            label="Início da parceria"
+            label={t("partners.since")}
             value={formatDate(data.partneredSince)}
             icon={<Calendar size={18} />}
           />
           {data.anniversaryDate && (
             <GroupedRow
-              label="Aniversário"
+              label={t("partners.anniversary")}
               value={formatDate(data.anniversaryDate)}
               icon={<Heart size={18} />}
             />
@@ -133,7 +132,7 @@ export default function PartnershipDetailPage({
           {data.howWeMet && (
             <div className="px-4 py-3">
               <p className="text-caption-1 text-muted-foreground mb-1">
-                Como nos conhecemos
+                {t("partners.howWeMet")}
               </p>
               <p className="text-body text-foreground">{data.howWeMet}</p>
             </div>
@@ -141,26 +140,26 @@ export default function PartnershipDetailPage({
         </GroupedSection>
       </div>
 
-      {/* Actions */}
+      {/* Shared features */}
       <div className="px-4 mb-6">
         <p className="text-footnote font-semibold text-muted-foreground uppercase tracking-wide mb-2 px-1">
-          Compartilhado
+          {t("partners.shared")}
         </p>
         <GroupedSection>
           <GroupedRow
-            label="Diário compartilhado"
+            label={t("partners.sharedDiary")}
             icon={<MessageSquare size={18} />}
             chevron
             className="cursor-pointer"
           />
           <GroupedRow
-            label="Marcos importantes"
+            label={t("partners.milestones")}
             icon={<Heart size={18} />}
             chevron
             className="cursor-pointer"
           />
           <GroupedRow
-            label="Lista de desejos"
+            label={t("partners.bucketList")}
             icon={<ListChecks size={18} />}
             chevron
             className="cursor-pointer"
@@ -173,7 +172,7 @@ export default function PartnershipDetailPage({
           href={`/systems/${other.id}`}
           className="block w-full text-center py-3 rounded-ios-md bg-secondary ios-press text-body font-semibold text-foreground"
         >
-          Ver perfil do sistema
+          {t("partners.viewProfile")}
         </Link>
       </div>
     </div>

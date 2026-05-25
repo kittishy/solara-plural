@@ -1,11 +1,55 @@
 import { eq } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { db } from '@/lib/db';
-import { systemPartnerships } from '@/lib/db/schema';
+import { systemPartnerships, systems } from '@/lib/db/schema';
 import { err, ok, parseJsonRecord, requireAuth } from '@/lib/api/helpers';
 import { getPartnershipForSystem } from '@/lib/partnerships';
 
 type Params = { params: Promise<{ partnershipId: string }> };
+
+// GET /api/partners/[partnershipId]
+export async function GET(_request: Request, { params }: Params) {
+  const auth = await requireAuth();
+  if (auth.error) return auth.error;
+
+  const { partnershipId } = await params;
+  if (!partnershipId) return err('Partnership ID is required.', 400);
+
+  const access = await getPartnershipForSystem(partnershipId, auth.systemId);
+  if (!access) return err('Partnership not found.', 404);
+
+  const { partnership, partnerSystemId } = access;
+
+  const partnerSystem = await db.query.systems.findFirst({
+    columns: { id: true, name: true, description: true, accountType: true, avatarMode: true, avatarEmoji: true, avatarUrl: true },
+    where: eq(systems.id, partnerSystemId),
+  });
+
+  if (!partnerSystem) return err('Partner system not found.', 404);
+
+  const isSystemA = partnership.systemAId === auth.systemId;
+
+  return ok({
+    partnershipId: partnership.id,
+    relationshipLabel: partnership.relationshipLabel,
+    partneredSince: partnership.partneredSince,
+    anniversaryDate: partnership.anniversaryDate,
+    howWeMet: partnership.howWeMet,
+    nicknameForPartner: isSystemA ? partnership.nicknameForB : partnership.nicknameForA,
+    checkinIntervalDays: partnership.checkinIntervalDays,
+    lastCheckinAt: partnership.lastCheckinAt,
+    createdAt: partnership.createdAt,
+    other: {
+      id: partnerSystem.id,
+      name: partnerSystem.name,
+      description: partnerSystem.description,
+      accountType: partnerSystem.accountType,
+      avatarMode: partnerSystem.avatarMode,
+      avatarEmoji: partnerSystem.avatarEmoji,
+      avatarUrl: partnerSystem.avatarUrl,
+    },
+  });
+}
 
 // DELETE /api/partners/[partnershipId]
 // Ends a partnership. The underlying friendship is preserved.
