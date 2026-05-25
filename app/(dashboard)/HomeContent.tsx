@@ -1,13 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { Users, Layers, BookOpen, FileText, Heart, UserPlus } from "lucide-react";
+import { Users, Layers, BookOpen, FileText, Heart, UserPlus, X } from "lucide-react";
+import useSWR, { mutate } from "swr";
+import { useState } from "react";
 import { GlassCard } from "@/components/glass/GlassCard";
 import { LargeTitle } from "@/components/layout/NavBar";
 import DynamicAvatarImage from "@/components/ui/DynamicAvatarImage";
 import { Badge } from "@/components/ui/badge";
 import { useLanguage } from "@/components/providers/LanguageProvider";
 import { parseStoredTags } from "@/lib/members/fields";
+import { apiFetcher, swrKeys, revalidateMembersAndFront } from "@/lib/swr";
 
 type FrontingMember = {
   id: string;
@@ -83,6 +86,48 @@ export function HomeContent({
   recentMembers,
 }: Props) {
   const { t } = useLanguage();
+  const [updating, setUpdating] = useState(false);
+
+  // Fetch current front entry client-side for interactive actions
+  const { data: currentFront } = useSWR<{ id: string; memberIds: string[]; startedAt: string } | null>(
+    swrKeys.front,
+    apiFetcher
+  );
+  const frontingIds = currentFront?.memberIds ?? [];
+
+  async function toggleMember(memberId: string) {
+    if (updating) return;
+    setUpdating(true);
+    try {
+      const newIds = frontingIds.filter((id) => id !== memberId);
+      if (newIds.length === 0) {
+        await fetch("/api/front", { method: "DELETE", credentials: "same-origin" });
+      } else {
+        await fetch("/api/front", {
+          method: "POST",
+          credentials: "same-origin",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ memberIds: newIds }),
+        });
+      }
+      revalidateMembersAndFront();
+      void mutate(swrKeys.frontHistory);
+    } finally {
+      setUpdating(false);
+    }
+  }
+
+  async function endFront() {
+    if (updating) return;
+    setUpdating(true);
+    try {
+      await fetch("/api/front", { method: "DELETE", credentials: "same-origin" });
+      revalidateMembersAndFront();
+      void mutate(swrKeys.frontHistory);
+    } finally {
+      setUpdating(false);
+    }
+  }
 
   return (
     <div className="animate-fade-in">
@@ -105,9 +150,20 @@ export function HomeContent({
 
       {/* Currently fronting */}
       <div className="px-4 mb-5">
-        <p className="text-footnote font-semibold text-muted-foreground uppercase tracking-wide mb-2 px-1">
-          {t("home.nowFronting")}
-        </p>
+        <div className="flex items-center justify-between mb-2 px-1">
+          <p className="text-footnote font-semibold text-muted-foreground uppercase tracking-wide">
+            {t("home.nowFronting")}
+          </p>
+          {frontingMembers.length > 0 && (
+            <button
+              onClick={endFront}
+              disabled={updating}
+              className="text-subheadline text-ios-red font-semibold ios-press disabled:opacity-50"
+            >
+              {t("front.endAll")}
+            </button>
+          )}
+        </div>
         <GlassCard padding="none" className="overflow-hidden">
           {frontingMembers.length === 0 ? (
             <Link
@@ -118,20 +174,33 @@ export function HomeContent({
             </Link>
           ) : (
             frontingMembers.map((m) => (
-              <Link
+              <div
                 key={m.id}
-                href={`/members/${m.id}`}
-                className="flex items-center gap-3 px-4 py-3 border-b border-border/50 last:border-0 active:bg-muted/50 ios-transition"
+                className="flex items-center gap-3 px-4 py-3 border-b border-border/50 last:border-0"
               >
-                <MemberAvatar member={m} size={44} />
-                <div className="flex-1 min-w-0">
-                  <p className="text-body font-semibold text-foreground truncate">{m.name}</p>
-                  {m.pronouns && (
-                    <p className="text-caption-1 text-muted-foreground truncate">{m.pronouns}</p>
-                  )}
-                </div>
+                <Link
+                  href={`/members/${m.id}`}
+                  className="flex items-center gap-3 flex-1 min-w-0"
+                >
+                  <MemberAvatar member={m} size={44} />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-body font-semibold text-foreground truncate">{m.name}</p>
+                    {m.pronouns && (
+                      <p className="text-caption-1 text-muted-foreground truncate">{m.pronouns}</p>
+                    )}
+                  </div>
+                </Link>
                 <Badge variant="success">{t("front.title")}</Badge>
-              </Link>
+                <button
+                  onClick={() => toggleMember(m.id)}
+                  disabled={updating}
+                  className="w-7 h-7 rounded-full flex items-center justify-center text-muted-foreground hover:text-ios-red hover:bg-ios-red/10 ios-transition disabled:opacity-50"
+                  title={t("front.removeMemberFront")}
+                  aria-label={t("front.removeMemberFront")}
+                >
+                  <X size={15} strokeWidth={2.5} />
+                </button>
+              </div>
             ))
           )}
         </GlassCard>
