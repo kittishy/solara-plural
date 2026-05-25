@@ -748,13 +748,18 @@ async function applyExportToPluralKit(
       if (op.action === 'update' && op.externalId && op.patch && Object.keys(op.patch).length > 0) {
         await remoteJsonWithBody(
           `${PLURALKIT_BASE_URL}/systems/@me/members/${op.externalId}`,
-          { method: 'PATCH', headers, body: JSON.stringify(op.patch) },
+          { method: 'PUT', headers, body: JSON.stringify(op.patch) },
         );
       }
     } catch (error) {
       if (error instanceof RemoteSyncError && error.status === 404) {
-        // member was deleted from PK — skip and continue
         continue;
+      }
+      if (error instanceof RemoteSyncError) {
+        throw new RemoteSyncError(
+          `${error.message} (member: ${op.name}, action: ${op.action})`,
+          error.status,
+        );
       }
       throw error;
     }
