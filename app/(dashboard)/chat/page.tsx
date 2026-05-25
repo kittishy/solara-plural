@@ -12,6 +12,8 @@ import {
   AlertTriangle,
   Smile,
   Paperclip,
+  Search,
+  X,
 } from "lucide-react";
 import { LargeTitle } from "@/components/layout/NavBar";
 import { GlassCard } from "@/components/glass/GlassCard";
@@ -84,6 +86,7 @@ export default function ChatPage() {
   const [confirmDeleteChannel, setConfirmDeleteChannel] = useState<Channel | null>(null);
   const [deletingMsgId, setDeletingMsgId] = useState<string | null>(null);
   const [showMemberPicker, setShowMemberPicker] = useState(false);
+  const [memberSearch, setMemberSearch] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -404,14 +407,35 @@ export default function ChatPage() {
       {/* Member picker — "Send as..." */}
       <BottomSheet
         open={showMemberPicker}
-        onClose={() => setShowMemberPicker(false)}
+        onClose={() => { setShowMemberPicker(false); setMemberSearch(""); }}
         title={t("chat.sendAs")}
       >
-        <div className="flex flex-col gap-1">
+        {/* Search input */}
+        <div className="relative mx-3 mb-2">
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <input
+            type="text"
+            value={memberSearch}
+            onChange={(e) => setMemberSearch(e.target.value)}
+            placeholder="Pesquisar membro..."
+            className="w-full h-9 pl-9 pr-8 rounded-ios-md bg-secondary text-body text-foreground placeholder:text-muted-foreground/50 focus:outline-none"
+          />
+          {memberSearch && (
+            <button
+              type="button"
+              onClick={() => setMemberSearch("")}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground ios-press"
+            >
+              <X size={16} />
+            </button>
+          )}
+        </div>
+
+        <div className="flex flex-col gap-1 max-h-[60vh] overflow-y-auto">
           {/* System option */}
           <button
             type="button"
-            onClick={() => { setSelectedMemberId(null); setShowMemberPicker(false); }}
+            onClick={() => { setSelectedMemberId(null); setShowMemberPicker(false); setMemberSearch(""); }}
             className={cn(
               "flex items-center gap-3 px-3 py-3 rounded-ios-lg ios-press ios-transition",
               !selectedMemberId ? "bg-ios-blue/10" : "hover:bg-secondary"
@@ -434,11 +458,13 @@ export default function ChatPage() {
           </button>
 
           {/* Members */}
-          {(membersList ?? []).map((m) => (
+          {(membersList ?? [])
+            .filter((m) => m.name.toLowerCase().includes(memberSearch.toLowerCase()))
+            .map((m) => (
             <button
               key={m.id}
               type="button"
-              onClick={() => { setSelectedMemberId(m.id); setShowMemberPicker(false); }}
+              onClick={() => { setSelectedMemberId(m.id); setShowMemberPicker(false); setMemberSearch(""); }}
               className={cn(
                 "flex items-center gap-3 px-3 py-3 rounded-ios-lg ios-press ios-transition",
                 selectedMemberId === m.id ? "bg-ios-blue/10" : "hover:bg-secondary"
