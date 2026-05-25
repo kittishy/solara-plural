@@ -9,6 +9,8 @@ import {
   Check,
   AlertTriangle,
   Server,
+  Download,
+  Upload,
 } from "lucide-react";
 import { LargeTitle } from "@/components/layout/NavBar";
 import { GlassCard, GroupedSection } from "@/components/glass/GlassCard";
@@ -47,6 +49,7 @@ export default function IntegrationsPage() {
   const router = useRouter();
   const { t } = useLanguage();
 
+  const [direction, setDirection] = useState<"import" | "export">("import");
   const [token, setToken] = useState("");
   const [showToken, setShowToken] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -69,7 +72,7 @@ export default function IntegrationsPage() {
         method: "POST",
         credentials: "same-origin",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ provider: "pluralkit" }),
+        body: JSON.stringify({ provider: "pluralkit", direction: "import" }),
       });
       const json = await res.json();
       if (json.success && json.data?.remoteSystemId) {
@@ -101,6 +104,7 @@ export default function IntegrationsPage() {
         body: JSON.stringify({
           provider: "pluralkit",
           token: token.trim(),
+          direction,
         }),
       });
       const json = await res.json();
@@ -135,6 +139,7 @@ export default function IntegrationsPage() {
           provider: "pluralkit",
           token: token.trim() || undefined,
           apply: true,
+          direction,
         }),
       });
       const json = await res.json();
@@ -209,6 +214,34 @@ export default function IntegrationsPage() {
       {/* Title */}
       <div className="px-4 pt-6 pb-2">
         <LargeTitle className="px-0">PluralKit Sync</LargeTitle>
+      </div>
+
+      {/* Direction toggle */}
+      <div className="px-4 mb-4">
+        <div className="flex rounded-ios-md bg-secondary p-0.5">
+          <button
+            type="button"
+            onClick={() => { setDirection("import"); setResult(null); setError(""); }}
+            className={cn(
+              "flex-1 flex items-center justify-center gap-1.5 py-2 rounded-ios-sm text-subheadline font-medium ios-transition",
+              direction === "import" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"
+            )}
+          >
+            <Download size={15} />
+            Import from PK
+          </button>
+          <button
+            type="button"
+            onClick={() => { setDirection("export"); setResult(null); setError(""); }}
+            className={cn(
+              "flex-1 flex items-center justify-center gap-1.5 py-2 rounded-ios-sm text-subheadline font-medium ios-transition",
+              direction === "export" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"
+            )}
+          >
+            <Upload size={15} />
+            Export to PK
+          </button>
+        </div>
       </div>
 
       {/* Connection status */}
@@ -327,7 +360,10 @@ export default function IntegrationsPage() {
             size={18}
             className={cn(loading && "animate-spin")}
           />
-          {loading ? "Testing..." : "Test connection"}
+          {loading
+            ? (direction === "import" ? "Testing..." : "Previewing...")
+            : (direction === "import" ? "Test connection" : "Preview export")
+          }
         </Button>
 
         {result && (
@@ -337,7 +373,10 @@ export default function IntegrationsPage() {
             className="w-full ios-press"
           >
             <Check size={18} />
-            {applying ? "Applying..." : "Apply sync"}
+            {applying
+              ? "Applying..."
+              : (direction === "import" ? "Apply sync" : "Apply export")
+            }
           </Button>
         )}
       </div>
@@ -374,10 +413,10 @@ export default function IntegrationsPage() {
       {result && (
         <div className="px-4 mb-10">
           <p className="text-footnote font-semibold text-muted-foreground uppercase tracking-wide mb-2 px-1">
-            {result.applied ? "Sync Result" : "Preview"}
+            {result.applied ? "Sync Result" : direction === "import" ? "Preview" : "Export Preview"}
           </p>
 
-          {result.remoteSystemId && (
+          {direction === "import" && result.remoteSystemId && (
             <GlassCard className="mb-4">
               <div className="flex items-center gap-3">
                 <Server size={18} className="text-ios-blue flex-shrink-0" />
@@ -400,13 +439,13 @@ export default function IntegrationsPage() {
                 <p className="text-title-2 font-bold text-green-500">
                   {result.summary.create}
                 </p>
-                <p className="text-caption-1 text-muted-foreground">Create</p>
+                <p className="text-caption-1 text-muted-foreground">{direction === "export" ? "Create" : "Create"}</p>
               </div>
               <div>
                 <p className="text-title-2 font-bold text-ios-blue">
                   {result.summary.update}
                 </p>
-                <p className="text-caption-1 text-muted-foreground">Update</p>
+                <p className="text-caption-1 text-muted-foreground">{direction === "export" ? "Update" : "Update"}</p>
               </div>
               <div>
                 <p className="text-title-2 font-bold text-muted-foreground">
@@ -418,7 +457,7 @@ export default function IntegrationsPage() {
                 <p className="text-title-2 font-bold text-muted-foreground">
                   {result.summary.unchanged}
                 </p>
-                <p className="text-caption-1 text-muted-foreground">Same</p>
+                <p className="text-caption-1 text-muted-foreground">{direction === "export" ? "Same" : "Same"}</p>
               </div>
             </div>
           </GlassCard>

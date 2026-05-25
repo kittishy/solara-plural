@@ -27,6 +27,7 @@ type SyncBody = {
   token?: unknown;
   apply?: unknown;
   options?: unknown;
+  direction?: unknown;
 };
 
 type ExternalMember = {
@@ -108,20 +109,39 @@ export async function POST(request: Request) {
 
     const apply = body.apply === true;
     const options = sanitizeSyncOptions(body.options);
+    const direction = body.direction === 'export' ? 'export' : 'import';
 
-    const [existingMembers, existingLinks, remote] = await Promise.all([
+    const [existingMembers, existingLinks] = await Promise.all([
       db.select().from(members).where(eq(members.systemId, auth.systemId)),
       db.select().from(memberExternalLinks).where(eq(memberExternalLinks.systemId, auth.systemId)),
-      fetchExternalMembers({
-        provider,
-        token,
-        includeFrontState: apply,
-      }),
     ]);
 
     if (providedToken) {
       await upsertPersistedToken(auth.systemId, provider, providedToken);
     }
+
+    if (direction === 'export') {
+      const localMembers = existingMembers.filter((m) => !m.isArchived);
+      const exportPlan = planExportToPluralKit(localMembers, existingLinks);
+
+      if (apply) {
+        await applyExportToPluralKit(auth.systemId, exportPlan.operations as SyncOperation[], token, existingLinks);
+        revalidatePath('/members');
+      }
+
+      return ok({
+        provider,
+        applied: apply,
+        direction: 'export',
+        summary: exportPlan.summary,
+        operations: compactOperations(exportPlan.operations as SyncOperation[]),
+        operationLimit: MAX_PREVIEW_OPERATIONS,
+      });
+    }
+
+    const [remote] = await Promise.all([
+      fetchExternalMembers({ provider, token, includeFrontState: apply }),
+    ]);
 
     const plan = planMemberSync({
       existingMembers,
@@ -151,6 +171,7 @@ export async function POST(request: Request) {
     return ok({
       provider,
       applied: apply,
+      direction: 'import',
       remoteSystemId: remote.remoteSystemId,
       summary: plan.summary,
       operations: compactOperations(plan.operations as SyncOperation[]),
@@ -571,6 +592,197 @@ async function upsertExternalLink(
     ...nextValues,
     createdAt: now,
   });
+}
+
+function planExportToPluralKit(
+  localMembers: typeof members.$inferSelect[],
+  existingLinks: typeof memberExternalLinks.$inferSelect[],
+) {
+  const pkLinks = existingLinks.filter((l) => l.provider === PROVIDERS.PLURALKIT);
+  const linkByMemberId = new Map(pkLinks.map((l) => [l.memberId, l]));
+
+  const operations: SyncOperation[] = [];
+
+  for (const member of localMembers) {
+    const base = { provider: PROVIDERS.PLURALKIT, externalId: '', name: member.name };
+
+    if (member.isArchived) {
+      operations.push({ ...base, action: 'skip', reason: 'archived' });
+      continue;
+    }
+
+    const link = linkByMemberId.get(member.id);
+    if (link) {
+      const changedFields: string[] = [];
+      const patch: Record<string, unknown> = {};
+
+      const candidates: Record<string, string | null> = {
+        name: member.name,
+        display_name: member.name,
+        color: member.color ? member.color.replace('#', '') : null,
+        pronouns: member.pronouns,
+        description: member.description,
+        avatar_url: member.avatarUrl,
+      };
+
+      for (const [field, value] of Object.entries(candidates)) {
+        const current = (member as Record<string, unknown>)[field] ?? null;
+        const next = value ?? null;
+        if (JSON.stringify(current) !== JSON.stringify(next)) {
+          patch[field] = next;
+          changedFields.push(field);
+        }
+      }
+
+      operations.push({
+        ...base,
+        action: changedFields.length > 0 ? 'update' : 'unchanged',
+        reason: 'linked',
+        externalId: link.externalId,
+        memberId: member.id,
+        patch,
+        changedFields,
+        link: {
+          provider: PROVIDERS.PLURALKIT,
+          externalId: link.externalId,
+          externalSecondaryId: link.externalSecondaryId,
+          externalName: member.name,
+          metadata: link.metadata,
+        },
+      });
+    } else {
+      const changedFields: string[] = [];
+      const payload: Record<string, unknown> = { name: member.name };
+      if (member.color) { payload.color = member.color.replace('#', ''); changedFields.push('color'); }
+      if (member.pronouns) { payload.pronouns = member.pronouns; changedFields.push('pronouns'); }
+      if (member.description) { payload.description = member.description; changedFields.push('description'); }
+      if (member.avatarUrl) { payload.avatar_url = member.avatarUrl; changedFields.push('avatar_url'); }
+      changedFields.unshift('name');
+
+      operations.push({
+        ...base,
+        action: 'create',
+        reason: 'new_local_member',
+        memberId: member.id,
+        member: payload,
+        changedFields,
+      });
+    }
+  }
+
+  return { operations, summary: makeSummary(operations) };
+}
+
+function makeSummary(operations: SyncOperation[]) {
+  const summary: Record<string, number> = { create: 0, update: 0, skip: 0, unchanged: 0 };
+  for (const op of operations) {
+    summary[op.action] = (summary[op.action] ?? 0) + 1;
+  }
+  return summary;
+}
+
+async function applyExportToPluralKit(
+  systemId: string,
+  operations: SyncOperation[],
+  token: string,
+  existingLinks: typeof memberExternalLinks.$inferSelect[],
+) {
+  for (const op of operations) {
+    if (op.action === 'skip' || op.action === 'unchanged') continue;
+
+    const headers = {
+      Authorization: token,
+      'User-Agent': SOLARA_USER_AGENT,
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    };
+
+    if (op.action === 'create' && op.member && op.memberId) {
+      const body = await remoteJsonWithBody(
+        `${PLURALKIT_BASE_URL}/systems/@me/members`,
+        { method: 'POST', headers, body: JSON.stringify(op.member) },
+      );
+      const record = toRecord(body);
+      const uuid = readId(record, ['uuid', 'id']);
+      const shortId = typeof record.id === 'string' ? record.id : null;
+
+      if (uuid) {
+        const now = new Date();
+        const linkRow = existingLinks.find(
+          (l) => l.memberId === op.memberId && l.provider === PROVIDERS.PLURALKIT,
+        );
+        if (linkRow) {
+          await db
+            .update(memberExternalLinks)
+            .set({
+              externalId: uuid,
+              externalSecondaryId: shortId && shortId !== uuid ? shortId : null,
+              externalName: op.name,
+              lastSyncedAt: now,
+              updatedAt: now,
+            })
+            .where(eq(memberExternalLinks.id, linkRow.id));
+        } else {
+          await db.insert(memberExternalLinks).values({
+            id: createId(),
+            systemId,
+            provider: PROVIDERS.PLURALKIT,
+            memberId: op.memberId,
+            externalId: uuid,
+            externalSecondaryId: shortId && shortId !== uuid ? shortId : null,
+            externalName: op.name,
+            createdAt: now,
+            updatedAt: now,
+            lastSyncedAt: now,
+          });
+        }
+      }
+    }
+
+    if (op.action === 'update' && op.externalId && op.patch && Object.keys(op.patch).length > 0) {
+      await remoteJsonWithBody(
+        `${PLURALKIT_BASE_URL}/systems/@me/members/${op.externalId}`,
+        { method: 'PATCH', headers, body: JSON.stringify(op.patch) },
+      );
+    }
+  }
+}
+
+async function remoteJsonWithBody(url: string, init: RequestInit): Promise<unknown> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), PLURALKIT_REQUEST_TIMEOUT_MS);
+
+  let response: Response;
+  try {
+    response = await fetch(url, { ...init, cache: 'no-store', signal: controller.signal });
+  } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw new RemoteSyncError('PluralKit took too long to respond. Please try again in a moment.', 504);
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
+
+  if (!response.ok) {
+    if (response.status === 429) {
+      const text = await response.text();
+      const retryAfter = readRetryAfter(parseRemoteBody(text));
+      throw new RemoteSyncError(
+        retryAfter ? `PluralKit rate limited. Try again after ${retryAfter}.` : 'PluralKit rate limited. Please try again.',
+        429,
+      );
+    }
+    const text = await response.text();
+    throw new RemoteSyncError(
+      readRemoteMessage(parseRemoteBody(text)) ?? `PluralKit request failed with HTTP ${response.status}.`,
+      response.status,
+    );
+  }
+
+  const text = await response.text();
+  if (response.status === 204 || text.length === 0) return null;
+  return parseRemoteBody(text);
 }
 
 function compactOperations(operations: SyncOperation[]) {

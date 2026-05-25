@@ -69,4 +69,14 @@ filter_claude.py
 .gemini/
 docs/AGENT_SWARM_REFERENCES.md
 
+# env files (contain secrets)
+.env
+.env.production
+
+# temp scripts
+scripts/add-vercel-env.cjs
+scripts/add-vercel-env.ps1
+scripts/set-vercel-env.ps1
+scripts/check-tables.mjs
+
 
