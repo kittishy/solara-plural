@@ -68,7 +68,8 @@ export default function ChatPage() {
     "/api/chat/channels",
     apiFetcher
   );
-  const { data: membersList } = useSWR<Member[]>(swrKeys.members, apiFetcher);
+  const { data: membersData } = useSWR<{ data: Member[] }>("/api/members?limit=9999", apiFetcher);
+  const membersList = membersData?.data ?? [];
 
   const channels = channelsData?.channels ?? [];
   const [activeChannelId, setActiveChannelId] = useState<string | null>(null);

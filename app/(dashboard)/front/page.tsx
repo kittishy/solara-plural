@@ -76,10 +76,11 @@ export default function FrontPage() {
     swrKeys.front,
     apiFetcher
   );
-  const { data: members, isLoading: loadingMembers } = useSWR<Member[]>(
-    swrKeys.members,
+  const { data: membersData, isLoading: loadingMembers } = useSWR<{ data: Member[] }>(
+    "/api/members?limit=9999",
     apiFetcher
   );
+  const members = membersData?.data ?? [];
   const { data: historyData } = useSWR<FrontEntry[]>(
     swrKeys.frontHistory,
     apiFetcher

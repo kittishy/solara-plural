@@ -59,7 +59,8 @@ export default function FrontHistoryPage() {
     swrKeys.frontHistory,
     apiFetcher
   );
-  const { data: members } = useSWR<Member[]>(swrKeys.members, apiFetcher);
+  const { data: membersData } = useSWR<{ data: Member[] }>("/api/members?limit=9999", apiFetcher);
+  const members = membersData?.data ?? [];
 
   const memberById = new Map((members ?? []).map((m) => [m.id, m]));
   const entries = history ?? [];
