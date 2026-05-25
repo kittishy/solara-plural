@@ -1,7 +1,7 @@
 "use client";
 
 import useSWR, { mutate } from "swr";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import {
   MessageCircle,
   Plus,
@@ -14,7 +14,10 @@ import {
   Paperclip,
   Search,
   X,
+  ImageUp,
+  Loader2,
 } from "lucide-react";
+import ReactMarkdown from "react-markdown";
 import { LargeTitle } from "@/components/layout/NavBar";
 import { GlassCard } from "@/components/glass/GlassCard";
 import { Button } from "@/components/ui/button";
@@ -23,6 +26,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { BottomSheet } from "@/components/glass/BottomSheet";
 import { apiFetcher, swrKeys } from "@/lib/swr";
 import DynamicAvatarImage from "@/components/ui/DynamicAvatarImage";
+import { EmojiPicker } from "@/components/chat/EmojiPicker";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/components/providers/LanguageProvider";
 
@@ -87,7 +91,11 @@ export default function ChatPage() {
   const [deletingMsgId, setDeletingMsgId] = useState<string | null>(null);
   const [showMemberPicker, setShowMemberPicker] = useState(false);
   const [memberSearch, setMemberSearch] = useState("");
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (channels.length > 0 && !activeChannelId) {
@@ -189,6 +197,42 @@ export default function ChatPage() {
       setSending(false);
     }
   }
+
+  function insertAtCursor(text: string) {
+    const input = inputRef.current;
+    if (!input) {
+      setMessageText((prev) => prev + text);
+      return;
+    }
+    const start = input.selectionStart ?? messageText.length;
+    const end = input.selectionEnd ?? messageText.length;
+    const next = messageText.slice(0, start) + text + messageText.slice(end);
+    setMessageText(next);
+    requestAnimationFrame(() => {
+      const pos = start + text.length;
+      input.setSelectionRange(pos, pos);
+      input.focus();
+    });
+  }
+
+  const handleFileUpload = useCallback(async (file: File) => {
+    if (file.size > 20 * 1024 * 1024) {
+      return;
+    }
+    setUploading(true);
+    try {
+      const body = new FormData();
+      body.append("file", file);
+      const res = await fetch("/api/upload", { method: "POST", body });
+      const json = await res.json();
+      if (json.url) {
+        const isImage = file.type.startsWith("image/");
+        insertAtCursor(isImage ? `![image](${json.url})` : json.url);
+      }
+    } finally {
+      setUploading(false);
+    }
+  }, []);
 
   const activeMember = (membersList ?? []).find((m) => m.id === selectedMemberId);
 
@@ -321,9 +365,11 @@ export default function ChatPage() {
                           {formatTime(msg.createdAt)}
                         </span>
                       </div>
-                      <p className="text-body text-foreground whitespace-pre-wrap break-words leading-snug">
-                        {msg.content}
-                      </p>
+                      <div className="text-body text-foreground whitespace-pre-wrap break-words leading-snug prose-img:rounded-ios-md prose-img:max-w-full prose-img:max-h-80 prose-img:object-cover prose-a:text-ios-blue prose-a:underline">
+                        <ReactMarkdown>
+                          {msg.content}
+                        </ReactMarkdown>
+                      </div>
                     </div>
                     {/* Delete button — visible on hover/focus */}
                     <button
@@ -347,7 +393,7 @@ export default function ChatPage() {
       {/* Input bar — Telegram style */}
       {!chatUnavailableMessage && activeChannelId && (
         <div className="shrink-0 border-t border-border/40 glass px-3 pt-2 pb-3">
-          <form onSubmit={sendMessage} className="flex items-center gap-2">
+          <form onSubmit={sendMessage} className="flex items-center gap-2 relative">
             {/* Member avatar — tap to open picker */}
             <button
               type="button"
@@ -375,8 +421,16 @@ export default function ChatPage() {
 
             {/* Input pill */}
             <div className="flex-1 flex items-center gap-1.5 h-10 px-3 rounded-full bg-secondary">
-              <Smile size={18} className="text-muted-foreground flex-shrink-0" />
+              <button
+                type="button"
+                onClick={() => { setShowEmojiPicker((v) => !v); }}
+                className="flex items-center justify-center flex-shrink-0 ios-press"
+                aria-label="Emoji picker"
+              >
+                <Smile size={18} className="text-muted-foreground" />
+              </button>
               <input
+                ref={inputRef}
                 type="text"
                 value={messageText}
                 onChange={(e) => setMessageText(e.target.value)}
@@ -384,9 +438,19 @@ export default function ChatPage() {
                 maxLength={4000}
                 className="flex-1 bg-transparent text-body focus:outline-none min-w-0"
               />
-              {!messageText.trim() && (
-                <Paperclip size={18} className="text-muted-foreground flex-shrink-0" />
-              )}
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading}
+                className="flex items-center justify-center flex-shrink-0 ios-press disabled:opacity-40"
+                aria-label="Attach file"
+              >
+                {uploading ? (
+                  <Loader2 size={18} className="text-muted-foreground animate-spin" />
+                ) : (
+                  <ImageUp size={18} className="text-muted-foreground" />
+                )}
+              </button>
             </div>
 
             {/* Send button — only when there's text */}
@@ -400,6 +464,29 @@ export default function ChatPage() {
                 <Send size={16} />
               </button>
             )}
+
+            {/* Emoji picker panel */}
+            <EmojiPicker
+              open={showEmojiPicker}
+              onClose={() => setShowEmojiPicker(false)}
+              onSelect={(emoji) => {
+                insertAtCursor(emoji);
+                inputRef.current?.focus();
+              }}
+            />
+
+            {/* Hidden file input */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*,video/*,.gif,.pdf,.doc,.docx,.txt,.zip,.mp3,.wav"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) { handleFileUpload(file); }
+                e.target.value = "";
+              }}
+            />
           </form>
         </div>
       )}
