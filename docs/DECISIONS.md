@@ -685,3 +685,78 @@
 - Added mobile docs for audit, backend/auth TODOs, EAS Update, APK generation, and future repository separation.
 
 ---
+
+## [2026-05-25] D038 — Image Upload Uses Server Proxy (uguu.se) Instead Of Direct Client Upload
+
+**Decision:** Files are uploaded through a server-side proxy (`POST /api/upload`) that forwards to uguu.se instead of uploading directly from the browser.
+
+**Evaluated Options:**
+| Option | Pros | Cons |
+|--------|------|------|
+| catbox.moe | Simple API, anonymous, no API key | ❌ Blocks Vercel IP range (HTTP 412) |
+| uguu.se | Works from Vercel, no API key, simple JSON response | Files deleted after unknown retention |
+| Direct browser → catbox/uguu | No server cost | ❌ CORS blocked — neither service returns `Access-Control-Allow-Origin` |
+| Vercel Blob Storage | Integrated, reliable | ❌ Requires paid plan |
+
+**Justification:**
+- catbox.moe returns 412 Precondition Failed from Vercel's cloud IP range (tested locally: works from residential IP, blocked from Vercel's `iad1` region)
+- uguu.se confirmed working from Vercel (HTTP 200 with file URL)
+- Server proxy avoids CORS issues and enforces the 20 MB limit
+- The proxy can switch upload backends without client changes
+
+**Implementation:**
+- `app/api/upload/route.ts` receives multipart `file`, reads as ArrayBuffer, constructs a new multipart request via `Buffer.concat()` (not native FormData, which has undici serialization bugs), and forwards to `uguu.se/upload`
+- Returns `{ url }` on success
+- Manual multipart construction uses random boundary, proper Content-Disposition headers, and explicit filename
+
+---
+
+## [2026-05-25] D039 — File Input Uses `<label>` Wrapping Instead Of Programmatic `.click()`
+
+**Decision:** The file upload trigger uses an HTML `<label>` element wrapping `<input type="file">` instead of `<button onClick={() => ref.click()}>`.
+
+**Justification:**
+- iOS Safari ignores programmatic `.click()` on file inputs that have `display: none` or `visibility: hidden`
+- The `<label>` wrapping pattern is the HTML spec's native mechanism for associating click targets with file inputs and works in every browser without JavaScript dependency
+- Also works with `className="hidden"` (no need for opacity/position hacks)
+
+**Implementation:**
+```tsx
+<label className="flex items-center ios-press cursor-pointer">
+  <input type="file" className="hidden" onChange={handleFile} />
+  <ImageUp size={18} />
+</label>
+```
+
+---
+
+## [2026-05-25] D040 — PluralKit Export Uses Name-Based Dedup Before Create
+
+**Decision:** Before the export plan emits a `create` operation for an unlinked local member, it first fetches all PK members and checks for a case-insensitive name match. If found, the operation becomes `update` with `reason: 'linked_by_name'` and the link is stored automatically.
+
+**Justification:**
+- The user had members on PK that were not linked in the Solara DB (e.g., "Evellyn Venerato")
+- Without dedup, every export would attempt to create a duplicate on PK, which would 405 (or worse, create real duplicates)
+- Storing the link after successful PUT ensures future exports treat it as linked
+
+**Implementation:**
+- Fetch PK member list before planning (`GET /systems/@me/members`)
+- Build `Map<lowercased_name, uuid>` from PK members
+- In `planExportToPluralKit`, check `pkMemberNameMap.get(member.name.trim().toLowerCase())` before the create branch
+- After successful PUT in `applyExportToPluralKit`, insert a row in `memberExternalLinks` if `reason === 'linked_by_name'`
+
+---
+
+## [2026-05-25] D041 — Export Uses PUT + Sends Complete Payload Instead Of PATCH + Diff
+
+**Decision:** Member update operations use HTTP PUT with all non-null fields instead of PATCH with a computed diff.
+
+**Justification:**
+- PK's OPTIONS response reports `allow: GET,HEAD` but the application server accepts POST/PUT/PATCH (verified with curl) — the user intermittently hit 405 on PATCH
+- The diff logic was buggy: it compared snake_case PK fields (`display_name`, `avatar_url`) against camelCase DB member fields, producing empty patches
+- Sending all non-null fields is simpler and correct for one-way sync — no need to reconstruct PK state
+
+**Implementation:**
+- Changed `method: 'PATCH'` to `method: 'PUT'` in `applyExportToPluralKit`
+- Removed the broken candidate-loop diff in `planExportToPluralKit` — now builds a complete patch object with all non-null fields
+- Both 404 (member deleted) and 405 (write rejected) are caught and skipped with member context in diagnostics

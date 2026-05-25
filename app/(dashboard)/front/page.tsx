@@ -2,7 +2,7 @@
 
 import useSWR, { mutate } from "swr";
 import { useState } from "react";
-import { Clock, Plus, Check } from "lucide-react";
+import { Clock, Plus, Check, X } from "lucide-react";
 import Link from "next/link";
 import { LargeTitle } from "@/components/layout/NavBar";
 import { GlassCard } from "@/components/glass/GlassCard";
@@ -147,9 +147,20 @@ export default function FrontPage() {
 
       {/* Currently fronting */}
       <div className="px-4 mb-4">
-        <p className="text-footnote font-semibold text-muted-foreground uppercase tracking-wide mb-2 px-1">
-          {t("front.now")}
-        </p>
+        <div className="flex items-center justify-between mb-2 px-1">
+          <p className="text-footnote font-semibold text-muted-foreground uppercase tracking-wide">
+            {t("front.now")}
+          </p>
+          {isFronting && (
+            <button
+              onClick={endFront}
+              disabled={updating}
+              className="text-subheadline text-ios-red font-semibold ios-press disabled:opacity-50"
+            >
+              {t("front.endAll")}
+            </button>
+          )}
+        </div>
         <GlassCard padding="none" className="overflow-hidden">
           {loadingFront ? (
             <div className="p-4 flex gap-3">
@@ -195,6 +206,15 @@ export default function FrontPage() {
                     </p>
                   </div>
                   <Badge variant="success">{t("members.fronting")}</Badge>
+                  <button
+                    onClick={() => toggleMember(id)}
+                    disabled={updating}
+                    className="w-7 h-7 rounded-full flex items-center justify-center text-muted-foreground hover:text-ios-red hover:bg-ios-red/10 ios-transition disabled:opacity-50"
+                    title={t("front.removeMemberFront")}
+                    aria-label={t("front.removeMemberFront")}
+                  >
+                    <X size={15} strokeWidth={2.5} />
+                  </button>
                 </div>
               );
             })

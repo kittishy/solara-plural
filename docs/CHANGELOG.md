@@ -18,6 +18,30 @@
 - **`app/page.tsx` route conflict** — the default Next.js scaffold page was intercepting the `/` route before `app/(dashboard)/page.tsx`; removed `app/page.tsx` entirely since route groups do not affect URL structure and `(dashboard)/page.tsx` correctly owns `/`
 - **Member profile front history** — added "Front history" section to `members/[id]/page.tsx`; queries last 10 front entries where this member's ID appears in `memberIds` using SQLite `LIKE`; shows date, time range, duration badge, note (if any), pulsing "Now" indicator for active sessions, warm empty state
 
+## [feature] — 2026-05-25
+
+### Added
+- **Chat page** (`/chat`) — real-time messaging with auto-scroll, member identity, time/date separators, channel management (create/delete), SWR 5s polling, and iOS Liquid Glass aesthetic
+- **Emoji picker** (`components/chat/EmojiPicker.tsx`) — floating panel above input bar with 8 categorized groups (~300 emojis), iOS-style animations, inserts emoji at cursor position
+- **Image upload via uguu.se** (`app/api/upload/route.ts`) — server-side proxy accepts multipart file, forwards to uguu.se, returns URL. Multipart constructed via Buffer.concat() for full Node.js reliability. 20 MB limit.
+- **File upload button** in chat input — `<label>` wrapping `<input type="file">` for cross-browser compatibility (no fragile `ref.click()`)
+- **ReactMarkdown rendering** — message content rendered via ReactMarkdown with `prose-img:rounded-ios-md` for styled inline images
+- **Name-based dedup for PluralKit export** — before creating, checks if PK member with same name exists; uses `update` + auto-stores link in `memberExternalLinks` instead of creating duplicates
+- **405 resilience in member export** — 405 errors caught and skipped alongside existing 404 handling, with member name + action appended to error diagnostics
+
+### Changed
+- **PK export uses PUT instead of PATCH** — PK API intermittently returned 405 on PATCH; PUT is functionally equivalent for full-member sync
+- **Export comparison simplified** — removed broken candidates loop that compared snake_case PK field names against camelCase DB fields; now always sends all non-null fields in PATCH/PUT
+- **Name lookup trim fix** — `member.name.toLowerCase()` → `member.name.trim().toLowerCase()` so leading/trailing whitespace doesn't break PK name dedup
+- **Hidden file input changed from `<button onClick={ref.click()}>` to `<label>` wrapping** — fixes iOS Safari file picker (display:none blocks programmatic .click())
+- **Error handling in upload flow** — `handleFileUpload` now shows `alert()` with server error message instead of silently failing
+- **PK member empty-string guard** — `if (member.description)` guards against sending empty descriptions, pronouns, avatarUrl
+
+### Fixed
+- **EmojiPicker closing tag removed by accident during edit** — restored EmojiPicker props after refactor
+
+---
+
 ## [Unreleased]
 
 ### Added

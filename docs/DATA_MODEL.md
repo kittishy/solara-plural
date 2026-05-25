@@ -486,3 +486,47 @@ Indexes and constraints:
 ### Notes
 - Custom fields are intentionally system-local.
 - Friend and partner views do not expose custom field values yet; sharing those values should be added only after field-level privacy controls exist.
+
+---
+
+## 2026-05-25 Data Model Update (System Chat)
+
+### system_chat_channels
+
+Discord-style channels within a system's internal chat.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| id | text | PRIMARY KEY | CUID |
+| systemId | text | FK -> systems.id (ON DELETE CASCADE) | Owning system |
+| name | text | NOT NULL | Channel display name |
+| sortOrder | integer | NOT NULL DEFAULT 0 | Display order |
+| createdAt | integer (timestamp) | NOT NULL | Unix timestamp |
+
+Indexes:
+- `idx_system_chat_channels_system_id(systemId)`
+- `idx_system_chat_channels_sort_order(sortOrder)`
+
+### system_chat_messages
+
+Internal alter chat messages. Member identity is resolved by joining `memberId` at query time.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| id | text | PRIMARY KEY | CUID |
+| systemId | text | FK -> systems.id (ON DELETE CASCADE) | Owning system |
+| channelId | text | nullable | FK to channel; null = legacy rows |
+| memberId | text | nullable | Which alter sent it; null = anonymous |
+| content | text | NOT NULL | Message text (Markdown) |
+| createdAt | integer (timestamp) | NOT NULL | Unix timestamp |
+
+Indexes:
+- `idx_system_chat_messages_system_id(systemId)`
+- `idx_system_chat_messages_channel_id(channelId)`
+- `idx_system_chat_messages_created_at(createdAt)`
+
+### Notes
+- `channelId` is nullable for legacy compatibility; new messages always set it.
+- `memberId` is nullable — anonymous messages are permitted.
+- There is no `updatedAt` or `editedAt`; messages are append-only (delete-only).
+- Chat data is system-private and never shared across friends/partners.

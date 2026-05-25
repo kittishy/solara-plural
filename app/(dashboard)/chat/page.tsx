@@ -215,6 +215,7 @@ export default function ChatPage() {
 
   async function handleFileUpload(file: File) {
     if (file.size > 20 * 1024 * 1024) {
+      alert("File must be under 20 MB.");
       return;
     }
     setUploading(true);
@@ -223,10 +224,16 @@ export default function ChatPage() {
       body.append("file", file);
       const res = await fetch("/api/upload", { method: "POST", body });
       const json = await res.json();
-      if (json.url) {
-        const isImage = file.type.startsWith("image/");
-        insertAtCursor(isImage ? `![image](${json.url})` : json.url);
+      if (!res.ok || !json.url) {
+        console.error("Upload failed:", json);
+        alert(json?.error || "Upload failed.");
+        return;
       }
+      const isImage = file.type.startsWith("image/");
+      insertAtCursor(isImage ? `![image](${json.url})` : json.url);
+    } catch (err) {
+      console.error("Upload error:", err);
+      alert("Upload failed. Check console.");
     } finally {
       setUploading(false);
     }
@@ -436,19 +443,28 @@ export default function ChatPage() {
                 maxLength={4000}
                 className="flex-1 bg-transparent text-body focus:outline-none min-w-0"
               />
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={uploading}
-                className="flex items-center justify-center flex-shrink-0 ios-press disabled:opacity-40"
+              <label
+                className="flex items-center justify-center flex-shrink-0 ios-press disabled:opacity-40 cursor-pointer"
                 aria-label="Attach file"
               >
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*,video/*,.gif,.pdf,.doc,.docx,.txt,.zip,.mp3,.wav"
+                  className="hidden"
+                  tabIndex={-1}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) { handleFileUpload(file); }
+                    e.target.value = "";
+                  }}
+                />
                 {uploading ? (
                   <Loader2 size={18} className="text-muted-foreground animate-spin" />
                 ) : (
                   <ImageUp size={18} className="text-muted-foreground" />
                 )}
-              </button>
+              </label>
             </div>
 
             {/* Send button — only when there's text */}
@@ -470,19 +486,6 @@ export default function ChatPage() {
               onSelect={(emoji) => {
                 insertAtCursor(emoji);
                 inputRef.current?.focus();
-              }}
-            />
-
-            {/* Hidden file input */}
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*,video/*,.gif,.pdf,.doc,.docx,.txt,.zip,.mp3,.wav"
-              className="hidden"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) { handleFileUpload(file); }
-                e.target.value = "";
               }}
             />
           </form>

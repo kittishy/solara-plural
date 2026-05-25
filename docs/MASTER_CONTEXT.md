@@ -61,6 +61,7 @@ Vercel's serverless environment doesn't support local persistent SQLite.
 9. Data export via JSON
 10. Responsive layout
 11. Functional Vercel deploy
+12. **Chat** — real-time messaging per system, multiple channels, emoji picker, image/file upload, Markdown rendering
 
 ## 9. Data Model (conceptual)
 ```ts

@@ -271,3 +271,30 @@ See IDEAS.md for the full backlog of feature ideas.
 - [ ] Remove unused npm dependencies
 - [ ] Reduce TypeScript complexity in favor of plain data structures
 - [ ] Minimize client-side JavaScript payload
+
+---
+
+## 2026-05-25 Chat Feature
+
+### Completed
+- [x] Chat page (`/chat`) — real-time messaging with SWR 5s polling, auto-scroll, member identity per message
+- [x] Channel management — create/delete channels; messages scoped per channel
+- [x] Emoji picker — floating panel, 8 categories, ~300 emojis, inserts at cursor
+- [x] Image/file upload via uguu.se server proxy (`POST /api/upload`)
+- [x] ReactMarkdown rendering of message content (inline images styled)
+- [x] Time-based message grouping and day-separator headers
+- [x] iOS Liquid Glass aesthetic (`.ios-glass`, `.ios-blur`) matching the design system
+- [x] `system_chat_channels` and `system_chat_messages` tables in Drizzle schema
+- [x] API routes: `GET/POST /api/chat`, `DELETE /api/chat/[id]`, `GET/POST /api/chat/channels`, `DELETE /api/chat/channels/[id]`
+
+### Next (chat backlog)
+- [ ] Real-time WebSocket push (replace 5s polling)
+- [ ] Message edit (append-only edit history)
+- [ ] Read/unread indicators per channel
+- [ ] Typing indicators
+- [ ] @member mention autocomplete
+- [ ] Link previews
+- [ ] System messages (member joined/left front)
+- [ ] Message search within a channel
+
+---

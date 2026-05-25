@@ -50,6 +50,8 @@ solara-plural/
 │   ├── (dashboard)/              # Main app route group
 │   │   ├── layout.tsx            # Sidebar + nav layout
 │   │   ├── page.tsx              # Dashboard / home
+│   │   ├── chat/
+│   │   │   └── page.tsx          # Real-time chat with emoji picker, file upload, ReactMarkdown rendering
 │   │   ├── members/
 │   │   │   ├── page.tsx          # Members list
 │   │   │   ├── [id]/
@@ -65,11 +67,27 @@ solara-plural/
 │   │   │   └── [id]/
 │   │   │       └── page.tsx      # Note detail/edit
 │   │   └── settings/
-│   │       └── page.tsx          # System settings + import/export
+│   │       ├── page.tsx          # System settings + import/export
+│   │       ├── integrations/
+│   │       │   └── page.tsx      # PluralKit sync UI
+│   │       └── ...
 │   ├── api/                      # Route Handlers
 │   │   ├── auth/
 │   │   │   └── [...nextauth]/
 │   │   │       └── route.ts
+│   │   ├── chat/
+│   │   │   ├── route.ts          # GET messages (by channelId), POST create
+│   │   │   ├── [id]/
+│   │   │   │   └── route.ts      # DELETE message
+│   │   │   └── channels/
+│   │   │       ├── route.ts      # GET all, POST create
+│   │   │       └── [id]/
+│   │   │           └── route.ts  # DELETE channel
+│   │   ├── upload/
+│   │   │   └── route.ts          # POST file upload proxy (uguu.se), 20 MB limit
+│   │   ├── integrations/
+│   │   │   └── member-sync/
+│   │   │       └── route.ts      # POST PluralKit sync (export/import, preview/apply)
 │   │   ├── members/
 │   │   │   ├── route.ts          # GET all, POST create
 │   │   │   └── [id]/
@@ -98,6 +116,9 @@ solara-plural/
 │   │   ├── Textarea.tsx
 │   │   ├── Modal.tsx
 │   │   └── Spinner.tsx
+│   ├── chat/
+│   │   ├── EmojiPicker.tsx       # Curated emoji grid (~300), 8 categories, cursor-insert
+│   │   └── ...                   # (additional chat components)
 │   ├── members/
 │   │   ├── MemberCard.tsx
 │   │   ├── MemberChip.tsx

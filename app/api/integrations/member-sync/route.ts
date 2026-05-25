@@ -122,7 +122,27 @@ export async function POST(request: Request) {
 
     if (direction === 'export') {
       const localMembers = existingMembers.filter((m) => !m.isArchived);
-      const exportPlan = planExportToPluralKit(localMembers, existingLinks);
+
+      let pkMemberNameMap: Map<string, string> = new Map();
+      try {
+        const rawPkMembers = await remoteJson(
+          `${PLURALKIT_BASE_URL}/systems/@me/members`,
+          { headers: { Authorization: token, 'User-Agent': SOLARA_USER_AGENT, Accept: 'application/json' } },
+        );
+        const pkList = asArray(rawPkMembers);
+        for (const raw of pkList) {
+          const rec = toRecord(raw);
+          const uuid = readId(rec, ['uuid', 'id']);
+          const pkName = typeof rec.name === 'string' ? rec.name.trim().toLowerCase() : '';
+          if (uuid && pkName) {
+            pkMemberNameMap.set(pkName, uuid);
+          }
+        }
+      } catch {
+        // if PK members fetch fails, skip name-based dedup
+      }
+
+      const exportPlan = planExportToPluralKit(localMembers, existingLinks, pkMemberNameMap);
 
       if (apply) {
         await applyExportToPluralKit(auth.systemId, exportPlan.operations as SyncOperation[], token, existingLinks);
@@ -597,6 +617,7 @@ async function upsertExternalLink(
 function planExportToPluralKit(
   localMembers: typeof members.$inferSelect[],
   existingLinks: typeof memberExternalLinks.$inferSelect[],
+  pkMemberNameMap?: Map<string, string>,
 ) {
   const pkLinks = existingLinks.filter((l) => l.provider === PROVIDERS.PLURALKIT);
   const linkByMemberId = new Map(pkLinks.map((l) => [l.memberId, l]));
@@ -655,22 +676,68 @@ function planExportToPluralKit(
         },
       });
     } else {
-      const changedFields: string[] = [];
-      const payload: Record<string, unknown> = { name: member.name };
-      if (member.color) { payload.color = member.color.replace('#', ''); changedFields.push('color'); }
-      if (member.pronouns) { payload.pronouns = member.pronouns; changedFields.push('pronouns'); }
-      if (member.description) { payload.description = member.description; changedFields.push('description'); }
-      if (member.avatarUrl) { payload.avatar_url = member.avatarUrl; changedFields.push('avatar_url'); }
-      changedFields.unshift('name');
+      const lowerName = member.name.trim().toLowerCase();
+      const matchedUuid = pkMemberNameMap?.get(lowerName);
+      if (matchedUuid) {
+        const changedFields: string[] = [];
+        const patch: Record<string, unknown> = {};
 
-      operations.push({
-        ...base,
-        action: 'create',
-        reason: 'new_local_member',
-        memberId: member.id,
-        member: payload,
-        changedFields,
-      });
+        if (member.name) {
+          patch.name = member.name;
+          patch.display_name = member.name;
+          changedFields.push('name', 'display_name');
+        }
+        if (member.color) {
+          patch.color = member.color.replace('#', '');
+          changedFields.push('color');
+        }
+        if (member.pronouns) {
+          patch.pronouns = member.pronouns;
+          changedFields.push('pronouns');
+        }
+        if (member.description) {
+          patch.description = member.description;
+          changedFields.push('description');
+        }
+        if (member.avatarUrl) {
+          patch.avatar_url = member.avatarUrl;
+          changedFields.push('avatar_url');
+        }
+
+        operations.push({
+          ...base,
+          action: 'update',
+          reason: 'linked_by_name',
+          externalId: matchedUuid,
+          memberId: member.id,
+          patch,
+          changedFields,
+          link: {
+            provider: PROVIDERS.PLURALKIT,
+            externalId: matchedUuid,
+            externalSecondaryId: null,
+            externalName: member.name,
+            metadata: null,
+          },
+        });
+      } else {
+        const changedFields: string[] = [];
+        const payload: Record<string, unknown> = { name: member.name };
+        if (member.color) { payload.color = member.color.replace('#', ''); changedFields.push('color'); }
+        if (member.pronouns) { payload.pronouns = member.pronouns; changedFields.push('pronouns'); }
+        if (member.description) { payload.description = member.description; changedFields.push('description'); }
+        if (member.avatarUrl) { payload.avatar_url = member.avatarUrl; changedFields.push('avatar_url'); }
+        changedFields.unshift('name');
+
+        operations.push({
+          ...base,
+          action: 'create',
+          reason: 'new_local_member',
+          memberId: member.id,
+          member: payload,
+          changedFields,
+        });
+      }
     }
   }
 
@@ -711,7 +778,7 @@ async function applyExportToPluralKit(
         const uuid = readId(record, ['uuid', 'id']);
         const shortId = typeof record.id === 'string' ? record.id : null;
 
-        if (uuid) {
+    if (uuid) {
           const now = new Date();
           const linkRow = existingLinks.find(
             (l) => l.memberId === op.memberId && l.provider === PROVIDERS.PLURALKIT,
@@ -750,9 +817,26 @@ async function applyExportToPluralKit(
           `${PLURALKIT_BASE_URL}/systems/@me/members/${op.externalId}`,
           { method: 'PUT', headers, body: JSON.stringify(op.patch) },
         );
+
+        // if this was a name-matched member (no existing link), store the link
+        if (op.reason === 'linked_by_name' && op.link && op.memberId) {
+          const now = new Date();
+          await db.insert(memberExternalLinks).values({
+            id: createId(),
+            systemId,
+            provider: PROVIDERS.PLURALKIT,
+            memberId: op.memberId,
+            externalId: op.externalId,
+            externalSecondaryId: op.link.externalSecondaryId ?? null,
+            externalName: op.name,
+            createdAt: now,
+            updatedAt: now,
+            lastSyncedAt: now,
+          });
+        }
       }
     } catch (error) {
-      if (error instanceof RemoteSyncError && error.status === 404) {
+      if (error instanceof RemoteSyncError && (error.status === 404 || error.status === 405)) {
         continue;
       }
       if (error instanceof RemoteSyncError) {
