@@ -1,4 +1,4 @@
-const CACHE_NAME = 'solara-pwa-v1';
+const CACHE_NAME = 'solara-pwa-v2';
 const STATIC_ASSETS = [
   '/',
   '/manifest.json',
