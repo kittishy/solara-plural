@@ -106,11 +106,11 @@ export default function FrontHistoryPage() {
     e.preventDefault();
     setFormError("");
     if (formMemberIds.length === 0) {
-      setFormError("Select at least one member");
+      setFormError(t("front.noMemberSelected"));
       return;
     }
     if (new Date(formEndedAt) < new Date(formStartedAt)) {
-      setFormError("End time must be after start time");
+      setFormError(t("front.endBeforeStart"));
       return;
     }
     setSaving(true);
@@ -133,7 +133,7 @@ export default function FrontHistoryPage() {
       });
       if (!res.ok) {
         const json = await res.json();
-        setFormError(json.error ?? "Failed to save entry");
+        setFormError(json.error ?? t("front.saveError"));
         return;
       }
       setShowEntryForm(false);

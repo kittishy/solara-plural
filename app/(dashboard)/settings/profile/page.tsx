@@ -10,11 +10,13 @@ import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import DynamicAvatarImage from "@/components/ui/DynamicAvatarImage";
 import { prepareAvatarDataUrl } from "@/lib/client/avatar-upload";
+import { useLanguage } from "@/components/providers/LanguageProvider";
 
 const EMOJI_OPTIONS = ["☀️", "🌙", "⭐", "✨", "🌸", "🌈", "🦋", "🌊", "🔥", "💎", "🌷", "🍃"];
 
 export default function ProfileSettingsPage() {
   const router = useRouter();
+  const { t } = useLanguage();
   const [loaded, setLoaded] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -50,7 +52,7 @@ export default function ProfileSettingsPage() {
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
     if (!name.trim()) {
-      setError("Nome obrigatório");
+      setError(t("members.nameRequired"));
       return;
     }
     setError("");
@@ -70,7 +72,7 @@ export default function ProfileSettingsPage() {
       });
       const json = await res.json();
       if (!res.ok || !json.success) {
-        setError(json.error ?? "Erro ao salvar");
+        setError(json.error ?? t("common.saveError"));
         return;
       }
       router.push("/settings");
@@ -87,7 +89,7 @@ export default function ProfileSettingsPage() {
       setAvatarUrl(dataUrl);
       setAvatarMode("url");
     } catch {
-      setError("Erro ao processar imagem");
+      setError(t("settings.imageError"));
     }
   }
 
@@ -109,23 +111,22 @@ export default function ProfileSettingsPage() {
             className="flex items-center gap-1 text-ios-blue ios-press -ml-1"
           >
             <ArrowLeft size={18} strokeWidth={2.5} />
-            <span className="text-body">Voltar</span>
+            <span className="text-body">{t("settings.title")}</span>
           </button>
           <h1 className="text-headline font-semibold absolute left-1/2 -translate-x-1/2">
-            Perfil
+            {t("settings.profile")}
           </h1>
           <button
             onClick={handleSave}
             disabled={saving || !name.trim()}
             className="text-body font-semibold text-ios-blue ios-press disabled:opacity-40"
           >
-            {saving ? "Salvando..." : "Salvar"}
+            {saving ? t("common.saving") : t("common.save")}
           </button>
         </div>
       </div>
 
       <form onSubmit={handleSave} className="flex flex-col gap-4 px-4 pt-4">
-        {/* Avatar */}
         <GlassCard padding="lg" className="flex flex-col gap-4 items-center">
           {avatarMode === "url" && avatarUrl ? (
             <div className="w-24 h-24 rounded-full overflow-hidden shadow-ios-md">
@@ -141,7 +142,6 @@ export default function ProfileSettingsPage() {
             </div>
           )}
 
-          {/* Mode toggle */}
           <div className="flex gap-1 rounded-ios-sm bg-secondary p-0.5">
             <button
               type="button"
@@ -165,7 +165,7 @@ export default function ProfileSettingsPage() {
                   : "text-muted-foreground"
               )}
             >
-              Imagem
+              {t("settings.imageMode")}
             </button>
           </div>
 
@@ -203,16 +203,15 @@ export default function ProfileSettingsPage() {
                 htmlFor="avatar-file"
                 className="block w-full py-3 text-center rounded-ios-sm bg-ios-blue text-white text-subheadline font-semibold cursor-pointer ios-press"
               >
-                Escolher imagem
+                {t("settings.chooseImage")}
               </label>
             </div>
           )}
         </GlassCard>
 
-        {/* Info */}
         <GlassCard padding="lg" className="flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="name">Nome do sistema *</Label>
+            <Label htmlFor="name">{t("settings.systemNameLabel")} *</Label>
             <Input
               id="name"
               value={name}
@@ -222,7 +221,7 @@ export default function ProfileSettingsPage() {
             />
           </div>
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="description">Descrição</Label>
+            <Label htmlFor="description">{t("members.description")}</Label>
             <textarea
               id="description"
               value={description}
@@ -240,7 +239,7 @@ export default function ProfileSettingsPage() {
 
         <Button type="submit" disabled={saving || !name.trim()} className="w-full">
           <Save size={16} />
-          {saving ? "Salvando..." : "Salvar perfil"}
+          {saving ? t("common.saving") : t("settings.saveProfile")}
         </Button>
       </form>
     </div>

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Users, Layers, BookOpen, FileText, Heart, UserPlus, X } from "lucide-react";
 import useSWR, { mutate } from "swr";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { GlassCard } from "@/components/glass/GlassCard";
 import { LargeTitle } from "@/components/layout/NavBar";
 import DynamicAvatarImage from "@/components/ui/DynamicAvatarImage";
@@ -39,6 +39,7 @@ type Props = {
   partnerCount: number;
   frontingMembers: FrontingMember[];
   recentMembers: RecentMember[];
+  hasFrontHistory: boolean;
 };
 
 function MemberAvatar({ member, size = 40 }: { member: { name: string; color: string | null; avatarUrl: string | null }; size?: number }) {
@@ -84,9 +85,11 @@ export function HomeContent({
   partnerCount,
   frontingMembers,
   recentMembers,
+  hasFrontHistory,
 }: Props) {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const [updating, setUpdating] = useState(false);
+  const [now, setNow] = useState(() => Date.now());
 
   // Fetch current front entry client-side for interactive actions
   const { data: currentFront } = useSWR<{ id: string; memberIds: string[]; startedAt: string } | null>(
@@ -94,6 +97,25 @@ export function HomeContent({
     apiFetcher
   );
   const frontingIds = currentFront?.memberIds ?? [];
+
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 60_000);
+    return () => clearInterval(id);
+  }, []);
+
+  function formatFrontDuration(startedAt: string): string {
+    const ms = now - new Date(startedAt).getTime();
+    const totalMin = Math.floor(ms / 60_000);
+    const hr = Math.floor(totalMin / 60);
+    const min = totalMin % 60;
+    if (hr > 0) return `${hr}h ${min}m`;
+    if (min > 0) return `${min}m`;
+    return "< 1m";
+  }
+
+  function formatStartTime(startedAt: string): string {
+    return new Date(startedAt).toLocaleTimeString(language, { hour: "2-digit", minute: "2-digit" });
+  }
 
   async function toggleMember(memberId: string) {
     if (updating) return;
@@ -151,9 +173,18 @@ export function HomeContent({
       {/* Currently fronting */}
       <div className="px-4 mb-5">
         <div className="flex items-center justify-between mb-2 px-1">
-          <p className="text-footnote font-semibold text-muted-foreground uppercase tracking-wide">
-            {t("home.nowFronting")}
-          </p>
+          <div className="flex flex-col gap-0">
+            <p className="text-footnote font-semibold text-muted-foreground uppercase tracking-wide">
+              {t("home.nowFronting")}
+            </p>
+            {currentFront?.startedAt && frontingMembers.length > 0 && (
+              <p className="text-caption-2 text-muted-foreground/70">
+                {t("home.frontSince", { time: formatStartTime(currentFront.startedAt) })}
+                {" · "}
+                {formatFrontDuration(currentFront.startedAt)}
+              </p>
+            )}
+          </div>
           {frontingMembers.length > 0 && (
             <button
               onClick={endFront}
@@ -210,7 +241,7 @@ export function HomeContent({
       <div className="px-4 mb-6">
         <div className="flex items-center justify-between mb-2 px-1">
           <p className="text-footnote font-semibold text-muted-foreground uppercase tracking-wide">
-            {t("home.recentMembers")}
+            {hasFrontHistory ? t("home.recentlyFronted") : t("home.recentMembers")}
           </p>
           <Link href="/members" className="text-subheadline text-ios-blue ios-press">
             {t("common.seeAll")}

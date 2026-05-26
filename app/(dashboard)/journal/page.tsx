@@ -8,6 +8,7 @@ import { GlassCard } from "@/components/glass/GlassCard";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { apiFetcher, swrKeys } from "@/lib/swr";
+import { useLanguage } from "@/components/providers/LanguageProvider";
 
 type JournalEntry = {
   id: string;
@@ -25,9 +26,9 @@ const moodEmoji: Record<string, string> = {
   terrible: "😞",
 };
 
-function formatDate(value: string | number | Date) {
+function formatDate(value: string | number | Date, lang: string) {
   const d = new Date(value);
-  return d.toLocaleDateString("pt-BR", {
+  return d.toLocaleDateString(lang, {
     day: "numeric",
     month: "long",
     year: "numeric",
@@ -35,6 +36,7 @@ function formatDate(value: string | number | Date) {
 }
 
 export default function JournalPage() {
+  const { t, language } = useLanguage();
   const { data, isLoading } = useSWR<JournalEntry[]>(
     swrKeys.journal,
     apiFetcher
@@ -44,7 +46,7 @@ export default function JournalPage() {
   return (
     <div className="animate-fade-in">
       <div className="px-4 pt-14 pb-2 flex items-end justify-between">
-        <LargeTitle className="px-0">Diário</LargeTitle>
+        <LargeTitle className="px-0">{t("journal.title")}</LargeTitle>
         <Button asChild size="icon" className="mb-1">
           <Link href="/journal/new">
             <Plus size={20} />
@@ -75,16 +77,16 @@ export default function JournalPage() {
               <BookOpen size={36} className="text-muted-foreground/40" />
               <div>
                 <p className="text-body font-semibold text-foreground">
-                  Diário vazio
+                  {t("journal.noEntries")}
                 </p>
                 <p className="text-subheadline text-muted-foreground mt-1">
-                  Registre seus pensamentos
+                  {t("journal.recordThoughts")}
                 </p>
               </div>
               <Button asChild variant="outline" size="sm">
                 <Link href="/journal/new">
                   <Plus size={16} />
-                  Nova entrada
+                  {t("journal.new")}
                 </Link>
               </Button>
             </div>
@@ -97,7 +99,7 @@ export default function JournalPage() {
               >
                 <div className="flex items-center justify-between gap-2">
                   <p className="text-caption-1 text-muted-foreground">
-                    {formatDate(entry.createdAt)}
+                    {formatDate(entry.createdAt, language)}
                   </p>
                   {entry.mood && (
                     <span className="text-base">

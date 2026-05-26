@@ -31,14 +31,14 @@ type FrontEntry = {
   note?: string | null;
 };
 
-function formatTime(value: string | number | Date) {
+function formatTime(value: string | number | Date, lang: string) {
   const d = new Date(value);
-  return d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+  return d.toLocaleTimeString(lang, { hour: "2-digit", minute: "2-digit" });
 }
 
-function formatDate(value: string | number | Date) {
+function formatDate(value: string | number | Date, lang: string) {
   const d = new Date(value);
-  return d.toLocaleDateString(undefined, { day: "numeric", month: "short" });
+  return d.toLocaleDateString(lang, { day: "numeric", month: "short" });
 }
 
 function MemberAvatar({ member, size = 12 }: { member: Member; size?: number }) {
@@ -71,7 +71,7 @@ function MemberAvatar({ member, size = 12 }: { member: Member; size?: number }) 
 }
 
 export default function FrontPage() {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const { data: currentFront, isLoading: loadingFront } = useSWR<FrontEntry | null>(
     swrKeys.front,
     apiFetcher
@@ -202,7 +202,7 @@ export default function FrontPage() {
                     )}
                     <p className="text-caption-1 text-muted-foreground flex items-center gap-1 mt-0.5">
                       <Clock size={11} />
-                      {t("members.sinceTime", { time: formatTime(currentFront!.startedAt) })}
+                      {t("members.sinceTime", { time: formatTime(currentFront!.startedAt, language) })}
                     </p>
                   </div>
                   <Badge variant="success">{t("members.fronting")}</Badge>
@@ -254,8 +254,8 @@ export default function FrontPage() {
                       {memberNames || "—"}
                     </p>
                     <p className="text-caption-1 text-muted-foreground">
-                      {formatDate(entry.startedAt)} · {formatTime(entry.startedAt)}
-                      {entry.endedAt && ` → ${formatTime(entry.endedAt)}`}
+                      {formatDate(entry.startedAt, language)} · {formatTime(entry.startedAt, language)}
+                      {entry.endedAt && ` → ${formatTime(entry.endedAt, language)}`}
                     </p>
                   </div>
                 </div>

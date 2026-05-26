@@ -5,8 +5,10 @@ import Link from "next/link";
 import { ArrowLeft, Upload, Check, AlertCircle } from "lucide-react";
 import { GlassCard } from "@/components/glass/GlassCard";
 import { Button } from "@/components/ui/button";
+import { useLanguage } from "@/components/providers/LanguageProvider";
 
 export default function ImportSettingsPage() {
+  const { t } = useLanguage();
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [result, setResult] = useState<{
@@ -23,7 +25,7 @@ export default function ImportSettingsPage() {
       try {
         json = JSON.parse(text);
       } catch {
-        setResult({ success: false, message: "Arquivo não é JSON válido" });
+        setResult({ success: false, message: t("settings.invalidJson") });
         return;
       }
       const res = await fetch("/api/import", {
@@ -36,16 +38,16 @@ export default function ImportSettingsPage() {
       if (!res.ok || !respJson.success) {
         setResult({
           success: false,
-          message: respJson.error ?? "Erro ao importar",
+          message: respJson.error ?? t("settings.importError"),
         });
         return;
       }
       setResult({
         success: true,
-        message: "Importação concluída com sucesso!",
+        message: t("settings.importSuccess"),
       });
     } catch {
-      setResult({ success: false, message: "Erro ao ler o arquivo" });
+      setResult({ success: false, message: t("settings.fileReadError") });
     } finally {
       setUploading(false);
     }
@@ -60,10 +62,10 @@ export default function ImportSettingsPage() {
             className="flex items-center gap-1 text-ios-blue ios-press -ml-1"
           >
             <ArrowLeft size={18} strokeWidth={2.5} />
-            <span className="text-body">Config</span>
+            <span className="text-body">{t("settings.title")}</span>
           </Link>
           <h1 className="text-headline font-semibold absolute left-1/2 -translate-x-1/2">
-            Importar
+            {t("settings.importTitle")}
           </h1>
         </div>
       </div>
@@ -71,11 +73,10 @@ export default function ImportSettingsPage() {
       <div className="px-4 pt-4 flex flex-col gap-4">
         <GlassCard padding="lg">
           <p className="text-body text-foreground mb-3">
-            Importe dados de um arquivo JSON exportado anteriormente do Solara.
+            {t("settings.importDesc")}
           </p>
           <p className="text-subheadline text-muted-foreground">
-            Os dados serão mesclados com sua conta atual. Membros com IDs duplicados
-            podem ser atualizados.
+            {t("settings.importMerge")}
           </p>
         </GlassCard>
 
@@ -96,7 +97,7 @@ export default function ImportSettingsPage() {
           className="w-full"
         >
           <Upload size={16} />
-          {uploading ? "Importando..." : "Escolher arquivo JSON"}
+          {uploading ? t("settings.importing") : t("settings.chooseJsonFile")}
         </Button>
 
         {result && (

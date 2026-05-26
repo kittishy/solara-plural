@@ -91,7 +91,7 @@ export default function IntegrationsPage() {
     setSuccessMessage("");
 
     if (!token.trim()) {
-      setError("Enter a PluralKit token to test the connection.");
+      setError(t("integrations.tokenRequired"));
       return;
     }
 
@@ -110,14 +110,14 @@ export default function IntegrationsPage() {
       const json = await res.json();
 
       if (!json.success) {
-        setError(json.error ?? "Connection test failed.");
+        setError(json.error ?? t("integrations.testFailed"));
         return;
       }
 
       setResult(json.data as SyncResult);
       setIsConnected(true);
     } catch {
-      setError("Could not connect to PluralKit. Check the token and try again.");
+      setError(t("integrations.connectFailed"));
     } finally {
       setLoading(false);
     }
@@ -145,14 +145,14 @@ export default function IntegrationsPage() {
       const json = await res.json();
 
       if (!json.success) {
-        setError(json.error ?? "Sync application failed.");
+        setError(json.error ?? t("integrations.applyFailed"));
         return;
       }
 
       setResult(json.data as SyncResult);
-      setSuccessMessage("Sync applied successfully!");
+      setSuccessMessage(t("integrations.applySuccess"));
     } catch {
-      setError("Could not apply the sync. Try again.");
+      setError(t("integrations.applyError"));
     } finally {
       setApplying(false);
     }
@@ -169,13 +169,13 @@ export default function IntegrationsPage() {
   function getActionLabel(action: string): string {
     switch (action) {
       case "create":
-        return "Create";
+        return t("integrations.actionCreate");
       case "update":
-        return "Update";
+        return t("integrations.actionUpdate");
       case "skip":
-        return "Skip";
+        return t("integrations.actionSkip");
       case "unchanged":
-        return "Same";
+        return t("integrations.actionSame");
       default:
         return action;
     }
@@ -206,14 +206,14 @@ export default function IntegrationsPage() {
             className="flex items-center gap-1 text-ios-blue ios-press -ml-1 pr-2 py-1"
           >
             <ArrowLeft size={18} strokeWidth={2.5} />
-            <span className="text-body">Settings</span>
+            <span className="text-body">{t("settings.title")}</span>
           </button>
         </div>
       </header>
 
       {/* Title */}
       <div className="px-4 pt-6 pb-2">
-        <LargeTitle className="px-0">PluralKit Sync</LargeTitle>
+        <LargeTitle className="px-0">{t("integrations.title")}</LargeTitle>
       </div>
 
       {/* Direction toggle */}
@@ -228,7 +228,7 @@ export default function IntegrationsPage() {
             )}
           >
             <Download size={15} />
-            Import from PK
+            {t("integrations.importFromPK")}
           </button>
           <button
             type="button"
@@ -239,7 +239,7 @@ export default function IntegrationsPage() {
             )}
           >
             <Upload size={15} />
-            Export to PK
+            {t("integrations.exportToPK")}
           </button>
         </div>
       </div>
@@ -254,7 +254,7 @@ export default function IntegrationsPage() {
                 className="text-muted-foreground animate-spin"
               />
               <span className="text-body text-muted-foreground">
-                Checking connection...
+                {t("integrations.checkingConnection")}
               </span>
             </div>
           ) : isConnected ? (
@@ -263,13 +263,13 @@ export default function IntegrationsPage() {
                 <Check size={18} />
               </span>
               <span className="flex-1 text-body text-foreground">
-                Connected to PluralKit
+                {t("integrations.connectedToPluralKit")}
               </span>
               <button
                 onClick={handleDisconnect}
                 className="text-subheadline text-ios-red ios-press"
               >
-                Disconnect
+                {t("integrations.disconnect")}
               </button>
             </div>
           ) : (
@@ -278,7 +278,7 @@ export default function IntegrationsPage() {
                 <Server size={18} />
               </span>
               <span className="flex-1 text-body text-foreground">
-                Not connected
+                {t("integrations.notConnected")}
               </span>
             </div>
           )}
@@ -288,7 +288,7 @@ export default function IntegrationsPage() {
       {/* Token input */}
       <div className="px-4 mb-6">
         <p className="text-footnote font-semibold text-muted-foreground uppercase tracking-wide mb-2 px-1">
-          PluralKit Token
+          {t("integrations.tokenHeader")}
         </p>
         <GroupedSection>
           <div className="px-4 py-3">
@@ -307,7 +307,7 @@ export default function IntegrationsPage() {
                 type="button"
                 onClick={() => setShowToken(!showToken)}
                 className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground ios-press p-1"
-                aria-label={showToken ? "Hide token" : "Show token"}
+                aria-label={showToken ? t("integrations.hideToken") : t("integrations.showToken")}
               >
                 {showToken ? (
                   <svg
@@ -342,7 +342,7 @@ export default function IntegrationsPage() {
               </button>
             </div>
             <p className="text-caption-1 text-muted-foreground mt-2">
-              Your PluralKit token is stored encrypted and never shared.
+              {t("integrations.tokenHelp")}
             </p>
           </div>
         </GroupedSection>
@@ -361,8 +361,8 @@ export default function IntegrationsPage() {
             className={cn(loading && "animate-spin")}
           />
           {loading
-            ? (direction === "import" ? "Testing..." : "Previewing...")
-            : (direction === "import" ? "Test connection" : "Preview export")
+            ? (direction === "import" ? t("integrations.testing") : t("integrations.previewing"))
+            : (direction === "import" ? t("integrations.testConnection") : t("integrations.previewExport"))
           }
         </Button>
 
@@ -374,8 +374,8 @@ export default function IntegrationsPage() {
           >
             <Check size={18} />
             {applying
-              ? "Applying..."
-              : (direction === "import" ? "Apply sync" : "Apply export")
+              ? t("integrations.applying")
+              : (direction === "import" ? t("integrations.applySync") : t("integrations.applyExport"))
             }
           </Button>
         )}
@@ -413,7 +413,11 @@ export default function IntegrationsPage() {
       {result && (
         <div className="px-4 mb-10">
           <p className="text-footnote font-semibold text-muted-foreground uppercase tracking-wide mb-2 px-1">
-            {result.applied ? "Sync Result" : direction === "import" ? "Preview" : "Export Preview"}
+            {result.applied
+              ? t("integrations.syncResult")
+              : direction === "import"
+                ? t("integrations.preview")
+                : t("integrations.exportPreview")}
           </p>
 
           {direction === "import" && result.remoteSystemId && (
@@ -422,7 +426,7 @@ export default function IntegrationsPage() {
                 <Server size={18} className="text-ios-blue flex-shrink-0" />
                 <div>
                   <p className="text-body font-semibold text-foreground">
-                    Remote system
+                    {t("integrations.remoteSystem")}
                   </p>
                   <p className="text-caption-1 text-muted-foreground font-mono">
                     {result.remoteSystemId}
@@ -439,25 +443,25 @@ export default function IntegrationsPage() {
                 <p className="text-title-2 font-bold text-green-500">
                   {result.summary.create}
                 </p>
-                <p className="text-caption-1 text-muted-foreground">{direction === "export" ? "Create" : "Create"}</p>
+                <p className="text-caption-1 text-muted-foreground">{t("integrations.actionCreate")}</p>
               </div>
               <div>
                 <p className="text-title-2 font-bold text-ios-blue">
                   {result.summary.update}
                 </p>
-                <p className="text-caption-1 text-muted-foreground">{direction === "export" ? "Update" : "Update"}</p>
+                <p className="text-caption-1 text-muted-foreground">{t("integrations.actionUpdate")}</p>
               </div>
               <div>
                 <p className="text-title-2 font-bold text-muted-foreground">
                   {result.summary.skip}
                 </p>
-                <p className="text-caption-1 text-muted-foreground">Skip</p>
+                <p className="text-caption-1 text-muted-foreground">{t("integrations.actionSkip")}</p>
               </div>
               <div>
                 <p className="text-title-2 font-bold text-muted-foreground">
                   {result.summary.unchanged}
                 </p>
-                <p className="text-caption-1 text-muted-foreground">{direction === "export" ? "Same" : "Same"}</p>
+                <p className="text-caption-1 text-muted-foreground">{t("integrations.actionSame")}</p>
               </div>
             </div>
           </GlassCard>
@@ -515,12 +519,12 @@ export default function IntegrationsPage() {
                 </span>
                 <div className="flex-1">
                   <p className="text-body font-semibold text-foreground">
-                    Front sync
+                    {t("integrations.frontSync")}
                   </p>
                   <p className="text-caption-1 text-muted-foreground">
-                    Status: {result.frontSync.status}
+                    {t("integrations.statusLabel")} {result.frontSync.status}
                     {result.frontSync.appliedMemberCount > 0 &&
-                      ` \u00b7 ${result.frontSync.appliedMemberCount} member(s)`}
+                      ` ${t("integrations.memberCount", { count: result.frontSync.appliedMemberCount })}`}
                   </p>
                 </div>
               </div>

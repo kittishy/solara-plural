@@ -3,6 +3,7 @@
 import { ArrowLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/components/providers/LanguageProvider";
 
 interface NavBarProps {
   title?: string;
@@ -16,12 +17,13 @@ interface NavBarProps {
 export function NavBar({
   title,
   backHref,
-  backLabel = "Voltar",
+  backLabel,
   right,
   transparent = false,
   className,
 }: NavBarProps) {
   const router = useRouter();
+  const { t } = useLanguage();
 
   return (
     <header
@@ -38,7 +40,7 @@ export function NavBar({
             className="flex items-center gap-1 text-ios-blue ios-press -ml-1 pr-2 py-1"
           >
             <ArrowLeft size={18} strokeWidth={2.5} />
-            <span className="text-body">{backLabel}</span>
+            <span className="text-body">{backLabel ?? t("common.back")}</span>
           </button>
         )}
       </div>

@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { GlassCard } from "@/components/glass/GlassCard";
 import { BottomSheet } from "@/components/glass/BottomSheet";
 import { revalidateNotes } from "@/lib/swr";
+import { useLanguage } from "@/components/providers/LanguageProvider";
 import { cn } from "@/lib/utils";
 
 interface NoteEditorProps {
@@ -17,6 +18,7 @@ interface NoteEditorProps {
 
 export function NoteEditor({ noteId }: NoteEditorProps) {
   const router = useRouter();
+  const { t } = useLanguage();
   const isNew = !noteId;
   const [loaded, setLoaded] = useState(isNew);
   const [saving, setSaving] = useState(false);
@@ -59,7 +61,7 @@ export function NoteEditor({ noteId }: NoteEditorProps) {
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
     if (!content.trim()) {
-      setError("O conteúdo não pode estar vazio");
+      setError(t("notes.emptyContent"));
       return;
     }
     setError("");
@@ -83,7 +85,7 @@ export function NoteEditor({ noteId }: NoteEditorProps) {
       );
       const json = await res.json();
       if (!res.ok || !json.success) {
-        setError(json.error ?? "Erro ao salvar");
+        setError(json.error ?? t("common.saveError"));
         return;
       }
       revalidateNotes();
@@ -133,10 +135,10 @@ export function NoteEditor({ noteId }: NoteEditorProps) {
             className="flex items-center gap-1 text-ios-blue ios-press -ml-1"
           >
             <ArrowLeft size={18} strokeWidth={2.5} />
-            <span className="text-body">Voltar</span>
+            <span className="text-body">{t("common.back")}</span>
           </button>
           <h1 className="text-headline font-semibold text-foreground absolute left-1/2 -translate-x-1/2">
-            {isNew ? "Nova nota" : "Editar"}
+            {isNew ? t("notes.new") : t("common.edit")}
           </h1>
           <button
             type="button"
@@ -144,7 +146,7 @@ export function NoteEditor({ noteId }: NoteEditorProps) {
             disabled={saving || !content.trim()}
             className="text-body font-semibold text-ios-blue ios-press disabled:opacity-40"
           >
-            {saving ? "Salvando..." : "Salvar"}
+            {saving ? t("common.saving") : t("common.save")}
           </button>
         </div>
       </div>
@@ -152,23 +154,23 @@ export function NoteEditor({ noteId }: NoteEditorProps) {
       <form onSubmit={handleSave} className="flex flex-col gap-4 px-4 pt-4">
         <GlassCard padding="lg" className="flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="title">Título</Label>
+            <Label htmlFor="title">{t("notes.titleLabel")}</Label>
             <Input
               id="title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="Sem título"
+              placeholder={t("notes.untitled")}
               maxLength={200}
             />
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="category">Categoria</Label>
+            <Label htmlFor="category">{t("notes.category")}</Label>
             <Input
               id="category"
               value={category}
               onChange={(e) => setCategory(e.target.value)}
-              placeholder="Geral, importante..."
+              placeholder={t("notes.categoryPlaceholder")}
               maxLength={80}
             />
           </div>
@@ -188,18 +190,16 @@ export function NoteEditor({ noteId }: NoteEditorProps) {
             )}
             <div className="flex-1 text-left">
               <p className="text-body font-semibold text-foreground">
-                {isPrivate ? "Privada" : "Visível ao sistema"}
+                {isPrivate ? t("notes.private") : t("notes.public")}
               </p>
               <p className="text-caption-1 text-muted-foreground">
-                {isPrivate
-                  ? "Só você pode ver esta nota"
-                  : "Outros membros podem ver"}
+                {isPrivate ? t("notes.onlyYouSee") : t("notes.othersSee")}
               </p>
             </div>
           </button>
 
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="content">Conteúdo *</Label>
+            <Label htmlFor="content">{t("notes.content")} *</Label>
             <textarea
               id="content"
               value={content}
@@ -224,7 +224,7 @@ export function NoteEditor({ noteId }: NoteEditorProps) {
             onClick={() => setConfirmDelete(true)}
           >
             <Trash2 size={16} />
-            Excluir nota
+            {t("notes.delete")}
           </Button>
         )}
 
@@ -234,18 +234,18 @@ export function NoteEditor({ noteId }: NoteEditorProps) {
           disabled={saving || !content.trim()}
         >
           <Save size={16} />
-          {saving ? "Salvando..." : isNew ? "Criar nota" : "Salvar alterações"}
+          {saving ? t("common.saving") : isNew ? t("notes.save") : t("journal.saveChanges")}
         </Button>
       </form>
 
       <BottomSheet
         open={confirmDelete}
         onClose={() => setConfirmDelete(false)}
-        title="Excluir nota?"
+        title={t("notes.confirmDeleteTitle")}
       >
         <div className="flex flex-col gap-4">
           <p className="text-body text-foreground">
-            Esta ação não pode ser desfeita.
+            {t("common.irreversible")}
           </p>
           <div className="flex flex-col gap-2">
             <Button
@@ -254,14 +254,14 @@ export function NoteEditor({ noteId }: NoteEditorProps) {
               disabled={deleting}
               className="w-full"
             >
-              {deleting ? "Excluindo..." : "Sim, excluir"}
+              {deleting ? t("common.deleting") : t("common.yes")}
             </Button>
             <Button
               variant="ghost"
               onClick={() => setConfirmDelete(false)}
               className="w-full"
             >
-              Cancelar
+              {t("common.cancel")}
             </Button>
           </div>
         </div>

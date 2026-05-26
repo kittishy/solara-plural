@@ -15,7 +15,7 @@ import { Label } from "@/components/ui/label";
 export default function DeleteAccountPage() {
   const router = useRouter();
   const { data: session } = useSession();
-  const { language } = useLanguage();
+  const { t, language } = useLanguage();
   const [confirmation, setConfirmation] = useState("");
   const [confirmEmail, setConfirmEmail] = useState("");
   const [acknowledged, setAcknowledged] = useState(false);
@@ -23,8 +23,9 @@ export default function DeleteAccountPage() {
   const [error, setError] = useState("");
 
   const accountEmail = session?.user?.email?.trim().toLowerCase() ?? "";
+  const confirmWord = t("settings.confirmWord");
   const canSubmit =
-    confirmation.trim().toUpperCase() === "EXCLUIR" &&
+    confirmation.trim().toUpperCase() === confirmWord.toUpperCase() &&
     confirmEmail.trim().toLowerCase() === accountEmail &&
     acknowledged &&
     accountEmail.length > 0;
@@ -45,7 +46,7 @@ export default function DeleteAccountPage() {
       });
       const json = await res.json();
       if (!res.ok || !json.success) {
-        setError(json.error ?? "Erro ao processar exclusao");
+        setError(json.error ?? t("common.error"));
         return;
       }
       await signOut({ callbackUrl: localizePathname("/login", language) });
@@ -63,10 +64,10 @@ export default function DeleteAccountPage() {
             className="flex items-center gap-1 text-ios-blue ios-press -ml-1"
           >
             <ArrowLeft size={18} strokeWidth={2.5} />
-            <span className="text-body">Config</span>
+            <span className="text-body">{t("settings.title")}</span>
           </Link>
           <h1 className="text-headline font-semibold absolute left-1/2 -translate-x-1/2">
-            Excluir conta
+            {t("settings.deleteAccount")}
           </h1>
         </div>
       </div>
@@ -77,14 +78,13 @@ export default function DeleteAccountPage() {
             <div className="w-12 h-12 rounded-full bg-ios-red/15 flex items-center justify-center">
               <AlertTriangle size={24} className="text-ios-red" />
             </div>
-            <h2 className="text-title-3 text-foreground">Atencao</h2>
+            <h2 className="text-title-3 text-foreground">{t("settings.deleteAccountWarning")}</h2>
             <p className="text-body text-muted-foreground">
-              Isso vai agendar a exclusao da sua conta, todos os membros, notas,
-              historico de front, parcerias, amizades e qualquer dado associado.
+              {t("settings.deleteAccountDesc")}
               <br />
               <br />
               <strong className="text-foreground">
-                Voce tera 72 horas para cancelar antes da remocao permanente.
+                {t("settings.deleteAccountRecovery")}
               </strong>
             </p>
           </div>
@@ -92,25 +92,25 @@ export default function DeleteAccountPage() {
 
         <GlassCard padding="lg" className="flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="confirmEmail">Confirme seu email</Label>
+            <Label htmlFor="confirmEmail">{t("settings.confirmEmailLabel")}</Label>
             <Input
               id="confirmEmail"
               type="email"
               value={confirmEmail}
               onChange={(e) => setConfirmEmail(e.target.value)}
-              placeholder={session?.user?.email ?? "email@exemplo.com"}
+              placeholder={session?.user?.email ?? t("auth.forgot.emailPlaceholder")}
             />
           </div>
 
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="confirmation">
-              Digite <strong className="text-ios-red">EXCLUIR</strong> para confirmar
+              {t("settings.confirmWordLabel")}
             </Label>
             <Input
               id="confirmation"
               value={confirmation}
               onChange={(e) => setConfirmation(e.target.value)}
-              placeholder="EXCLUIR"
+              placeholder={confirmWord}
             />
           </div>
 
@@ -122,8 +122,7 @@ export default function DeleteAccountPage() {
               className="mt-1 h-4 w-4 accent-ios-red"
             />
             <span className="text-subheadline text-muted-foreground">
-              Entendo que a conta fica em recuperacao por 72 horas e depois
-              pode ser removida permanentemente.
+              {t("settings.acknowledgeLabel")}
             </span>
           </label>
 
@@ -137,7 +136,7 @@ export default function DeleteAccountPage() {
             disabled={!canSubmit || submitting}
             className="w-full"
           >
-            {submitting ? "Agendando..." : "Agendar exclusao da conta"}
+            {submitting ? t("settings.scheduling") : t("settings.scheduleDelete")}
           </Button>
 
           <Button
@@ -145,7 +144,7 @@ export default function DeleteAccountPage() {
             onClick={() => router.push("/settings")}
             className="w-full"
           >
-            Cancelar
+            {t("common.cancel")}
           </Button>
         </GlassCard>
       </div>

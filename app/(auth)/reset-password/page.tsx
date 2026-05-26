@@ -8,15 +8,17 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { GlassCard } from "@/components/glass/GlassCard";
+import { useLanguage } from "@/components/providers/LanguageProvider";
+import type { TranslationKey } from "@/lib/i18n";
 
-function getResetPasswordErrorMessage(code: unknown) {
-  if (code === "RATE_LIMITED") return "Muitas tentativas. Aguarde um pouco e tente novamente.";
-  if (code === "INVALID_TOKEN") return "Link invalido ou expirado. Solicite uma nova redefinicao.";
-  if (code === "WEAK_PASSWORD") return "Use uma senha com pelo menos 8 caracteres.";
-  return "Erro ao redefinir senha";
-}
+const ERROR_KEY_MAP: Record<string, TranslationKey> = {
+  RATE_LIMITED: "auth.reset.rateLimited",
+  INVALID_TOKEN: "auth.reset.invalid",
+  WEAK_PASSWORD: "auth.register.passwordShort",
+};
 
 function ResetPasswordForm() {
+  const { t } = useLanguage();
   const searchParams = useSearchParams();
   const token = searchParams.get("token") ?? "";
   const [showPassword, setShowPassword] = useState(false);
@@ -34,7 +36,7 @@ function ResetPasswordForm() {
     const confirm = data.get("confirm") as string;
 
     if (password !== confirm) {
-      setError("As senhas não coincidem");
+      setError(t("auth.reset.mismatch"));
       setLoading(false);
       return;
     }
@@ -49,13 +51,14 @@ function ResetPasswordForm() {
       const json = await res.json().catch(() => null);
 
       if (!res.ok || !json?.success) {
-        setError(json?.error ?? getResetPasswordErrorMessage(json?.code));
+        const errorKey = ERROR_KEY_MAP[json?.code as string];
+        setError(json?.error ?? (errorKey ? t(errorKey) : t("auth.reset.invalid")));
         return;
       }
 
       setDone(true);
     } catch {
-      setError("Erro ao redefinir. Tente novamente.");
+      setError(t("auth.reset.invalid"));
     } finally {
       setLoading(false);
     }
@@ -69,10 +72,10 @@ function ResetPasswordForm() {
             <span className="text-3xl">✓</span>
           </div>
           <p className="text-body text-foreground">
-            Senha redefinida com sucesso!
+            {t("auth.reset.success")}
           </p>
           <Button asChild size="sm">
-            <Link href="/login">Entrar</Link>
+            <Link href="/login">{t("auth.reset.signIn")}</Link>
           </Button>
         </div>
       </GlassCard>
@@ -83,13 +86,13 @@ function ResetPasswordForm() {
     <GlassCard className="w-full" padding="lg">
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="password">Nova senha</Label>
+          <Label htmlFor="password">{t("auth.reset.newPassword")}</Label>
           <div className="relative">
             <Input
               id="password"
               name="password"
               type={showPassword ? "text" : "password"}
-              placeholder="Mínimo 8 caracteres"
+              placeholder={t("auth.register.passwordPlaceholder")}
               minLength={8}
               required
               className="pr-12"
@@ -105,12 +108,12 @@ function ResetPasswordForm() {
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="confirm">Confirmar senha</Label>
+          <Label htmlFor="confirm">{t("auth.register.confirmPassword")}</Label>
           <Input
             id="confirm"
             name="confirm"
             type="password"
-            placeholder="Repita a senha"
+            placeholder={t("auth.register.confirmPlaceholder")}
             minLength={8}
             required
           />
@@ -125,7 +128,7 @@ function ResetPasswordForm() {
           className="w-full"
           disabled={loading || !token}
         >
-          {loading ? "Salvando..." : "Salvar nova senha"}
+          {loading ? t("auth.reset.saving") : t("auth.reset.save")}
         </Button>
       </form>
     </GlassCard>
@@ -133,12 +136,14 @@ function ResetPasswordForm() {
 }
 
 export default function ResetPasswordPage() {
+  const { t } = useLanguage();
+
   return (
     <div className="flex flex-col items-center gap-8 animate-fade-in">
       <div className="text-center">
-        <h1 className="text-title-1 text-foreground">Nova senha</h1>
+        <h1 className="text-title-1 text-foreground">{t("auth.reset.title")}</h1>
         <p className="text-subheadline text-muted-foreground mt-1">
-          Escolha uma senha segura
+          {t("auth.reset.helper")}
         </p>
       </div>
 
@@ -146,7 +151,7 @@ export default function ResetPasswordPage() {
         fallback={
           <GlassCard className="w-full" padding="lg">
             <div className="h-40 flex items-center justify-center text-muted-foreground text-subheadline">
-              Carregando...
+              {t("common.loading")}
             </div>
           </GlassCard>
         }

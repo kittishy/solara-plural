@@ -21,16 +21,16 @@ type Note = {
   updatedAt: string | number | Date;
 };
 
-function formatDate(value: string | number | Date) {
+function formatDate(value: string | number | Date, lang: string) {
   const d = new Date(value);
-  return d.toLocaleDateString(undefined, {
+  return d.toLocaleDateString(lang, {
     day: "numeric",
     month: "short",
   });
 }
 
 export default function NotesPage() {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
   const { data, isLoading } = useSWR<Note[]>(swrKeys.notes, apiFetcher);
   const notes = data ?? [];
@@ -99,7 +99,9 @@ export default function NotesPage() {
               <FileText size={36} className="text-muted-foreground/40" />
               <div>
                 <p className="text-body font-semibold text-foreground">
-                  {categoryFilter ? `Nenhuma nota em "${categoryFilter}"` : t("notes.noNotes")}
+                  {categoryFilter
+                    ? t("notes.noNotesInCategory", { category: categoryFilter })
+                    : t("notes.noNotes")}
                 </p>
                 <p className="text-subheadline text-muted-foreground mt-1">
                   {t("notes.createFirst")}
@@ -125,7 +127,7 @@ export default function NotesPage() {
                     {note.title || t("notes.untitled")}
                   </p>
                   <span className="text-caption-1 text-muted-foreground flex-shrink-0">
-                    {formatDate(note.updatedAt)}
+                    {formatDate(note.updatedAt, language)}
                   </span>
                 </div>
                 {note.content && (

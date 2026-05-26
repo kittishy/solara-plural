@@ -58,7 +58,7 @@ type BucketItem = {
 
 const MOODS = ["😊", "🥰", "😌", "😐", "😔", "😤", "❤️", "🌟", "🌀", "💫"];
 
-function DiarySheet({ partnershipId, onClose, t }: { partnershipId: string; onClose: () => void; t: (k: TranslationKey) => string }) {
+function DiarySheet({ partnershipId, onClose, t, language }: { partnershipId: string; onClose: () => void; t: (k: TranslationKey, v?: Record<string, string | number>) => string; language: string }) {
   const notesKey = `/api/partners/${partnershipId}/notes`;
   const { data: notes, isLoading } = useSWR<Note[]>(notesKey, apiFetcher);
   const [content, setContent] = useState("");
@@ -99,7 +99,7 @@ function DiarySheet({ partnershipId, onClose, t }: { partnershipId: string; onCl
               <div className="flex items-center gap-2 mb-1">
                 {note.mood && <span className="text-lg">{note.mood}</span>}
                 <span className="text-caption-1 text-muted-foreground">
-                  {new Date(note.createdAt).toLocaleDateString()}
+                  {new Date(note.createdAt).toLocaleDateString(language, { day: "numeric", month: "short", year: "numeric" })}
                 </span>
               </div>
               <p className="text-body text-foreground whitespace-pre-wrap">{note.content}</p>
@@ -143,7 +143,7 @@ function DiarySheet({ partnershipId, onClose, t }: { partnershipId: string; onCl
   );
 }
 
-function MilestonesSheet({ partnershipId, onClose, t, language }: { partnershipId: string; onClose: () => void; t: (k: TranslationKey) => string; language: string }) {
+function MilestonesSheet({ partnershipId, onClose, t, language }: { partnershipId: string; onClose: () => void; t: (k: TranslationKey, v?: Record<string, string | number>) => string; language: string }) {
   const milestonesKey = `/api/partners/${partnershipId}/milestones`;
   const { data: milestones, isLoading } = useSWR<Milestone[]>(milestonesKey, apiFetcher);
   const [title, setTitle] = useState("");
@@ -152,10 +152,7 @@ function MilestonesSheet({ partnershipId, onClose, t, language }: { partnershipI
   const [saving, setSaving] = useState(false);
 
   function formatDate(value: string) {
-    return new Date(value).toLocaleDateString(
-      language === "pt-BR" ? "pt-BR" : language === "es" ? "es" : "en",
-      { day: "numeric", month: "long", year: "numeric" }
-    );
+    return new Date(value).toLocaleDateString(language, { day: "numeric", month: "long", year: "numeric" });
   }
 
   async function addMilestone(e: React.FormEvent) {
@@ -236,7 +233,7 @@ function MilestonesSheet({ partnershipId, onClose, t, language }: { partnershipI
   );
 }
 
-function BucketSheet({ partnershipId, onClose, t }: { partnershipId: string; onClose: () => void; t: (k: TranslationKey) => string }) {
+function BucketSheet({ partnershipId, onClose, t }: { partnershipId: string; onClose: () => void; t: (k: TranslationKey, v?: Record<string, string | number>) => string }) {
   const bucketKey = `/api/partners/${partnershipId}/bucket`;
   const { data: items, isLoading } = useSWR<BucketItem[]>(bucketKey, apiFetcher);
   const [newTitle, setNewTitle] = useState("");
@@ -310,7 +307,7 @@ function BucketSheet({ partnershipId, onClose, t }: { partnershipId: string; onC
                 onClick={() => toggleItem(item)}
                 disabled={togglingId === item.id}
                 className="text-muted-foreground ios-press flex-shrink-0"
-                aria-label="Toggle"
+                aria-label={t("partners.markDone")}
               >
                 <Square size={20} />
               </button>
@@ -330,7 +327,7 @@ function BucketSheet({ partnershipId, onClose, t }: { partnershipId: string; onC
             <>
               <div className="mt-2 mb-1 px-1">
                 <p className="text-caption-1 text-muted-foreground font-semibold uppercase tracking-wide">
-                  Done · {done.length}
+                  {t("partners.bucketDoneCount", { count: done.length })}
                 </p>
               </div>
               {done.map((item) => (
@@ -340,7 +337,7 @@ function BucketSheet({ partnershipId, onClose, t }: { partnershipId: string; onC
                     onClick={() => toggleItem(item)}
                     disabled={togglingId === item.id}
                     className="text-ios-green ios-press flex-shrink-0"
-                    aria-label="Toggle"
+                    aria-label={t("partners.markUndone")}
                   >
                     <CheckSquare size={20} />
                   </button>
@@ -393,11 +390,7 @@ export default function PartnershipDetailPage({
 
   function formatDate(value: string | null | undefined) {
     if (!value) return "—";
-    return new Date(value).toLocaleDateString(language === "pt-BR" ? "pt-BR" : language === "es" ? "es" : "en", {
-      day: "numeric",
-      month: "long",
-      year: "numeric",
-    });
+    return new Date(value).toLocaleDateString(language, { day: "numeric", month: "long", year: "numeric" });
   }
 
   if (isLoading) {
@@ -541,6 +534,7 @@ export default function PartnershipDetailPage({
           partnershipId={params.partnershipId}
           onClose={() => setSheet(null)}
           t={t}
+          language={language}
         />
       </BottomSheet>
 

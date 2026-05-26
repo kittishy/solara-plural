@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { BottomSheet } from "@/components/glass/BottomSheet";
 import { apiFetcher, swrKeys } from "@/lib/swr";
+import { useLanguage } from "@/components/providers/LanguageProvider";
 import { cn } from "@/lib/utils";
 
 type CustomField = {
@@ -21,21 +22,22 @@ type CustomField = {
   options: { label: string; value: string }[];
 };
 
-const FIELD_TYPES = [
-  { value: "text", label: "Texto curto" },
-  { value: "long_text", label: "Texto longo" },
-  { value: "number", label: "Número" },
-  { value: "date", label: "Data" },
-  { value: "checkbox", label: "Sim/Não" },
-  { value: "select", label: "Seleção" },
-] as const;
-
 export default function CustomFieldsSettingsPage() {
+  const { t } = useLanguage();
   const { data, isLoading } = useSWR<{ fields: CustomField[] }>(
     swrKeys.customFields,
     apiFetcher
   );
   const fields = data?.fields ?? [];
+
+  const FIELD_TYPES = [
+    { value: "text", label: t("settings.fieldTypeShortText") },
+    { value: "long_text", label: t("settings.fieldTypeLongText") },
+    { value: "number", label: t("settings.fieldTypeNumber") },
+    { value: "date", label: t("settings.fieldTypeDate") },
+    { value: "checkbox", label: t("settings.fieldTypeCheckbox") },
+    { value: "select", label: t("settings.fieldTypeSelect") },
+  ] as const;
 
   const [showNew, setShowNew] = useState(false);
   const [name, setName] = useState("");
@@ -81,7 +83,7 @@ export default function CustomFieldsSettingsPage() {
       });
       const json = await res.json();
       if (!res.ok || !json.success) {
-        setError(json.error ?? "Erro ao criar");
+        setError(json.error ?? t("common.saveError"));
         return;
       }
       reset();
@@ -114,10 +116,10 @@ export default function CustomFieldsSettingsPage() {
             className="flex items-center gap-1 text-ios-blue ios-press -ml-1"
           >
             <ArrowLeft size={18} strokeWidth={2.5} />
-            <span className="text-body">Config</span>
+            <span className="text-body">{t("settings.title")}</span>
           </Link>
           <h1 className="text-headline font-semibold absolute left-1/2 -translate-x-1/2">
-            Campos
+            {t("settings.customFields")}
           </h1>
           <button
             onClick={() => setShowNew(true)}
@@ -130,7 +132,7 @@ export default function CustomFieldsSettingsPage() {
 
       <div className="px-4 pt-4">
         <p className="text-subheadline text-muted-foreground mb-3 px-1">
-          Crie campos customizados para adicionar a cada membro do sistema (cor de cabelo, hobby, etc.)
+          {t("settings.customFieldsDesc")}
         </p>
 
         <GlassCard padding="none" className="overflow-hidden">
@@ -142,7 +144,7 @@ export default function CustomFieldsSettingsPage() {
             </div>
           ) : fields.length === 0 ? (
             <div className="py-12 text-center text-muted-foreground text-subheadline">
-              Nenhum campo ainda — adicione um
+              {t("settings.noCustomFields")}
             </div>
           ) : (
             fields.map((f) => (
@@ -156,9 +158,9 @@ export default function CustomFieldsSettingsPage() {
                     {f.name}
                   </p>
                   <p className="text-caption-1 text-muted-foreground">
-                    {FIELD_TYPES.find((t) => t.value === f.type)?.label ?? f.type}
+                    {FIELD_TYPES.find((ft) => ft.value === f.type)?.label ?? f.type}
                     {f.type === "select" && f.options.length > 0 && (
-                      <> · {f.options.length} opções</>
+                      <> · {f.options.length} {t("settings.fieldOptionsCount")}</>
                     )}
                   </p>
                 </div>
@@ -166,7 +168,7 @@ export default function CustomFieldsSettingsPage() {
                   onClick={() => deleteField(f.id)}
                   disabled={deletingId === f.id}
                   className="w-9 h-9 rounded-full bg-ios-red/10 text-ios-red flex items-center justify-center ios-press disabled:opacity-50"
-                  aria-label="Excluir"
+                  aria-label={t("common.delete")}
                 >
                   <Trash2 size={14} />
                 </button>
@@ -176,55 +178,54 @@ export default function CustomFieldsSettingsPage() {
         </GlassCard>
       </div>
 
-      {/* New field sheet */}
       <BottomSheet
         open={showNew}
         onClose={() => {
           setShowNew(false);
           reset();
         }}
-        title="Novo campo"
+        title={t("settings.newField")}
       >
         <form onSubmit={createField} className="flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="field-name">Nome *</Label>
+            <Label htmlFor="field-name">{t("members.name")} *</Label>
             <Input
               id="field-name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Cor de cabelo, hobby..."
+              placeholder={t("settings.fieldNamePlaceholder")}
               required
               maxLength={80}
             />
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="field-description">Descrição</Label>
+            <Label htmlFor="field-description">{t("members.description")}</Label>
             <Input
               id="field-description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Opcional"
+              placeholder={t("common.optional")}
               maxLength={180}
             />
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <Label>Tipo</Label>
+            <Label>{t("settings.fieldType")}</Label>
             <div className="grid grid-cols-2 gap-2">
-              {FIELD_TYPES.map((t) => (
+              {FIELD_TYPES.map((ft) => (
                 <button
-                  key={t.value}
+                  key={ft.value}
                   type="button"
-                  onClick={() => setType(t.value)}
+                  onClick={() => setType(ft.value)}
                   className={cn(
                     "px-3 py-2 rounded-ios-sm text-subheadline font-semibold ios-press text-left",
-                    type === t.value
+                    type === ft.value
                       ? "bg-ios-blue text-white"
                       : "bg-secondary text-foreground"
                   )}
                 >
-                  {t.label}
+                  {ft.label}
                 </button>
               ))}
             </div>
@@ -232,13 +233,13 @@ export default function CustomFieldsSettingsPage() {
 
           {type === "select" && (
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="field-options">Opções (uma por linha)</Label>
+              <Label htmlFor="field-options">{t("settings.fieldOptions")}</Label>
               <textarea
                 id="field-options"
                 value={optionsText}
                 onChange={(e) => setOptionsText(e.target.value)}
                 rows={4}
-                placeholder="Opção 1&#10;Opção 2&#10;Opção 3"
+                placeholder={"Option 1\nOption 2\nOption 3"}
                 className="min-h-[100px] px-4 py-3 rounded-ios-sm bg-[var(--ios-bg-secondary)] text-body resize-y focus:outline-none focus:ring-2 focus:ring-ios-blue"
               />
             </div>
@@ -253,7 +254,7 @@ export default function CustomFieldsSettingsPage() {
             disabled={saving || !name.trim()}
             className="w-full"
           >
-            {saving ? "Criando..." : "Criar campo"}
+            {saving ? t("settings.creatingField") : t("settings.createField")}
           </Button>
         </form>
       </BottomSheet>

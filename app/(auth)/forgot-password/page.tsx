@@ -7,8 +7,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { GlassCard } from "@/components/glass/GlassCard";
+import { useLanguage } from "@/components/providers/LanguageProvider";
 
 export default function ForgotPasswordPage() {
+  const { t } = useLanguage();
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState("");
@@ -29,13 +31,13 @@ export default function ForgotPasswordPage() {
 
       if (!res.ok) {
         const json = await res.json();
-        setError(json.error ?? "Erro ao enviar e-mail");
+        setError(json.error ?? t("auth.forgot.sendFailed"));
         return;
       }
 
       setSent(true);
     } catch {
-      setError("Erro ao enviar. Tente novamente.");
+      setError(t("auth.forgot.sendFailed"));
     } finally {
       setLoading(false);
     }
@@ -44,9 +46,9 @@ export default function ForgotPasswordPage() {
   return (
     <div className="flex flex-col items-center gap-8 animate-fade-in">
       <div className="text-center">
-        <h1 className="text-title-1 text-foreground">Recuperar senha</h1>
+        <h1 className="text-title-1 text-foreground">{t("auth.forgot.title")}</h1>
         <p className="text-subheadline text-muted-foreground mt-1">
-          Enviaremos um link para o seu e-mail
+          {t("auth.forgot.helper")}
         </p>
       </div>
 
@@ -57,11 +59,11 @@ export default function ForgotPasswordPage() {
               <span className="text-3xl">✉️</span>
             </div>
             <p className="text-body text-foreground">
-              E-mail enviado! Verifique sua caixa de entrada.
+              {t("auth.forgot.sent")}
             </p>
             <Button asChild variant="ghost" size="sm">
               <Link href="/login">
-                Voltar ao login
+                {t("auth.forgot.backToLogin")}
               </Link>
             </Button>
           </div>
@@ -70,12 +72,12 @@ export default function ForgotPasswordPage() {
         <GlassCard className="w-full" padding="lg">
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="email">E-mail</Label>
+              <Label htmlFor="email">{t("auth.login.email")}</Label>
               <Input
                 id="email"
                 name="email"
                 type="email"
-                placeholder="seu@email.com"
+                placeholder={t("auth.forgot.emailPlaceholder")}
                 autoComplete="email"
                 required
               />
@@ -88,7 +90,7 @@ export default function ForgotPasswordPage() {
             )}
 
             <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Enviando..." : "Enviar link"}
+              {loading ? t("auth.forgot.sending") : t("auth.forgot.send")}
             </Button>
           </form>
         </GlassCard>
@@ -99,7 +101,7 @@ export default function ForgotPasswordPage() {
         className="flex items-center gap-1 text-ios-blue text-subheadline hover:opacity-80 ios-transition"
       >
         <ArrowLeft size={16} />
-        Voltar ao login
+        {t("auth.forgot.backToLogin")}
       </Link>
     </div>
   );

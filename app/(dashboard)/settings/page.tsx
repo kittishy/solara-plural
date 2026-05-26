@@ -56,7 +56,7 @@ export default function SettingsPage() {
       });
       if (!res.ok) {
         const json = await res.json();
-        setTypeError(json.error ?? "Erro ao alterar tipo de conta");
+        setTypeError(json.error ?? t("common.saveError"));
         return;
       }
       setShowAccountType(false);
@@ -67,7 +67,7 @@ export default function SettingsPage() {
   }
 
   const themeLabel =
-    theme === "light" ? "Light" : theme === "dark" ? "Dark" : "System";
+    theme === "light" ? t("theme.light") : theme === "dark" ? t("theme.dark") : t("theme.system");
 
   async function handleSignOut() {
     setSigningOut(true);
@@ -98,12 +98,12 @@ export default function SettingsPage() {
             <div className="flex items-center gap-3 px-4 py-3 min-h-[44px] active:bg-muted/50 ios-transition cursor-pointer">
               <Avatar className="w-12 h-12">
                 <AvatarFallback className="text-body bg-ios-blue/20 text-ios-blue">
-                  {(session?.user?.name ?? "S")[0].toUpperCase()}
+                  {(session?.user?.name ?? t("settings.system"))[0].toUpperCase()}
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1 min-w-0">
                 <p className="text-body font-semibold text-foreground truncate">
-                  {session?.user?.name ?? "Sistema"}
+                  {session?.user?.name ?? t("settings.system")}
                 </p>
                 <p className="text-caption-1 text-muted-foreground truncate">
                   {session?.user?.email ?? t("settings.profile")}
@@ -170,7 +170,7 @@ export default function SettingsPage() {
           </Link>
           <Link href="/settings/integrations">
             <GroupedRow
-              label="Integrações"
+              label={t("settings.integrations")}
               icon={<GitFork size={18} />}
               chevron
               className="cursor-pointer"
@@ -289,8 +289,8 @@ export default function SettingsPage() {
               </p>
               <p className="text-subheadline text-muted-foreground mt-1">
                 {currentType === "singlet"
-                  ? "Upgrade to a full system account with member management, front tracking, and all features."
-                  : "Switch to a simplified singlet profile. Members and front history are preserved."}
+                  ? t("settings.accountTypeUpgradeDesc")
+                  : t("settings.accountTypeSwitchDesc")}
               </p>
             </div>
           </div>

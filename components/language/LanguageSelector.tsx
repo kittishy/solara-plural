@@ -12,7 +12,7 @@ interface LanguageSelectorProps {
 }
 
 export function LanguageSelector({ className }: LanguageSelectorProps) {
-  const { language, setLanguage } = useLanguage();
+  const { language, setLanguage, t } = useLanguage();
   const [open, setOpen] = useState(false);
 
   const current = LANGUAGES.find((l) => l.code === language) ?? LANGUAGES[0];
@@ -23,13 +23,13 @@ export function LanguageSelector({ className }: LanguageSelectorProps) {
         type="button"
         onClick={() => setOpen(true)}
         className="flex items-center gap-2 px-3 py-2 rounded-ios-sm glass text-subheadline text-foreground ios-transition ios-press select-none"
-        aria-label="Selecionar idioma"
+        aria-label={t("common.selectLanguage")}
       >
         <Globe size={15} className="text-ios-blue" />
         <span className="font-medium">{current.shortLabel}</span>
       </button>
 
-      <BottomSheet open={open} onClose={() => setOpen(false)} title="Idioma">
+      <BottomSheet open={open} onClose={() => setOpen(false)} title={t("settings.language")}>
         <div className="flex flex-col gap-1">
           {LANGUAGES.map((lang) => {
             const isActive = lang.code === language;

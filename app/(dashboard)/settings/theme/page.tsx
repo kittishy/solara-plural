@@ -12,12 +12,13 @@ import {
   Save,
 } from "lucide-react";
 import { useTheme } from "next-themes";
-import { GlassCard, GroupedSection, GroupedRow } from "@/components/glass/GlassCard";
+import { GlassCard, GroupedSection } from "@/components/glass/GlassCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { MemberColorPicker } from "@/components/members/MemberColorPicker";
 import { BottomSheet } from "@/components/glass/BottomSheet";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/components/providers/LanguageProvider";
 import {
   readStoredCustomTheme,
   persistCustomTheme,
@@ -34,23 +35,24 @@ import {
 
 type ColorField = keyof SolaraCustomColors;
 
-const COLOR_ROWS: { field: ColorField; label: string }[] = [
-  { field: "bg", label: "Fundo" },
-  { field: "surface", label: "Superfície" },
-  { field: "primary", label: "Primária / Destaque" },
-  { field: "front", label: "Frente" },
-  { field: "text", label: "Texto" },
-  { field: "border", label: "Borda" },
-];
-
-const MODES = [
-  { value: "light", label: "Claro", icon: Sun },
-  { value: "dark", label: "Escuro", icon: Moon },
-  { value: "system", label: "Sistema", icon: Smartphone },
-] as const;
-
 export default function ThemeSettingsPage() {
   const { theme, setTheme } = useTheme();
+  const { t } = useLanguage();
+
+  const COLOR_ROWS: { field: ColorField; label: string }[] = [
+    { field: "bg", label: t("theme.bg") },
+    { field: "surface", label: t("theme.surface") },
+    { field: "primary", label: t("theme.primary") },
+    { field: "front", label: t("theme.front") },
+    { field: "text", label: t("theme.text") },
+    { field: "border", label: t("theme.border") },
+  ];
+
+  const MODES = [
+    { value: "light", label: t("theme.light"), icon: Sun },
+    { value: "dark", label: t("theme.dark"), icon: Moon },
+    { value: "system", label: t("theme.system"), icon: Smartphone },
+  ] as const;
 
   const [colors, setColors] = useState<SolaraCustomColors>(DEFAULT_SOLARA_COLORS);
   const [appearance, setAppearance] = useState<SolaraAppearance>(DEFAULT_SOLARA_APPEARANCE);
@@ -117,7 +119,6 @@ export default function ThemeSettingsPage() {
     applyCustomTheme(colors);
     applySolaraAppearance(finalAppearance);
 
-    // Bridge to iOS CSS vars
     const root = document.documentElement;
     root.style.setProperty("--ios-blue", colors.primary);
     root.style.setProperty("--ios-bg", colors.bg);
@@ -133,7 +134,6 @@ export default function ThemeSettingsPage() {
 
   return (
     <div className="animate-fade-in pb-8">
-      {/* Navigation Bar */}
       <div className="sticky top-0 z-40 glass border-b border-border/40">
         <div className="flex items-center px-4 h-11">
           <Link
@@ -141,10 +141,10 @@ export default function ThemeSettingsPage() {
             className="flex items-center gap-1 text-ios-blue ios-press -ml-1"
           >
             <ArrowLeft size={18} strokeWidth={2.5} />
-            <span className="text-body">Config</span>
+            <span className="text-body">{t("settings.title")}</span>
           </Link>
           <h1 className="text-headline font-semibold absolute left-1/2 -translate-x-1/2">
-            Aparência
+            {t("theme.appearance")}
           </h1>
         </div>
       </div>
@@ -153,7 +153,7 @@ export default function ThemeSettingsPage() {
         {/* A) Mode toggle */}
         <div>
           <p className="text-footnote font-semibold text-muted-foreground uppercase tracking-wide mb-2 px-1">
-            Modo
+            {t("theme.mode")}
           </p>
           <div className="grid grid-cols-3 gap-2">
             {MODES.map((m) => {
@@ -180,7 +180,7 @@ export default function ThemeSettingsPage() {
         {/* B) Custom colors */}
         <div>
           <p className="text-footnote font-semibold text-muted-foreground uppercase tracking-wide mb-2 px-1">
-            Cores do sistema
+            {t("theme.systemColors")}
           </p>
           <GroupedSection>
             {COLOR_ROWS.map(({ field, label }, idx) => (
@@ -210,20 +210,20 @@ export default function ThemeSettingsPage() {
             className="mt-2 w-full flex items-center justify-center gap-2 py-3 text-ios-blue text-body ios-press ios-transition"
           >
             <RefreshCw size={15} />
-            <span>Restaurar padrões</span>
+            <span>{t("settings.restoreDefaults")}</span>
           </button>
         </div>
 
         {/* C) Wallpaper */}
         <div>
           <p className="text-footnote font-semibold text-muted-foreground uppercase tracking-wide mb-2 px-1">
-            Papel de parede
+            {t("theme.wallpaper")}
           </p>
           <GlassCard padding="md" className="flex flex-col gap-4">
             <div className="flex flex-col gap-1.5">
               <label className="text-caption-1 text-muted-foreground font-medium flex items-center gap-1.5">
                 <Image size={13} />
-                URL da imagem
+                {t("theme.wallpaperUrl")}
               </label>
               <Input
                 type="url"
@@ -234,19 +234,18 @@ export default function ThemeSettingsPage() {
                 className="text-body"
               />
               <p className="text-caption-2 text-muted-foreground px-0.5">
-                Insira uma URL de imagem (HTTPS)
+                {t("theme.wallpaperUrlHint")}
               </p>
             </div>
 
-            {/* Upload */}
             <div className="flex flex-col gap-1.5">
               <label className="text-caption-1 text-muted-foreground font-medium flex items-center gap-1.5">
                 <Image size={13} />
-                Ou faça upload
+                {t("theme.orUpload")}
               </label>
               <label className="flex items-center justify-center gap-2 py-3 rounded-ios-md bg-secondary ios-press cursor-pointer">
                 <Image size={16} className="text-ios-blue" />
-                <span className="text-body text-ios-blue font-medium">Escolher arquivo</span>
+                <span className="text-body text-ios-blue font-medium">{t("theme.chooseFile")}</span>
                 <input
                   type="file"
                   accept="image/*"
@@ -265,16 +264,15 @@ export default function ThemeSettingsPage() {
                 />
               </label>
               <p className="text-caption-2 text-muted-foreground px-0.5">
-                PNG, JPG ou WebP
+                {t("theme.imageFormats")}
               </p>
             </div>
 
             <div className="flex flex-col gap-3">
-              {/* Dim slider */}
               <div className="flex flex-col gap-1.5">
                 <div className="flex items-center justify-between">
                   <label className="text-caption-1 text-muted-foreground font-medium">
-                    Escurecimento
+                    {t("theme.dim")}
                   </label>
                   <span className="text-caption-1 text-muted-foreground font-mono">
                     {appearance.wallpaperDim}%
@@ -295,11 +293,10 @@ export default function ThemeSettingsPage() {
                 />
               </div>
 
-              {/* Blur slider */}
               <div className="flex flex-col gap-1.5">
                 <div className="flex items-center justify-between">
                   <label className="text-caption-1 text-muted-foreground font-medium">
-                    Desfoque
+                    {t("theme.blur")}
                   </label>
                   <span className="text-caption-1 text-muted-foreground font-mono">
                     {appearance.wallpaperBlur}px
@@ -326,7 +323,7 @@ export default function ThemeSettingsPage() {
                 onClick={handleRemoveWallpaper}
                 className="flex items-center justify-center gap-1.5 py-2 text-destructive text-body ios-press ios-transition"
               >
-                <span>Remover papel de parede</span>
+                <span>{t("theme.removeWallpaper")}</span>
               </button>
             )}
           </GlassCard>
@@ -335,12 +332,11 @@ export default function ThemeSettingsPage() {
         {/* D) Options */}
         <div>
           <p className="text-footnote font-semibold text-muted-foreground uppercase tracking-wide mb-2 px-1">
-            Opções
+            {t("theme.options")}
           </p>
           <GroupedSection>
-            {/* Reduce texture */}
             <div className="flex items-center gap-3 px-4 py-3 min-h-[44px]">
-              <span className="flex-1 text-body text-foreground">Reduzir texturas</span>
+              <span className="flex-1 text-body text-foreground">{t("theme.reduceTextures")}</span>
               <button
                 role="switch"
                 aria-checked={appearance.reduceTexture}
@@ -364,12 +360,11 @@ export default function ThemeSettingsPage() {
               </button>
             </div>
 
-            {/* Auto adapt theme */}
             <div className="flex items-center gap-3 px-4 py-3 min-h-[44px] border-t border-border/60">
               <div className="flex-1">
-                <p className="text-body text-foreground">Adaptar tema ao wallpaper</p>
+                <p className="text-body text-foreground">{t("theme.adaptToWallpaper")}</p>
                 {extracting && (
-                  <p className="text-caption-1 text-muted-foreground mt-0.5">Extraindo...</p>
+                  <p className="text-caption-1 text-muted-foreground mt-0.5">{t("theme.extracting")}</p>
                 )}
               </div>
               <button
@@ -396,13 +391,13 @@ export default function ThemeSettingsPage() {
         {/* E) Preview */}
         <div>
           <p className="text-footnote font-semibold text-muted-foreground uppercase tracking-wide mb-2 px-1">
-            Pré-visualização
+            {t("theme.preview")}
           </p>
           <GlassCard padding="lg" className="flex flex-col gap-3">
-            <Button className="w-full">Botão primário</Button>
+            <Button className="w-full">{t("theme.primaryButton")}</Button>
             <p className="text-body text-foreground">
-              Este é o texto principal. Os links{" "}
-              <a className="text-ios-blue font-semibold">aparecem assim</a>.
+              {t("theme.primaryButton")}{" "}
+              <a className="text-ios-blue font-semibold">{t("theme.primary")}</a>
             </p>
             <div className="flex gap-2">
               <span className="px-2.5 py-0.5 rounded-full bg-ios-blue/12 text-ios-blue text-caption-1 font-semibold">
@@ -415,10 +410,9 @@ export default function ThemeSettingsPage() {
                   color: colors.primary,
                 }}
               >
-                Cor primária
+                {t("theme.primaryColor")}
               </span>
             </div>
-            {/* Color swatches preview */}
             <div className="flex gap-1.5 mt-1">
               {COLOR_ROWS.map(({ field }) => (
                 <div
@@ -442,21 +436,20 @@ export default function ThemeSettingsPage() {
           size="lg"
         >
           <Save size={18} />
-          {saved ? "Salvo!" : "Salvar e aplicar"}
+          {saved ? t("settings.saved") : t("settings.saveApply")}
         </Button>
 
         <p className="text-caption-1 text-muted-foreground text-center px-4 -mt-2">
-          As preferências são salvas neste dispositivo.
+          {t("theme.prefsDevice")}
         </p>
       </div>
 
-      {/* Color picker bottom sheet */}
       <BottomSheet
         open={pickerField !== null}
         onClose={() => setPickerField(null)}
         title={
           pickerField
-            ? COLOR_ROWS.find((r) => r.field === pickerField)?.label ?? "Cor"
+            ? COLOR_ROWS.find((r) => r.field === pickerField)?.label
             : undefined
         }
       >

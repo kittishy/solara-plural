@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/components/providers/LanguageProvider";
 
 interface BottomSheetProps {
   open: boolean;
@@ -19,6 +20,8 @@ export function BottomSheet({
   children,
   className,
 }: BottomSheetProps) {
+  const { t } = useLanguage();
+
   useEffect(() => {
     if (!open) return;
     const prev = document.body.style.overflow;
@@ -73,7 +76,7 @@ export function BottomSheet({
               type="button"
               onClick={onClose}
               className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center ios-press"
-              aria-label="Fechar"
+              aria-label={t("common.close")}
             >
               <X size={16} />
             </button>

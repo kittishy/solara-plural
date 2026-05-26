@@ -3,8 +3,11 @@
 import Link from "next/link";
 import { ArrowLeft, Shield, Eye, UserCheck } from "lucide-react";
 import { GlassCard, GroupedSection, GroupedRow } from "@/components/glass/GlassCard";
+import { useLanguage } from "@/components/providers/LanguageProvider";
 
 export default function PrivacySettingsPage() {
+  const { t } = useLanguage();
+
   return (
     <div className="animate-fade-in pb-8">
       <div className="sticky top-0 z-40 glass border-b border-border/40">
@@ -14,10 +17,10 @@ export default function PrivacySettingsPage() {
             className="flex items-center gap-1 text-ios-blue ios-press -ml-1"
           >
             <ArrowLeft size={18} strokeWidth={2.5} />
-            <span className="text-body">Config</span>
+            <span className="text-body">{t("settings.title")}</span>
           </Link>
           <h1 className="text-headline font-semibold absolute left-1/2 -translate-x-1/2">
-            Privacidade
+            {t("settings.privacy")}
           </h1>
         </div>
       </div>
@@ -28,11 +31,10 @@ export default function PrivacySettingsPage() {
             <Shield size={24} className="text-ios-blue flex-shrink-0 mt-1" />
             <div>
               <h2 className="text-headline font-semibold text-foreground mb-1">
-                Seus dados são privados
+                {t("privacy.dataPrivate")}
               </h2>
               <p className="text-subheadline text-muted-foreground">
-                Por padrão, seus membros, fronting e notas só são visíveis para você.
-                Você pode compartilhar individualmente com amigos e parceiros.
+                {t("privacy.dataPrivateDesc")}
               </p>
             </div>
           </div>
@@ -40,26 +42,26 @@ export default function PrivacySettingsPage() {
 
         <div>
           <p className="text-footnote font-semibold text-muted-foreground uppercase tracking-wide mb-2 px-1">
-            Controles
+            {t("privacy.controls")}
           </p>
           <GroupedSection>
             <GroupedRow
-              label="Visibilidade de membros"
+              label={t("privacy.memberVisibility")}
               icon={<Eye size={18} />}
-              value="Por amigo"
+              value={t("privacy.perFriend")}
               chevron
               className="cursor-pointer"
             />
             <GroupedRow
-              label="Quem pode me adicionar"
+              label={t("privacy.whoCanAdd")}
               icon={<UserCheck size={18} />}
-              value="Por e-mail"
+              value={t("privacy.byEmail")}
               chevron
               className="cursor-pointer"
             />
           </GroupedSection>
           <p className="text-caption-1 text-muted-foreground mt-2 px-1">
-            Configure o compartilhamento de cada membro na página de amigos.
+            {t("privacy.sharingHint")}
           </p>
         </div>
       </div>

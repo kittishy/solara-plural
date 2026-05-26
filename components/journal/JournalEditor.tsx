@@ -9,22 +9,16 @@ import { Label } from "@/components/ui/label";
 import { GlassCard } from "@/components/glass/GlassCard";
 import { BottomSheet } from "@/components/glass/BottomSheet";
 import { revalidateJournal } from "@/lib/swr";
+import { useLanguage } from "@/components/providers/LanguageProvider";
 import { cn } from "@/lib/utils";
 
 interface JournalEditorProps {
   entryId?: string;
 }
 
-const MOODS = [
-  { value: "great", emoji: "😄", label: "Ótimo" },
-  { value: "good", emoji: "🙂", label: "Bom" },
-  { value: "okay", emoji: "😐", label: "Ok" },
-  { value: "bad", emoji: "😕", label: "Ruim" },
-  { value: "terrible", emoji: "😞", label: "Péssimo" },
-];
-
 export function JournalEditor({ entryId }: JournalEditorProps) {
   const router = useRouter();
+  const { t } = useLanguage();
   const isNew = !entryId;
   const [loaded, setLoaded] = useState(isNew);
   const [saving, setSaving] = useState(false);
@@ -35,6 +29,14 @@ export function JournalEditor({ entryId }: JournalEditorProps) {
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [mood, setMood] = useState<string | null>(null);
+
+  const MOODS = [
+    { value: "great", emoji: "😄", label: t("journal.moodGreat") },
+    { value: "good", emoji: "🙂", label: t("journal.moodGood") },
+    { value: "okay", emoji: "😐", label: t("journal.moodOkay") },
+    { value: "bad", emoji: "😕", label: t("journal.moodBad") },
+    { value: "terrible", emoji: "😞", label: t("journal.moodTerrible") },
+  ];
 
   useEffect(() => {
     if (!entryId) return;
@@ -63,7 +65,7 @@ export function JournalEditor({ entryId }: JournalEditorProps) {
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
     if (!content.trim()) {
-      setError("O conteúdo não pode estar vazio");
+      setError(t("notes.emptyContent"));
       return;
     }
     setError("");
@@ -85,7 +87,7 @@ export function JournalEditor({ entryId }: JournalEditorProps) {
       );
       const json = await res.json();
       if (!res.ok || !json.success) {
-        setError(json.error ?? "Erro ao salvar");
+        setError(json.error ?? t("common.saveError"));
         return;
       }
       revalidateJournal();
@@ -135,10 +137,10 @@ export function JournalEditor({ entryId }: JournalEditorProps) {
             className="flex items-center gap-1 text-ios-blue ios-press -ml-1"
           >
             <ArrowLeft size={18} strokeWidth={2.5} />
-            <span className="text-body">Voltar</span>
+            <span className="text-body">{t("common.back")}</span>
           </button>
           <h1 className="text-headline font-semibold text-foreground absolute left-1/2 -translate-x-1/2">
-            {isNew ? "Nova entrada" : "Editar"}
+            {isNew ? t("journal.new") : t("common.edit")}
           </h1>
           <button
             type="button"
@@ -146,7 +148,7 @@ export function JournalEditor({ entryId }: JournalEditorProps) {
             disabled={saving || !content.trim()}
             className="text-body font-semibold text-ios-blue ios-press disabled:opacity-40"
           >
-            {saving ? "Salvando..." : "Salvar"}
+            {saving ? t("common.saving") : t("common.save")}
           </button>
         </div>
       </div>
@@ -154,18 +156,18 @@ export function JournalEditor({ entryId }: JournalEditorProps) {
       <form onSubmit={handleSave} className="flex flex-col gap-4 px-4 pt-4">
         <GlassCard padding="lg" className="flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="title">Título</Label>
+            <Label htmlFor="title">{t("journal.title_label")}</Label>
             <Input
               id="title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="Opcional"
+              placeholder={t("common.optional")}
               maxLength={200}
             />
           </div>
 
           <div className="flex flex-col gap-2">
-            <Label>Humor</Label>
+            <Label>{t("journal.mood")}</Label>
             <div className="flex gap-2">
               {MOODS.map((m) => (
                 <button
@@ -190,7 +192,7 @@ export function JournalEditor({ entryId }: JournalEditorProps) {
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="content">Conteúdo *</Label>
+            <Label htmlFor="content">{t("journal.content")} *</Label>
             <textarea
               id="content"
               value={content}
@@ -198,7 +200,7 @@ export function JournalEditor({ entryId }: JournalEditorProps) {
               rows={12}
               required
               maxLength={20000}
-              placeholder="O que você está sentindo hoje?"
+              placeholder={t("journal.contentPlaceholder")}
               className="min-h-[240px] px-4 py-3 rounded-ios-sm bg-[var(--ios-bg-secondary)] text-body resize-y focus:outline-none focus:ring-2 focus:ring-ios-blue"
             />
           </div>
@@ -216,7 +218,7 @@ export function JournalEditor({ entryId }: JournalEditorProps) {
             onClick={() => setConfirmDelete(true)}
           >
             <Trash2 size={16} />
-            Excluir entrada
+            {t("journal.delete")}
           </Button>
         )}
 
@@ -226,18 +228,18 @@ export function JournalEditor({ entryId }: JournalEditorProps) {
           disabled={saving || !content.trim()}
         >
           <Save size={16} />
-          {saving ? "Salvando..." : isNew ? "Criar entrada" : "Salvar alterações"}
+          {saving ? t("common.saving") : isNew ? t("journal.save") : t("journal.saveChanges")}
         </Button>
       </form>
 
       <BottomSheet
         open={confirmDelete}
         onClose={() => setConfirmDelete(false)}
-        title="Excluir entrada?"
+        title={t("journal.confirmDeleteTitle")}
       >
         <div className="flex flex-col gap-4">
           <p className="text-body text-foreground">
-            Esta ação não pode ser desfeita.
+            {t("common.irreversible")}
           </p>
           <div className="flex flex-col gap-2">
             <Button
@@ -246,14 +248,14 @@ export function JournalEditor({ entryId }: JournalEditorProps) {
               disabled={deleting}
               className="w-full"
             >
-              {deleting ? "Excluindo..." : "Sim, excluir"}
+              {deleting ? t("common.deleting") : t("common.yes")}
             </Button>
             <Button
               variant="ghost"
               onClick={() => setConfirmDelete(false)}
               className="w-full"
             >
-              Cancelar
+              {t("common.cancel")}
             </Button>
           </div>
         </div>

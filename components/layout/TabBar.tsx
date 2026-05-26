@@ -15,9 +15,11 @@ import {
   Bell,
   Settings,
 } from "lucide-react";
+import useSWR from "swr";
 import { cn } from "@/lib/utils";
 import { BottomSheet } from "@/components/glass/BottomSheet";
 import { useLanguage } from "@/components/providers/LanguageProvider";
+import { apiFetcher, swrKeys } from "@/lib/swr";
 
 const tabHrefs = ["/", "/members", "/front", "/chat"];
 const moreHrefList = ["/journal", "/friends", "/partners", "/notes", "/notifications", "/settings"];
@@ -42,6 +44,13 @@ export function TabBar() {
     { href: "/notifications", icon: Bell, label: t("nav.notifications") },
     { href: "/settings", icon: Settings, label: t("nav.settings") },
   ];
+
+  const { data: notifData } = useSWR<{ notifications: unknown[]; unreadCount: number }>(
+    swrKeys.notifications,
+    apiFetcher,
+    { refreshInterval: 60_000 }
+  );
+  const unreadCount = notifData?.unreadCount ?? 0;
 
   const isMaisActive = moreHrefList.some((href) => pathname.startsWith(href));
 
@@ -99,11 +108,18 @@ export function TabBar() {
                 : "text-muted-foreground hover:text-foreground"
             )}
           >
-            <Grid3X3
-              size={24}
-              strokeWidth={isMaisActive ? 2.5 : 1.8}
-              className={cn("ios-transition", isMaisActive && "scale-110")}
-            />
+            <div className="relative">
+              <Grid3X3
+                size={24}
+                strokeWidth={isMaisActive ? 2.5 : 1.8}
+                className={cn("ios-transition", isMaisActive && "scale-110")}
+              />
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 min-w-[14px] h-[14px] bg-ios-red rounded-full flex items-center justify-center text-[9px] font-bold text-white px-0.5">
+                  {unreadCount > 99 ? "99+" : unreadCount}
+                </span>
+              )}
+            </div>
             <span
               className={cn(
                 "text-caption-2 font-medium ios-transition",
@@ -122,19 +138,29 @@ export function TabBar() {
         title={t("nav.more")}
       >
         <div className="grid grid-cols-2 gap-3">
-          {moreItems.map(({ href, icon: Icon, label }) => (
-            <Link
-              key={href}
-              href={href}
-              onClick={() => setSheetOpen(false)}
-              className="glass rounded-ios-xl p-4 flex flex-col items-center gap-2 ios-press active:scale-95 ios-transition"
-            >
-              <Icon size={28} strokeWidth={1.8} className="text-ios-blue" />
-              <span className="text-caption-1 font-medium text-foreground text-center">
-                {label}
-              </span>
-            </Link>
-          ))}
+          {moreItems.map(({ href, icon: Icon, label }) => {
+            const showBadge = href === "/notifications" && unreadCount > 0;
+            return (
+              <Link
+                key={href}
+                href={href}
+                onClick={() => setSheetOpen(false)}
+                className="glass rounded-ios-xl p-4 flex flex-col items-center gap-2 ios-press active:scale-95 ios-transition"
+              >
+                <div className="relative">
+                  <Icon size={28} strokeWidth={1.8} className="text-ios-blue" />
+                  {showBadge && (
+                    <span className="absolute -top-1 -right-1 min-w-[16px] h-4 bg-ios-red rounded-full flex items-center justify-center text-[10px] font-bold text-white px-1">
+                      {unreadCount > 99 ? "99+" : unreadCount}
+                    </span>
+                  )}
+                </div>
+                <span className="text-caption-1 font-medium text-foreground text-center">
+                  {label}
+                </span>
+              </Link>
+            );
+          })}
         </div>
       </BottomSheet>
     </>

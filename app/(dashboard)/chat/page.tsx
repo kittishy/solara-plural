@@ -91,6 +91,7 @@ export default function ChatPage() {
   const [memberSearch, setMemberSearch] = useState("");
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -214,8 +215,9 @@ export default function ChatPage() {
   }
 
   async function handleFileUpload(file: File) {
+    setUploadError("");
     if (file.size > 20 * 1024 * 1024) {
-      alert("File must be under 20 MB.");
+      setUploadError(t("chat.fileTooBig"));
       return;
     }
     setUploading(true);
@@ -225,15 +227,13 @@ export default function ChatPage() {
       const res = await fetch("/api/upload", { method: "POST", body });
       const json = await res.json();
       if (!res.ok || !json.url) {
-        console.error("Upload failed:", json);
-        alert(json?.error || "Upload failed.");
+        setUploadError(json?.error ?? t("chat.uploadFailed"));
         return;
       }
       const isImage = file.type.startsWith("image/");
       insertAtCursor(isImage ? `![image](${json.url})` : json.url);
-    } catch (err) {
-      console.error("Upload error:", err);
-      alert("Upload failed. Check console.");
+    } catch {
+      setUploadError(t("chat.uploadFailed"));
     } finally {
       setUploading(false);
     }
@@ -267,7 +267,7 @@ export default function ChatPage() {
             type="button"
             onClick={() => setShowNewChannel(true)}
             className="ios-press"
-            aria-label="Novo canal"
+            aria-label={t("chat.newChannel")}
           >
             <Plus size={20} className="text-ios-blue" />
           </button>
@@ -281,7 +281,7 @@ export default function ChatPage() {
             <AlertTriangle size={40} className="text-ios-red/60" />
             <div>
               <p className="text-body font-semibold text-foreground">
-                Chat indisponivel
+                {t("chat.unavailable")}
               </p>
               <p className="text-subheadline mt-0.5">
                 {chatUnavailableMessage}
@@ -395,6 +395,16 @@ export default function ChatPage() {
         )}
       </div>
 
+      {/* Upload error */}
+      {uploadError && (
+        <div className="shrink-0 px-4 py-1.5 bg-ios-red/10 border-t border-ios-red/20 flex items-center justify-between gap-2">
+          <p className="text-caption-1 text-ios-red flex-1">{uploadError}</p>
+          <button type="button" onClick={() => setUploadError("")} className="text-ios-red ios-press flex-shrink-0">
+            <X size={14} />
+          </button>
+        </div>
+      )}
+
       {/* Input bar — Telegram style */}
       {!chatUnavailableMessage && activeChannelId && (
         <div className="shrink-0 border-t border-border/40 glass px-3 pt-2 pb-3">
@@ -430,7 +440,7 @@ export default function ChatPage() {
                 type="button"
                 onClick={() => { setShowEmojiPicker((v) => !v); }}
                 className="flex items-center justify-center flex-shrink-0 ios-press"
-                aria-label="Emoji picker"
+                aria-label={t("chat.emojiPicker")}
               >
                 <Smile size={18} className="text-muted-foreground" />
               </button>
@@ -440,12 +450,12 @@ export default function ChatPage() {
                 value={messageText}
                 onChange={(e) => setMessageText(e.target.value)}
                 placeholder={t("chat.messagePlaceholderAs", { name: activeMember?.name ?? t("chat.system") })}
-                maxLength={4000}
+                maxLength={2000}
                 className="flex-1 bg-transparent text-body focus:outline-none min-w-0"
               />
               <label
                 className="flex items-center justify-center flex-shrink-0 ios-press disabled:opacity-40 cursor-pointer"
-                aria-label="Attach file"
+                aria-label={t("chat.attachFile")}
               >
                 <input
                   ref={fileInputRef}
@@ -505,7 +515,7 @@ export default function ChatPage() {
             type="text"
             value={memberSearch}
             onChange={(e) => setMemberSearch(e.target.value)}
-            placeholder="Pesquisar membro..."
+            placeholder={t("chat.searchAlter")}
             className="w-full h-9 pl-9 pr-8 rounded-ios-md bg-secondary text-body text-foreground placeholder:text-muted-foreground/50 focus:outline-none"
           />
           {memberSearch && (
@@ -621,7 +631,7 @@ export default function ChatPage() {
                     onClick={() => setConfirmDeleteChannel(ch)}
                     disabled={deletingChannelId === ch.id}
                     className="w-8 h-8 rounded-full bg-ios-red/10 text-ios-red flex items-center justify-center ios-press disabled:opacity-40"
-                    aria-label={`Excluir ${ch.name}`}
+                    aria-label={t("chat.deleteChannel")}
                   >
                     <Trash2 size={14} />
                   </button>

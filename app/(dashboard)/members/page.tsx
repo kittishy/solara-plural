@@ -136,7 +136,7 @@ export default function MembersPage() {
     m.name?.toLowerCase().includes(q) ||
     m.pronouns?.toLowerCase().includes(q) ||
     m.role?.toLowerCase().includes(q) ||
-    (m.tags ?? []).some(t => t.toLowerCase().includes(q))
+    (m.tags ?? []).some(tag => tag.toLowerCase().includes(q))
   );
 
   return (

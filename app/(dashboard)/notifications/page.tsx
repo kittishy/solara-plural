@@ -27,20 +27,20 @@ type NotificationsPayload = {
   unreadCount: number;
 };
 
-function formatRelative(value: string | number | Date) {
-  const ms = Date.now() - new Date(value).getTime();
-  const sec = Math.floor(ms / 1000);
-  const min = Math.floor(sec / 60);
-  const hr = Math.floor(min / 60);
-  const day = Math.floor(hr / 24);
-  if (day > 0) return `${day}d`;
-  if (hr > 0) return `${hr}h`;
-  if (min > 0) return `${min}min`;
-  return "now";
-}
-
 export default function NotificationsPage() {
   const { t } = useLanguage();
+
+  function formatRelative(value: string | number | Date) {
+    const ms = Date.now() - new Date(value).getTime();
+    const sec = Math.floor(ms / 1000);
+    const min = Math.floor(sec / 60);
+    const hr = Math.floor(min / 60);
+    const day = Math.floor(hr / 24);
+    if (day > 0) return `${day}d`;
+    if (hr > 0) return `${hr}h`;
+    if (min > 0) return `${min}min`;
+    return t("notifications.timeNow");
+  }
   const { data, isLoading } = useSWR<NotificationsPayload>(
     swrKeys.notifications,
     apiFetcher
@@ -151,7 +151,7 @@ export default function NotificationsPage() {
                 onClick={enablePush}
                 disabled={enabling}
               >
-                {enabling ? "..." : t("notifications.enable")}
+                {enabling ? t("notifications.enabling") : t("notifications.enable")}
               </Button>
             )}
           </div>

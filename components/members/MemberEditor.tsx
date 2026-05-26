@@ -15,9 +15,10 @@ import {
 } from "@/components/members/CustomFieldInputs";
 import { BottomSheet } from "@/components/glass/BottomSheet";
 import { revalidateMembersAndFront } from "@/lib/swr";
+import { useLanguage } from "@/components/providers/LanguageProvider";
 
 interface MemberEditorProps {
-  memberId?: string; // undefined means "new"
+  memberId?: string;
 }
 
 type Member = {
@@ -36,6 +37,7 @@ const DEFAULT_COLOR = "#8B5CF6";
 
 export function MemberEditor({ memberId }: MemberEditorProps) {
   const router = useRouter();
+  const { t } = useLanguage();
   const isNew = !memberId;
 
   const [loaded, setLoaded] = useState(isNew);
@@ -56,7 +58,6 @@ export function MemberEditor({ memberId }: MemberEditorProps) {
   const [customFields, setCustomFields] = useState<MemberCustomField[]>([]);
   const [customValues, setCustomValues] = useState<Record<string, string>>({});
 
-  // Load existing member + custom fields
   useEffect(() => {
     let cancelled = false;
     async function load() {
@@ -115,7 +116,7 @@ export function MemberEditor({ memberId }: MemberEditorProps) {
     e.preventDefault();
     setError("");
     if (!name.trim()) {
-      setError("Nome é obrigatório");
+      setError(t("members.nameRequired"));
       return;
     }
     setSaving(true);
@@ -141,7 +142,7 @@ export function MemberEditor({ memberId }: MemberEditorProps) {
       );
       const json = await res.json();
       if (!res.ok || !json.success) {
-        setError(json.error ?? "Erro ao salvar");
+        setError(json.error ?? t("common.saveError"));
         return;
       }
       revalidateMembersAndFront();
@@ -162,7 +163,7 @@ export function MemberEditor({ memberId }: MemberEditorProps) {
       });
       const json = await res.json();
       if (!res.ok || !json.success) {
-        setError(json.error ?? "Erro ao excluir");
+        setError(json.error ?? t("common.error"));
         setDeleting(false);
         return;
       }
@@ -185,7 +186,6 @@ export function MemberEditor({ memberId }: MemberEditorProps) {
 
   return (
     <div className="animate-fade-in pb-8">
-      {/* Top nav */}
       <div className="sticky top-0 z-40 glass border-b border-border/40">
         <div className="flex items-center justify-between px-4 h-11">
           <button
@@ -194,10 +194,10 @@ export function MemberEditor({ memberId }: MemberEditorProps) {
             className="flex items-center gap-1 text-ios-blue ios-press -ml-1"
           >
             <ArrowLeft size={18} strokeWidth={2.5} />
-            <span className="text-body">Voltar</span>
+            <span className="text-body">{t("common.back")}</span>
           </button>
           <h1 className="text-headline font-semibold text-foreground absolute left-1/2 -translate-x-1/2">
-            {isNew ? "Novo membro" : "Editar"}
+            {isNew ? t("members.new") : t("common.edit")}
           </h1>
           <button
             type="button"
@@ -205,13 +205,12 @@ export function MemberEditor({ memberId }: MemberEditorProps) {
             disabled={saving || !name.trim()}
             className="text-body font-semibold text-ios-blue ios-press disabled:opacity-40"
           >
-            {saving ? "Salvando..." : "Salvar"}
+            {saving ? t("common.saving") : t("common.save")}
           </button>
         </div>
       </div>
 
       <form onSubmit={handleSave} className="flex flex-col gap-4 px-4 pt-4">
-        {/* Avatar + color */}
         <GlassCard padding="lg" className="flex flex-col gap-5">
           <AvatarUpload
             currentUrl={avatarUrl}
@@ -222,16 +221,15 @@ export function MemberEditor({ memberId }: MemberEditorProps) {
 
           <div>
             <p className="text-footnote font-semibold text-muted-foreground uppercase tracking-wide mb-2">
-              Cor de acento
+              {t("members.color")}
             </p>
             <MemberColorPicker value={color} onChange={setColor} />
           </div>
         </GlassCard>
 
-        {/* Basic info */}
         <GlassCard padding="lg" className="flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="name">Nome *</Label>
+            <Label htmlFor="name">{t("members.name")} *</Label>
             <Input
               id="name"
               value={name}
@@ -242,29 +240,29 @@ export function MemberEditor({ memberId }: MemberEditorProps) {
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="pronouns">Pronomes</Label>
+            <Label htmlFor="pronouns">{t("members.pronouns")}</Label>
             <Input
               id="pronouns"
               value={pronouns}
               onChange={(e) => setPronouns(e.target.value)}
-              placeholder="ela/dela, ele/dele, they/them..."
+              placeholder={t("members.pronounsPlaceholder")}
               maxLength={60}
             />
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="role">Papel/função</Label>
+            <Label htmlFor="role">{t("members.role")}</Label>
             <Input
               id="role"
               value={role}
               onChange={(e) => setRole(e.target.value)}
-              placeholder="protetor, criança interna..."
+              placeholder={t("members.rolePlaceholder")}
               maxLength={80}
             />
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="description">Descrição</Label>
+            <Label htmlFor="description">{t("members.description")}</Label>
             <textarea
               id="description"
               value={description}
@@ -276,7 +274,7 @@ export function MemberEditor({ memberId }: MemberEditorProps) {
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="tags">Tags</Label>
+            <Label htmlFor="tags">{t("members.tags")}</Label>
             <div className="flex gap-2">
               <Input
                 id="tags"
@@ -288,7 +286,7 @@ export function MemberEditor({ memberId }: MemberEditorProps) {
                     addTag();
                   }
                 }}
-                placeholder="Adicionar tag..."
+                placeholder={t("members.tagPlaceholder")}
                 className="flex-1"
               />
               <Button
@@ -297,7 +295,7 @@ export function MemberEditor({ memberId }: MemberEditorProps) {
                 onClick={addTag}
                 disabled={!tagInput.trim()}
               >
-                Adicionar
+                {t("members.addTag")}
               </Button>
             </div>
             {tags.length > 0 && (
@@ -318,11 +316,10 @@ export function MemberEditor({ memberId }: MemberEditorProps) {
           </div>
         </GlassCard>
 
-        {/* Custom fields */}
         {customFields.length > 0 && (
           <GlassCard padding="lg">
             <p className="text-footnote font-semibold text-muted-foreground uppercase tracking-wide mb-3">
-              Campos customizados
+              {t("members.customFields")}
             </p>
             <CustomFieldInputs
               fields={customFields}
@@ -346,7 +343,7 @@ export function MemberEditor({ memberId }: MemberEditorProps) {
             onClick={() => setConfirmDelete(true)}
           >
             <Trash2 size={16} />
-            Excluir membro
+            {t("members.delete")}
           </Button>
         )}
 
@@ -356,20 +353,18 @@ export function MemberEditor({ memberId }: MemberEditorProps) {
           disabled={saving || !name.trim()}
         >
           <Save size={16} />
-          {saving ? "Salvando..." : isNew ? "Criar membro" : "Salvar alterações"}
+          {saving ? t("common.saving") : isNew ? t("members.createMember") : t("members.saveChanges")}
         </Button>
       </form>
 
-      {/* Delete confirmation */}
       <BottomSheet
         open={confirmDelete}
         onClose={() => setConfirmDelete(false)}
-        title="Excluir membro?"
+        title={t("members.confirmDeleteTitle")}
       >
         <div className="flex flex-col gap-4">
           <p className="text-body text-foreground">
-            Isso vai excluir permanentemente <strong>{name}</strong> e todos os dados
-            relacionados. Esta ação não pode ser desfeita.
+            {t("members.confirmDeleteDesc", { name })}
           </p>
           <div className="flex flex-col gap-2">
             <Button
@@ -378,14 +373,14 @@ export function MemberEditor({ memberId }: MemberEditorProps) {
               disabled={deleting}
               className="w-full"
             >
-              {deleting ? "Excluindo..." : "Sim, excluir"}
+              {deleting ? t("common.deleting") : t("common.yes")}
             </Button>
             <Button
               variant="ghost"
               onClick={() => setConfirmDelete(false)}
               className="w-full"
             >
-              Cancelar
+              {t("common.cancel")}
             </Button>
           </div>
         </div>

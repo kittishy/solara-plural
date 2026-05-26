@@ -8,9 +8,9 @@ import {
   systemFriendships,
   systemPartnerships,
 } from "@/lib/db/schema";
-import { and, eq, isNull, or } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, or } from "drizzle-orm";
 import { requireSystemId } from "@/lib/auth/session";
-import { parseMemberIds } from "@/lib/front";
+import { parseMemberIds, safeParseMemberIds } from "@/lib/front";
 import { HomeContent } from "./HomeContent";
 
 export default async function DashboardPage() {
@@ -85,20 +85,35 @@ export default async function DashboardPage() {
         })
       : [];
 
-  const recentMembers = await db.query.members.findMany({
-    columns: {
-      id: true,
-      name: true,
-      pronouns: true,
-      color: true,
-      avatarUrl: true,
-      tags: true,
-      createdAt: true,
-    },
-    where: and(eq(members.systemId, systemId), eq(members.isArchived, 0)),
-    orderBy: (m, { desc: d }) => [d(m.createdAt)],
-    limit: 5,
+  // Build recently-fronted member list: last 30 history entries → unique member IDs → limit 5
+  const recentHistory = await db.query.frontEntries.findMany({
+    columns: { memberIds: true },
+    where: eq(frontEntries.systemId, systemId),
+    orderBy: [desc(frontEntries.startedAt)],
+    limit: 30,
   });
+
+  const recentlyFrontedIds: string[] = [];
+  const seen = new Set<string>();
+  for (const entry of recentHistory) {
+    for (const id of safeParseMemberIds(entry.memberIds)) {
+      if (!seen.has(id)) { seen.add(id); recentlyFrontedIds.push(id); }
+      if (recentlyFrontedIds.length === 5) break;
+    }
+    if (recentlyFrontedIds.length === 5) break;
+  }
+
+  const recentMembers = recentlyFrontedIds.length > 0
+    ? await db.query.members.findMany({
+        columns: { id: true, name: true, pronouns: true, color: true, avatarUrl: true, tags: true, createdAt: true },
+        where: and(eq(members.systemId, systemId), eq(members.isArchived, 0), inArray(members.id, recentlyFrontedIds)),
+      }).then((rows) => recentlyFrontedIds.map((id) => rows.find((r) => r.id === id)).filter(Boolean) as typeof rows)
+    : await db.query.members.findMany({
+        columns: { id: true, name: true, pronouns: true, color: true, avatarUrl: true, tags: true, createdAt: true },
+        where: and(eq(members.systemId, systemId), eq(members.isArchived, 0)),
+        orderBy: (m, { desc: d }) => [d(m.createdAt)],
+        limit: 5,
+      });
 
   return (
     <HomeContent
@@ -111,6 +126,7 @@ export default async function DashboardPage() {
       partnerCount={partnerCount}
       frontingMembers={frontingMembers}
       recentMembers={recentMembers}
+      hasFrontHistory={recentlyFrontedIds.length > 0}
     />
   );
 }

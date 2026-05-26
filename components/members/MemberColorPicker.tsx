@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/components/providers/LanguageProvider";
 
 interface MemberColorPickerProps {
   value: string;
@@ -83,6 +84,7 @@ function isValidHex(hex: string): boolean {
 }
 
 export function MemberColorPicker({ value, onChange }: MemberColorPickerProps) {
+  const { t } = useLanguage();
   const initial = isValidHex(value) ? value : "#8B5CF6";
   const [hex, setHex] = useState(initial);
   const [hexInput, setHexInput] = useState(initial);
@@ -170,7 +172,7 @@ export function MemberColorPicker({ value, onChange }: MemberColorPickerProps) {
           )})`,
         }}
         role="slider"
-        aria-label="Saturação e brilho"
+        aria-label={t("members.colorSatBright")}
       >
         <div
           className="absolute w-4 h-4 rounded-full border-2 border-white shadow-md pointer-events-none -translate-x-1/2 -translate-y-1/2"
@@ -193,7 +195,7 @@ export function MemberColorPicker({ value, onChange }: MemberColorPickerProps) {
             "linear-gradient(to right, #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff, #ff0000)",
         }}
         role="slider"
-        aria-label="Matiz"
+        aria-label={t("members.colorHue")}
       >
         <div
           className="absolute w-5 h-5 rounded-full border-2 border-white shadow-md pointer-events-none -translate-x-1/2 -translate-y-1/2 top-1/2"

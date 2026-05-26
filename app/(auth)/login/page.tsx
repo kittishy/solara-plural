@@ -69,7 +69,7 @@ export default function LoginPage() {
               id="email"
               name="email"
               type="email"
-              placeholder="seu@email.com"
+              placeholder={t("auth.forgot.emailPlaceholder")}
               autoComplete="email"
               required
             />

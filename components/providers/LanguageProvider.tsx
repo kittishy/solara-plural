@@ -77,8 +77,8 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
       const langTranslations = (translations as Record<string, Record<string, unknown>>)[language];
       const fallback = (translations as Record<string, Record<string, unknown>>)[DEFAULT_LANGUAGE];
       const raw =
-        getNestedValue(langTranslations, key) ||
-        getNestedValue(fallback, key) ||
+        getNestedValue(langTranslations, key) ??
+        getNestedValue(fallback, key) ??
         key;
       return interpolate(raw, values);
     },

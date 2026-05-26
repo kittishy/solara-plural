@@ -181,20 +181,20 @@ export default function FriendsPage() {
       {/* Tabs */}
       <div className="px-4 mb-4">
         <div className="flex gap-1 p-1 rounded-ios-md bg-secondary overflow-x-auto">
-          {tabs.map((t) => (
+          {tabs.map((tabItem) => (
             <button
-              key={t.id}
-              onClick={() => setTab(t.id)}
+              key={tabItem.id}
+              onClick={() => setTab(tabItem.id)}
               className={cn(
                 "flex-1 px-3 py-1.5 rounded-ios-sm text-caption-1 font-semibold ios-transition whitespace-nowrap",
-                tab === t.id
+                tab === tabItem.id
                   ? "bg-white dark:bg-ios-gray-3/30 text-foreground shadow-sm"
                   : "text-muted-foreground"
               )}
             >
-              {t.label}
-              {t.count > 0 && (
-                <span className="ml-1 text-ios-blue">{t.count}</span>
+              {tabItem.label}
+              {tabItem.count > 0 && (
+                <span className="ml-1 text-ios-blue">{tabItem.count}</span>
               )}
             </button>
           ))}

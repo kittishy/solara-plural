@@ -5,6 +5,7 @@ import { Camera, Link as LinkIcon, Upload, X } from "lucide-react";
 import { prepareAvatarDataUrl } from "@/lib/client/avatar-upload";
 import DynamicAvatarImage from "@/components/ui/DynamicAvatarImage";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/components/providers/LanguageProvider";
 
 interface AvatarUploadProps {
   currentUrl?: string | null;
@@ -21,6 +22,7 @@ export function AvatarUpload({
   memberName,
   onUpload,
 }: AvatarUploadProps) {
+  const { t } = useLanguage();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [mode, setMode] = useState<"upload" | "url">("upload");
   const [urlInput, setUrlInput] = useState("");
@@ -81,7 +83,7 @@ export function AvatarUpload({
               ? "transparent"
               : `${memberColor}22`,
           }}
-          aria-label="Trocar avatar"
+          aria-label={t("members.changeAvatar")}
         >
           {currentUrl ? (
             <DynamicAvatarImage
