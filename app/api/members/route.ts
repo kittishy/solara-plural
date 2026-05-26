@@ -13,7 +13,7 @@ export async function GET(request: Request) {
   if (auth.error) return auth.error;
 
   const url = new URL(request.url);
-  const limit = Math.min(Math.max(parseInt(url.searchParams.get('limit') ?? '60', 10) || 60, 1), 100);
+  const limit = Math.min(Math.max(parseInt(url.searchParams.get('limit') ?? '500', 10) || 500, 1), 500);
   const offset = Math.max(parseInt(url.searchParams.get('offset') ?? '0', 10) || 0, 0);
 
   const where = and(

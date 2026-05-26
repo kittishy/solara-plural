@@ -180,6 +180,7 @@ export const members = sqliteTable('members', {
   updatedAt:   integer('updated_at', { mode: 'timestamp' }).notNull().default(sql`(strftime('%s', 'now'))`),
 }, (t) => ({
   systemIdx: index('idx_members_system_id').on(t.systemId),
+  systemArchivedIdx: index('idx_members_system_archived').on(t.systemId, t.isArchived),
 }));
 
 export const customFields = sqliteTable('custom_fields', {
@@ -324,6 +325,7 @@ export const frontEntries = sqliteTable('front_entries', {
 }, (t) => ({
   systemIdx: index('idx_front_entries_system_id').on(t.systemId),
   endedAtIdx: index('idx_front_entries_ended_at').on(t.endedAt),
+  systemEndedIdx: index('idx_front_entries_system_ended').on(t.systemId, t.endedAt),
 }));
 
 // System Notes

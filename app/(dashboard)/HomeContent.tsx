@@ -3,14 +3,14 @@
 import Link from "next/link";
 import { Users, Layers, BookOpen, FileText, Heart, UserPlus, X } from "lucide-react";
 import useSWR, { mutate } from "swr";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { GlassCard } from "@/components/glass/GlassCard";
 import { LargeTitle } from "@/components/layout/NavBar";
 import DynamicAvatarImage from "@/components/ui/DynamicAvatarImage";
 import { Badge } from "@/components/ui/badge";
 import { useLanguage } from "@/components/providers/LanguageProvider";
 import { parseStoredTags } from "@/lib/members/fields";
-import { apiFetcher, swrKeys, revalidateMembersAndFront } from "@/lib/swr";
+import { apiFetcher, swrKeys } from "@/lib/swr";
 
 type FrontingMember = {
   id: string;
@@ -32,7 +32,6 @@ type RecentMember = {
 type Props = {
   systemName: string | undefined;
   memberCount: number;
-  frontingCount: number;
   journalCount: number;
   noteCount: number;
   friendCount: number;
@@ -78,12 +77,11 @@ function StatCard({ icon: Icon, label, value, color, href }: { icon: React.Eleme
 export function HomeContent({
   systemName,
   memberCount,
-  frontingCount,
   journalCount,
   noteCount,
   friendCount,
   partnerCount,
-  frontingMembers,
+  frontingMembers: initialFrontingMembers,
   recentMembers,
   hasFrontHistory,
 }: Props) {
@@ -91,11 +89,30 @@ export function HomeContent({
   const [updating, setUpdating] = useState(false);
   const [now, setNow] = useState(() => Date.now());
 
-  // Fetch current front entry client-side for interactive actions
+  // Fetch current front entry client-side for interactive actions and live display
   const { data: currentFront } = useSWR<{ id: string; memberIds: string[]; startedAt: string } | null>(
     swrKeys.front,
     apiFetcher
   );
+
+  // Build a stable lookup map from the SSR snapshot so we can resolve member
+  // details even after the SWR front entry updates with different IDs.
+  const memberLookup = useMemo(
+    () => new Map(initialFrontingMembers.map((m) => [m.id, m])),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [] // intentionally stable — lookup is seeded once from SSR props
+  );
+
+  // Derive the displayed fronting list reactively from SWR.
+  // Falls back to the SSR snapshot while SWR hydrates (currentFront === undefined).
+  const frontingMembers = useMemo((): FrontingMember[] => {
+    if (currentFront === undefined) return initialFrontingMembers;
+    if (!currentFront?.memberIds?.length) return [];
+    return currentFront.memberIds
+      .map((id) => memberLookup.get(id))
+      .filter(Boolean) as FrontingMember[];
+  }, [currentFront, memberLookup, initialFrontingMembers]);
+
   const frontingIds = currentFront?.memberIds ?? [];
 
   useEffect(() => {
@@ -132,7 +149,7 @@ export function HomeContent({
           body: JSON.stringify({ memberIds: newIds }),
         });
       }
-      revalidateMembersAndFront();
+      void mutate(swrKeys.front);
       void mutate(swrKeys.frontHistory);
     } finally {
       setUpdating(false);
@@ -144,7 +161,7 @@ export function HomeContent({
     setUpdating(true);
     try {
       await fetch("/api/front", { method: "DELETE", credentials: "same-origin" });
-      revalidateMembersAndFront();
+      void mutate(swrKeys.front);
       void mutate(swrKeys.frontHistory);
     } finally {
       setUpdating(false);
@@ -163,7 +180,7 @@ export function HomeContent({
       {/* Stats grid */}
       <div className="grid grid-cols-2 gap-3 px-4 mb-5">
         <StatCard icon={Users} label={t("home.statMembers")} value={memberCount} color="#007AFF" href="/members" />
-        <StatCard icon={Layers} label={t("home.statFronting")} value={frontingCount} color="#34C759" href="/front" />
+        <StatCard icon={Layers} label={t("home.statFronting")} value={frontingMembers.length} color="#34C759" href="/front" />
         <StatCard icon={BookOpen} label={t("home.statEntries")} value={journalCount} color="#AF52DE" href="/journal" />
         <StatCard icon={FileText} label={t("home.statNotes")} value={noteCount} color="#FF9500" href="/notes" />
         <StatCard icon={UserPlus} label={t("home.statFriends")} value={friendCount} color="#5AC8FA" href="/friends" />
