@@ -3,7 +3,7 @@
 import useSWR, { mutate } from "swr";
 import Link from "next/link";
 import { Plus, Search, Minus, Sun, X } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { LargeTitle } from "@/components/layout/NavBar";
 import { GlassCard } from "@/components/glass/GlassCard";
 import { Button } from "@/components/ui/button";
@@ -35,45 +35,58 @@ export default function MembersPage() {
   const [allMembers, setAllMembers] = useState<Member[]>([]);
   const { data, isLoading } = useSWR<{ data: Member[]; total: number }>(
     `/api/members?limit=${PAGE_SIZE}&offset=${page * PAGE_SIZE}`,
-    apiFetcher
+    apiFetcher,
+    { revalidateOnFocus: false, dedupingInterval: 30_000 }
   );
   const { data: currentFront } = useSWR<FrontEntry | null>(swrKeys.front, apiFetcher);
   const [search, setSearch] = useState("");
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
   const [updating, setUpdating] = useState(false);
 
-  // Accumulate members as new pages arrive
+  // Accumulate members as pages load. Page 0 replaces state; subsequent pages append.
   useEffect(() => {
-    if (data?.data) {
-      setAllMembers((prev) => {
-        if (page === 0) return data.data;
-        const existingIds = new Set(prev.map((m) => m.id));
-        const newItems = data.data.filter((m) => !existingIds.has(m.id));
-        return newItems.length > 0 ? [...prev, ...newItems] : prev;
-      });
+    if (!data?.data) return;
+    if (page === 0) {
+      setAllMembers(data.data);
+      return;
     }
+    setAllMembers((prev) => {
+      const existingIds = new Set(prev.map((m) => m.id));
+      const newItems = data.data.filter((m) => !existingIds.has(m.id));
+      return newItems.length > 0 ? [...prev, ...newItems] : prev;
+    });
   }, [data, page]);
 
   const total = data?.total ?? 0;
-  const frontingIds = currentFront?.memberIds ?? [];
-  const frontingSet = new Set(frontingIds);
+
+  // Use SWR data directly for page 0 to avoid one-render flash on cache hit
+  const displayMembers = page === 0 ? (data?.data ?? allMembers) : allMembers;
+  // Only show skeleton on true first load (no data at all yet)
+  const showSkeleton = isLoading && displayMembers.length === 0;
+
+  const frontingSet = useMemo(
+    () => new Set(currentFront?.memberIds ?? []),
+    [currentFront]
+  );
+  const frontingIds = useMemo(
+    () => currentFront?.memberIds ?? [],
+    [currentFront]
+  );
   const selectedIsFronting = selectedMember ? frontingSet.has(selectedMember.id) : false;
 
-  function revalidateAfterFrontChange() {
-    void mutate((key) => typeof key === "string" && key.startsWith("/api/members"));
+  const revalidateAfterFrontChange = useCallback(() => {
     void mutate(swrKeys.front);
     void mutate(swrKeys.frontHistory);
-  }
+  }, []);
 
-  function openSheet(e: React.MouseEvent, member: Member) {
-    e.preventDefault();
+  const openSheet = useCallback((e: React.MouseEvent, member: Member) => {
     e.stopPropagation();
     setSelectedMember(member);
-  }
+  }, []);
 
-  function closeSheet() {
+  const closeSheet = useCallback(() => {
     setSelectedMember(null);
-  }
+  }, []);
 
   async function addToFront() {
     if (!selectedMember || updating) return;
@@ -131,13 +144,17 @@ export default function MembersPage() {
     }
   }
 
-  const q = search.toLowerCase();
-  const filtered = allMembers.filter((m) =>
-    m.name?.toLowerCase().includes(q) ||
-    m.pronouns?.toLowerCase().includes(q) ||
-    m.role?.toLowerCase().includes(q) ||
-    (m.tags ?? []).some(tag => tag.toLowerCase().includes(q))
-  );
+  const filtered = useMemo(() => {
+    const q = search.toLowerCase();
+    if (!q) return displayMembers;
+    return displayMembers.filter(
+      (m) =>
+        m.name?.toLowerCase().includes(q) ||
+        m.pronouns?.toLowerCase().includes(q) ||
+        m.role?.toLowerCase().includes(q) ||
+        m.tags.some((tag) => tag.toLowerCase().includes(q))
+    );
+  }, [displayMembers, search]);
 
   return (
     <div className="animate-fade-in">
@@ -167,7 +184,7 @@ export default function MembersPage() {
       {/* List */}
       <div className="px-4">
         <GlassCard padding="none" className="overflow-hidden">
-          {isLoading ? (
+          {showSkeleton ? (
             <div className="p-4 flex flex-col gap-0">
               {[1, 2, 3, 4, 5].map((i) => (
                 <div
@@ -264,7 +281,7 @@ export default function MembersPage() {
               );
             })
           )}
-          {!isLoading && allMembers.length < total && (
+          {!isLoading && displayMembers.length < total && (
             <div className="px-4 py-3 border-t border-border/50">
               <Button
                 variant="outline"
