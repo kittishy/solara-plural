@@ -1,4 +1,5 @@
 import { createCipheriv, createDecipheriv, createHash, hkdfSync, randomBytes } from 'crypto';
+import { decryptIntegrationToken } from '@/lib/integrations/token-crypto';
 
 // Push-subscription specific crypto. Decoupled from integration tokens so a
 // missing INTEGRATIONS_TOKEN_SECRET in production doesn't break notifications.
@@ -89,12 +90,10 @@ export function decryptPushSubscription(payload: string): string {
 
   // Legacy format from the original integrations-token-crypto module. The
   // payload looks like `v2.iv.tag.data` (no marker prefix that matches ours).
+  // Delegate to the legacy module to keep already-saved tokens working.
   const [format, ivB64, tagB64, dataB64] = payload.split('.');
   if ((format === 'v1' || format === 'v2') && ivB64 && tagB64 && dataB64) {
-    // Delegate to the legacy module to keep already-saved tokens working.
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const legacy = require('@/lib/integrations/token-crypto') as typeof import('@/lib/integrations/token-crypto');
-    return legacy.decryptIntegrationToken(payload);
+    return decryptIntegrationToken(payload);
   }
 
   throw new Error('Invalid push subscription payload.');
