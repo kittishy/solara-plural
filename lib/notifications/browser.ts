@@ -38,10 +38,27 @@ export async function requestAndSavePushToken(): Promise<
   if (!publicKey) return { success: false, reason: 'web_push_not_configured' };
 
   const registration = await navigator.serviceWorker.register('/service-worker.js', { scope: '/' });
-  const existing = await registration.pushManager.getSubscription();
+  const expectedKey = urlBase64ToUint8Array(publicKey);
+
+  let existing = await registration.pushManager.getSubscription();
+
+  // If a subscription exists but was created with a different VAPID public
+  // key (e.g. before the key was configured in production), it's dead —
+  // the server can't push to it. Drop it and re-subscribe with the current key.
+  if (existing) {
+    const existingKey = existing.options?.applicationServerKey;
+    const matches = existingKey instanceof ArrayBuffer
+      && existingKey.byteLength === expectedKey.byteLength
+      && new Uint8Array(existingKey).every((byte, i) => byte === expectedKey[i]);
+    if (!matches) {
+      try { await existing.unsubscribe(); } catch { /* ignore */ }
+      existing = null;
+    }
+  }
+
   const subscription = existing ?? await registration.pushManager.subscribe({
     userVisibleOnly: true,
-    applicationServerKey: urlBase64ToUint8Array(publicKey),
+    applicationServerKey: expectedKey,
   });
 
   const subscriptionJson = subscription.toJSON();

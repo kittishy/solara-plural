@@ -40,6 +40,24 @@ export function NotificationRuntime() {
       void mutate(swrKeys.notifications);
     };
 
+    // Silent re-sync of push subscription.
+    //
+    // Covers the case where the user previously granted notification
+    // permission, but the server-side push token is missing (e.g. cleared
+    // by a fresh install, or never saved because VAPID wasn't configured
+    // when they first opted in). Re-subscribing with the current VAPID
+    // public key is idempotent — the token row is upserted by endpoint
+    // hash — so it's safe to run on every PWA load.
+    void (async () => {
+      try {
+        if (!("Notification" in window)) return;
+        if (Notification.permission !== "granted") return;
+        if (!("serviceWorker" in navigator) || !("PushManager" in window)) return;
+        const { requestAndSavePushToken } = await import("@/lib/notifications/browser");
+        await requestAndSavePushToken();
+      } catch { /* ignore — we'll retry on next load */ }
+    })();
+
     const dispatchNotification = (payload: SolaraNotificationPayload) => {
       window.dispatchEvent(
         new CustomEvent<SolaraNotificationPayload>(SOLARA_NOTIFICATION_EVENT, { detail: payload }),
