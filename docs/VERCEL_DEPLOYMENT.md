@@ -71,7 +71,13 @@ vercel env add WEB_PUSH_VAPID_PRIVATE_KEY --sensitive
 - [ ] `public/manifest.json` exists if `app/layout.tsx` references `/manifest.json`.
 - [ ] `public/service-worker.js` and PWA icons exist before enabling browser push.
 - [ ] Native Web Push VAPID env vars are set before expecting push delivery.
-- [ ] `INTEGRATIONS_TOKEN_SECRET` is set; production token encryption no longer falls back to `NEXTAUTH_SECRET`.
+      Generate them with `npm run vapid:generate "mailto:you@example.com"` and paste
+      the three output lines into `.env.local` AND into Vercel Environment Variables
+      (Production + Preview). Push subscriptions encrypt with a dedicated key chain
+      (`PUSH_SUBSCRIPTION_SECRET` → `INTEGRATIONS_TOKEN_SECRET` → `NEXTAUTH_SECRET`),
+      so push delivery survives a missing integrations secret in production.
+- [ ] `INTEGRATIONS_TOKEN_SECRET` is set for **PluralKit integration tokens**
+      (push tokens have their own fallback chain — see above).
 - [ ] Remote image hostnames are restricted before public production use.
 - [ ] Import/export actions have visible success and error states.
 - [ ] Run `npm run db:migrate` before deploying member sync changes that depend on `member_external_links`.

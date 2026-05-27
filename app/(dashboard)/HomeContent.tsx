@@ -29,6 +29,12 @@ type RecentMember = {
   tags: string | null;
 };
 
+type CurrentFrontSnapshot = {
+  id: string;
+  memberIds: string[];
+  startedAt: string;
+} | null;
+
 type Props = {
   systemName: string | undefined;
   memberCount: number;
@@ -39,6 +45,7 @@ type Props = {
   frontingMembers: FrontingMember[];
   recentMembers: RecentMember[];
   hasFrontHistory: boolean;
+  currentFrontSnapshot: CurrentFrontSnapshot;
 };
 
 function MemberAvatar({ member, size = 40 }: { member: { name: string; color: string | null; avatarUrl: string | null }; size?: number }) {
@@ -84,16 +91,21 @@ export function HomeContent({
   frontingMembers: initialFrontingMembers,
   recentMembers,
   hasFrontHistory,
+  currentFrontSnapshot,
 }: Props) {
   const { t, language } = useLanguage();
   const [updating, setUpdating] = useState(false);
   const [now, setNow] = useState(() => Date.now());
 
-  // Fetch current front entry client-side for interactive actions and live display
-  const { data: currentFront } = useSWR<{ id: string; memberIds: string[]; startedAt: string } | null>(
-    swrKeys.front,
-    apiFetcher
-  );
+  // Fetch current front entry client-side for interactive actions and live display.
+  // `fallbackData` seeds SWR with the SSR snapshot so the first paint matches the
+  // server render — no spinner flash, no layout shift on hydration.
+  const { data: currentFront, mutate: mutateFront } = useSWR<
+    { id: string; memberIds: string[]; startedAt: string } | null
+  >(swrKeys.front, apiFetcher, {
+    fallbackData: currentFrontSnapshot,
+    keepPreviousData: true,
+  });
 
   // Build a stable lookup map from the SSR snapshot so we can resolve member
   // details even after the SWR front entry updates with different IDs.
@@ -137,19 +149,34 @@ export function HomeContent({
   async function toggleMember(memberId: string) {
     if (updating) return;
     setUpdating(true);
+    const newIds = frontingIds.filter((id) => id !== memberId);
+    // Optimistic: paint the new state immediately. SWR will reconcile with the
+    // server response. If the request fails, the rollback flag below restores.
+    const optimistic = newIds.length === 0
+      ? null
+      : currentFront
+        ? { ...currentFront, memberIds: newIds }
+        : null;
     try {
-      const newIds = frontingIds.filter((id) => id !== memberId);
-      if (newIds.length === 0) {
-        await fetch("/api/front", { method: "DELETE", credentials: "same-origin" });
-      } else {
-        await fetch("/api/front", {
-          method: "POST",
-          credentials: "same-origin",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ memberIds: newIds }),
-        });
-      }
-      void mutate(swrKeys.front);
+      await mutateFront(
+        async () => {
+          if (newIds.length === 0) {
+            await fetch("/api/front", { method: "DELETE", credentials: "same-origin" });
+            return null;
+          }
+          const res = await fetch("/api/front", {
+            method: "POST",
+            credentials: "same-origin",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ memberIds: newIds }),
+          });
+          const json = await res.json().catch(() => null);
+          return json?.data
+            ? { id: json.data.id, memberIds: json.data.memberIds, startedAt: json.data.startedAt }
+            : optimistic;
+        },
+        { optimisticData: optimistic, rollbackOnError: true, revalidate: false }
+      );
       void mutate(swrKeys.frontHistory);
     } finally {
       setUpdating(false);
@@ -160,8 +187,13 @@ export function HomeContent({
     if (updating) return;
     setUpdating(true);
     try {
-      await fetch("/api/front", { method: "DELETE", credentials: "same-origin" });
-      void mutate(swrKeys.front);
+      await mutateFront(
+        async () => {
+          await fetch("/api/front", { method: "DELETE", credentials: "same-origin" });
+          return null;
+        },
+        { optimisticData: null, rollbackOnError: true, revalidate: false }
+      );
       void mutate(swrKeys.frontHistory);
     } finally {
       setUpdating(false);

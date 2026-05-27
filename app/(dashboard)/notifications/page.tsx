@@ -145,7 +145,7 @@ export default function NotificationsPage() {
                     : t("notifications.pushDisabledDesc")}
               </p>
             </div>
-            {permission === "default" && (
+            {(permission === "default" || permission === "granted") && (
               <Button
                 size="sm"
                 onClick={enablePush}

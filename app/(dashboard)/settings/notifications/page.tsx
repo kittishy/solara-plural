@@ -97,9 +97,13 @@ export default function NotificationsSettingsPage() {
                 {statusDesc}
               </p>
             </div>
-            {permission === "default" && (
+            {(permission === "default" || permission === "granted") && (
               <Button onClick={enable} disabled={enabling}>
-                {enabling ? t("notifications.enabling") : t("notifications.enablePush")}
+                {enabling
+                  ? t("notifications.enabling")
+                  : permission === "granted"
+                    ? t("notifications.enablePush")
+                    : t("notifications.enablePush")}
               </Button>
             )}
             {error && (

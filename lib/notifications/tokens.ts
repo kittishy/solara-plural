@@ -1,14 +1,10 @@
-import { createHash } from 'crypto';
-import { decryptIntegrationToken, encryptIntegrationToken } from '@/lib/integrations/token-crypto';
+// Push subscription persistence helpers. Re-exports from the dedicated
+// push-subscription crypto so the rest of the codebase keeps importing from
+// the same place, but the encryption is now resilient to a missing
+// INTEGRATIONS_TOKEN_SECRET in production.
 
-export function hashPushEndpoint(endpoint: string): string {
-  return createHash('sha256').update(endpoint).digest('hex');
-}
-
-export function encryptPushSubscription(subscriptionJson: string): string {
-  return encryptIntegrationToken(subscriptionJson);
-}
-
-export function decryptPushSubscription(payload: string): string {
-  return decryptIntegrationToken(payload);
-}
+export {
+  encryptPushSubscription,
+  decryptPushSubscription,
+  hashPushEndpoint,
+} from '@/lib/notifications/push-subscription-crypto';

@@ -2,6 +2,7 @@ import { db } from '@/lib/db';
 import { frontEntries, memberExternalLinks, members, systemIntegrations } from '@/lib/db/schema';
 import { eq, and, isNull, inArray } from 'drizzle-orm';
 import { requireAuth, ok, err, parseJsonRecord } from '@/lib/api/helpers';
+import { CACHE_FRESH_SHORT } from '@/lib/api/cache-headers';
 import { createId } from '@paralleldrive/cuid2';
 import { parseMemberIds, serializeMemberIds } from '@/lib/front';
 import { revalidatePath } from 'next/cache';
@@ -188,15 +189,11 @@ export async function GET() {
     ),
   });
 
-  if (!current) return ok(null);
+  if (!current) return ok(null, 200, { headers: { ...CACHE_FRESH_SHORT } });
   return ok(
     { ...current, memberIds: parseMemberIds(current.memberIds) },
     200,
-    {
-      headers: {
-        'Cache-Control': 'private, max-age=0, s-maxage=15, stale-while-revalidate=30',
-      },
-    }
+    { headers: { ...CACHE_FRESH_SHORT } }
   );
 }
 

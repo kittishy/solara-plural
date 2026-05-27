@@ -4,6 +4,8 @@ import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import { SessionProvider } from "@/components/providers/SessionProvider";
 import { LanguageProvider } from "@/components/providers/LanguageProvider";
 import { ThemeRuntime } from "@/components/providers/ThemeRuntime";
+import { SWRProvider } from "@/components/providers/SWRProvider";
+import { ServiceWorkerRuntime } from "@/components/providers/ServiceWorkerRuntime";
 import { cookies } from "next/headers";
 import { DEFAULT_LANGUAGE, LANGUAGES, LANGUAGE_COOKIE_KEY, isLanguage } from "@/lib/i18n";
 
@@ -52,8 +54,11 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <SessionProvider>
-            <LanguageProvider>{children}</LanguageProvider>
+            <SWRProvider>
+              <LanguageProvider>{children}</LanguageProvider>
+            </SWRProvider>
             <ThemeRuntime />
+            <ServiceWorkerRuntime />
           </SessionProvider>
         </ThemeProvider>
       </body>

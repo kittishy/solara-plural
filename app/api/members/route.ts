@@ -2,6 +2,7 @@ import { db } from '@/lib/db';
 import { members } from '@/lib/db/schema';
 import { eq, and, count } from 'drizzle-orm';
 import { requireAuth, ok, err, parseJsonRecord } from '@/lib/api/helpers';
+import { CACHE_FRESH_MEDIUM } from '@/lib/api/cache-headers';
 import { createId } from '@paralleldrive/cuid2';
 import { revalidatePath } from 'next/cache';
 import { saveMemberCustomFieldValues } from '@/lib/member-custom-fields';
@@ -47,11 +48,7 @@ export async function GET(request: Request) {
     tags: parseStoredTags(m.tags),
   }));
 
-  return ok({ data, total }, 200, {
-    headers: {
-      'Cache-Control': 'private, max-age=0, s-maxage=30, stale-while-revalidate=120',
-    },
-  });
+  return ok({ data, total }, 200, { headers: { ...CACHE_FRESH_MEDIUM } });
 }
 
 // POST /api/members — create a new member

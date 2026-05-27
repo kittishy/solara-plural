@@ -8,6 +8,7 @@ import {
 } from '@/lib/db/schema';
 import { decryptPushSubscription } from '@/lib/notifications/tokens';
 import { sendPushMessages, shouldRevokePushSubscription } from '@/lib/notifications/web-push';
+import { publishNotification } from '@/lib/notifications/realtime-broker';
 
 export type CreateNotificationInput = {
   recipientSystemId: string;
@@ -37,12 +38,35 @@ export async function createNotification(input: CreateNotificationInput) {
     createdAt: now,
   }).returning();
 
-  await deliverPushForNotification({
+  // 1. Wake any in-app listeners for this recipient immediately. Same process
+  //    only, but for the most common case (a single Vercel function handles
+  //    both writer and reader) this is instant.
+  publishNotification(input.recipientSystemId, {
+    id: notification.id,
+    type: notification.type,
+    title: notification.title,
+    body: notification.body,
+    createdAt: notification.createdAt instanceof Date
+      ? notification.createdAt.toISOString()
+      : new Date(notification.createdAt as unknown as number).toISOString(),
+  });
+
+  // 2. Fire-and-forget push delivery. We never want the API request to wait
+  //    for an external push service round-trip — that adds 200-2000ms to
+  //    every action that triggers a notification (front change, friend
+  //    accept, etc.).
+  void deliverPushForNotification({
     notificationId: notification.id,
     recipientSystemId: input.recipientSystemId,
     title: input.push?.title ?? input.title,
     body: input.push?.body ?? input.body,
     url: input.push?.url ?? '/notifications',
+  }).catch((error) => {
+    console.error('[notifications] push delivery failed', {
+      event: 'push_delivery_failed',
+      notificationId: notification.id,
+      error: error instanceof Error ? error.message : 'unknown_error',
+    });
   });
 
   return notification;

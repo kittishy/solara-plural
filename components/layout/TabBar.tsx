@@ -45,10 +45,11 @@ export function TabBar() {
     { href: "/settings", icon: Settings, label: t("nav.settings") },
   ];
 
+  // NotificationRuntime (in the dashboard layout) drives realtime updates
+  // via SSE + visibility change, so this cache stays fresh without polling.
   const { data: notifData } = useSWR<{ notifications: unknown[]; unreadCount: number }>(
     swrKeys.notifications,
-    apiFetcher,
-    { refreshInterval: 60_000 }
+    apiFetcher
   );
   const unreadCount = notifData?.unreadCount ?? 0;
 

@@ -16,28 +16,26 @@ import { HomeContent } from "./HomeContent";
 export default async function DashboardPage() {
   const systemId = await requireSystemId();
 
-  // Round 1 — all independent queries in parallel, including recentHistory
-  // which previously ran after round 1 (waterfall removed)
+  // Batch all independent reads into a single libsql round-trip.
+  // 8 queries → 1 HTTP request to Turso (saves ~7 round-trips of latency).
   const [
-    system,
+    [system],
     [memberCountRow],
-    activeFront,
+    [activeFront],
     [journalCountRow],
     [noteCountRow],
     [friendCountRow],
     [partnerCountRow],
     recentHistory,
-  ] = await Promise.all([
-    db.query.systems.findFirst({
-      columns: { name: true, description: true },
-      where: eq(systems.id, systemId),
-    }),
+  ] = await db.batch([
+    db.select({ name: systems.name, description: systems.description })
+      .from(systems).where(eq(systems.id, systemId)).limit(1),
     db.select({ value: count() }).from(members).where(
       and(eq(members.systemId, systemId), eq(members.isArchived, 0))
     ),
-    db.query.frontEntries.findFirst({
-      where: and(eq(frontEntries.systemId, systemId), isNull(frontEntries.endedAt)),
-    }),
+    db.select().from(frontEntries).where(
+      and(eq(frontEntries.systemId, systemId), isNull(frontEntries.endedAt))
+    ).limit(1),
     db.select({ value: count() }).from(systemJournal).where(
       eq(systemJournal.systemId, systemId)
     ),
@@ -56,17 +54,15 @@ export default async function DashboardPage() {
         eq(systemPartnerships.systemBId, systemId)
       )
     ),
-    db.query.frontEntries.findMany({
-      columns: { memberIds: true },
-      where: eq(frontEntries.systemId, systemId),
-      orderBy: [desc(frontEntries.startedAt)],
-      limit: 30,
-    }),
+    db.select({ memberIds: frontEntries.memberIds }).from(frontEntries)
+      .where(eq(frontEntries.systemId, systemId))
+      .orderBy(desc(frontEntries.startedAt))
+      .limit(30),
   ]);
 
   const frontingIds = activeFront ? parseMemberIds(activeFront.memberIds) : [];
 
-  // Compute recently fronted IDs from the history already fetched in round 1
+  // Compute recently fronted IDs from the history already fetched above.
   const recentlyFrontedIds: string[] = [];
   const seen = new Set<string>();
   for (const entry of recentHistory) {
@@ -77,33 +73,78 @@ export default async function DashboardPage() {
     if (recentlyFrontedIds.length === 5) break;
   }
 
-  // Round 2 — frontingMembers + recentMembers in parallel (was 2 sequential round trips)
-  const [frontingMembers, recentMembers] = await Promise.all([
-    frontingIds.length > 0
-      ? db.query.members.findMany({
-          columns: { id: true, name: true, pronouns: true, color: true, avatarUrl: true },
-          where: and(
-            eq(members.systemId, systemId),
-            inArray(members.id, frontingIds)
-          ),
-        })
-      : Promise.resolve([]),
-    recentlyFrontedIds.length > 0
-      ? db.query.members.findMany({
-          columns: { id: true, name: true, pronouns: true, color: true, avatarUrl: true, tags: true, createdAt: true },
-          where: and(eq(members.systemId, systemId), eq(members.isArchived, 0), inArray(members.id, recentlyFrontedIds)),
-        }).then((rows) =>
-          recentlyFrontedIds
-            .map((id) => rows.find((r) => r.id === id))
-            .filter(Boolean) as typeof rows
+  // Round 2 — fronting + recent member details. Also batched.
+  const memberCols = {
+    id: members.id,
+    name: members.name,
+    pronouns: members.pronouns,
+    color: members.color,
+    avatarUrl: members.avatarUrl,
+  } as const;
+
+  const memberColsWithTags = {
+    ...memberCols,
+    tags: members.tags,
+    createdAt: members.createdAt,
+  } as const;
+
+  type FrontingMemberRow = {
+    id: string; name: string; pronouns: string | null; color: string | null; avatarUrl: string | null;
+  };
+  type RecentMemberRow = FrontingMemberRow & { tags: string | null; createdAt: Date };
+
+  let frontingMembers: FrontingMemberRow[] = [];
+  let recentMembers: RecentMemberRow[] = [];
+
+  if (frontingIds.length > 0 && recentlyFrontedIds.length > 0) {
+    const [fronting, recent] = await db.batch([
+      db.select(memberCols).from(members).where(
+        and(eq(members.systemId, systemId), inArray(members.id, frontingIds))
+      ),
+      db.select(memberColsWithTags).from(members).where(
+        and(
+          eq(members.systemId, systemId),
+          eq(members.isArchived, 0),
+          inArray(members.id, recentlyFrontedIds),
         )
-      : db.query.members.findMany({
-          columns: { id: true, name: true, pronouns: true, color: true, avatarUrl: true, tags: true, createdAt: true },
-          where: and(eq(members.systemId, systemId), eq(members.isArchived, 0)),
-          orderBy: (m, { desc: d }) => [d(m.createdAt)],
-          limit: 5,
-        }),
-  ]);
+      ),
+    ]);
+    frontingMembers = fronting;
+    recentMembers = recentlyFrontedIds
+      .map((id) => recent.find((r) => r.id === id))
+      .filter(Boolean) as typeof recent;
+  } else if (frontingIds.length > 0) {
+    frontingMembers = await db.select(memberCols).from(members).where(
+      and(eq(members.systemId, systemId), inArray(members.id, frontingIds))
+    );
+    recentMembers = await db.select(memberColsWithTags).from(members).where(
+      and(eq(members.systemId, systemId), eq(members.isArchived, 0)),
+    ).orderBy(desc(members.createdAt)).limit(5);
+  } else if (recentlyFrontedIds.length > 0) {
+    const recent = await db.select(memberColsWithTags).from(members).where(
+      and(
+        eq(members.systemId, systemId),
+        eq(members.isArchived, 0),
+        inArray(members.id, recentlyFrontedIds),
+      )
+    );
+    recentMembers = recentlyFrontedIds
+      .map((id) => recent.find((r) => r.id === id))
+      .filter(Boolean) as typeof recent;
+  } else {
+    recentMembers = await db.select(memberColsWithTags).from(members).where(
+      and(eq(members.systemId, systemId), eq(members.isArchived, 0)),
+    ).orderBy(desc(members.createdAt)).limit(5);
+  }
+
+  // SSR snapshot of the current front entry, shaped for SWR fallbackData.
+  const currentFrontSnapshot = activeFront
+    ? {
+        id: activeFront.id,
+        memberIds: frontingIds,
+        startedAt: (activeFront.startedAt as Date).toISOString(),
+      }
+    : null;
 
   return (
     <HomeContent
@@ -116,6 +157,7 @@ export default async function DashboardPage() {
       frontingMembers={frontingMembers}
       recentMembers={recentMembers}
       hasFrontHistory={recentlyFrontedIds.length > 0}
+      currentFrontSnapshot={currentFrontSnapshot}
     />
   );
 }
