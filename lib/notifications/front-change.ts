@@ -8,6 +8,19 @@ import {
 } from '@/lib/db/schema';
 import { createNotification } from '@/lib/notifications/create-notification';
 
+// Notifies every friend of `input.systemId` about a front change.
+//
+// All friends are notified by default — this is the core social signal of the
+// app. Member-level visibility (systemFriendMemberShares) only controls how
+// much detail the notification body includes:
+//
+//   - Friend can see one or more of the fronting members:
+//       body mentions those names ("Alex, Sam are in front")
+//   - Friend has no shared members or none in front:
+//       body uses a generic message ("Their front changed.")
+//
+// This restores notifications for the common case where two systems become
+// friends but haven't manually configured per-member sharing yet.
 export async function notifyFriendsAboutFrontChange(input: {
   systemId: string;
   memberIds: string[];
@@ -22,24 +35,34 @@ export async function notifyFriendsAboutFrontChange(input: {
 
   if (friendships.length === 0) return;
 
-  const owner = await db.query.systems.findFirst({
-    columns: { name: true },
-    where: eq(systems.id, input.systemId),
-  });
-  const ownerName = owner?.name ?? 'A friend';
-
   const friendIds = friendships.map((friendship) => (
     friendship.systemAId === input.systemId ? friendship.systemBId : friendship.systemAId
   ));
 
-  const visibleShares = await db.query.systemFriendMemberShares.findMany({
-    where: and(
-      eq(systemFriendMemberShares.ownerSystemId, input.systemId),
-      inArray(systemFriendMemberShares.friendSystemId, friendIds),
-    ),
-  });
+  const [owner, visibleShares, frontMemberRows] = await Promise.all([
+    db.query.systems.findFirst({
+      columns: { name: true },
+      where: eq(systems.id, input.systemId),
+    }),
+    db.query.systemFriendMemberShares.findMany({
+      where: and(
+        eq(systemFriendMemberShares.ownerSystemId, input.systemId),
+        inArray(systemFriendMemberShares.friendSystemId, friendIds),
+      ),
+    }),
+    input.memberIds.length > 0
+      ? db.query.members.findMany({
+          columns: { id: true, name: true },
+          where: and(
+            eq(members.systemId, input.systemId),
+            inArray(members.id, input.memberIds),
+          ),
+        })
+      : Promise.resolve([] as Array<{ id: string; name: string }>),
+  ]);
 
-  if (visibleShares.length === 0) return;
+  const ownerName = owner?.name ?? 'A friend';
+  const memberNameById = new Map(frontMemberRows.map((member) => [member.id, member.name]));
 
   const visibleByFriend = new Map<string, Set<string>>();
   for (const share of visibleShares) {
@@ -49,36 +72,32 @@ export async function notifyFriendsAboutFrontChange(input: {
     visibleByFriend.set(share.friendSystemId, set);
   }
 
-  if (visibleByFriend.size === 0) return;
-
-  const frontMemberRows = input.memberIds.length > 0
-    ? await db.query.members.findMany({
-        columns: { id: true, name: true },
-        where: and(
-          eq(members.systemId, input.systemId),
-          inArray(members.id, input.memberIds),
-        ),
-      })
-    : [];
-  const memberNameById = new Map(frontMemberRows.map((member) => [member.id, member.name]));
-
   await Promise.all(friendIds.map(async (friendSystemId) => {
-    const visibleMemberIds = visibleByFriend.get(friendSystemId);
-    if (!visibleMemberIds) return;
+    const visibleMemberIds = visibleByFriend.get(friendSystemId) ?? new Set<string>();
 
     const visibleFrontNames = input.memberIds
       .filter((memberId) => visibleMemberIds.has(memberId))
       .map((memberId) => memberNameById.get(memberId))
       .filter((name): name is string => Boolean(name));
 
-    if (input.event === 'started' && visibleFrontNames.length === 0) return;
+    let title: string;
+    let body: string;
+    let pushBody: string;
 
-    const title = input.event === 'ended'
-      ? `${ownerName} ended their front`
-      : `${ownerName} updated their front`;
-    const body = input.event === 'ended'
-      ? 'They are not listing anyone in front right now.'
-      : `${visibleFrontNames.join(', ')} ${visibleFrontNames.length === 1 ? 'is' : 'are'} in front.`;
+    if (input.event === 'ended') {
+      title = `${ownerName} ended their front`;
+      body = 'They are not listing anyone in front right now.';
+      pushBody = body;
+    } else {
+      title = `${ownerName} updated their front`;
+      if (visibleFrontNames.length > 0) {
+        body = `${visibleFrontNames.join(', ')} ${visibleFrontNames.length === 1 ? 'is' : 'are'} in front.`;
+        pushBody = body;
+      } else {
+        body = 'Their front changed.';
+        pushBody = 'Open Solara to see the update.';
+      }
+    }
 
     await createNotification({
       recipientSystemId: friendSystemId,
@@ -93,10 +112,9 @@ export async function notifyFriendsAboutFrontChange(input: {
       },
       push: {
         title,
-        body: input.event === 'ended' ? body : 'Open Solara to see the shared front update.',
-        url: '/notifications',
+        body: pushBody,
+        url: '/friends',
       },
     });
   }));
 }
-
