@@ -14,9 +14,12 @@ type PushResult = {
 };
 
 function getVapidConfig() {
-  const publicKey = process.env.NEXT_PUBLIC_WEB_PUSH_VAPID_PUBLIC_KEY;
-  const privateKey = process.env.WEB_PUSH_VAPID_PRIVATE_KEY;
-  const subject = process.env.WEB_PUSH_VAPID_SUBJECT;
+  // Trim is critical: when env vars are pasted/uploaded with trailing newlines
+  // (a very common Vercel-CLI / dashboard mistake), web-push rejects the key
+  // with "Vapid public key must be a URL-safe base64 encoded 65-byte value".
+  const publicKey = process.env.NEXT_PUBLIC_WEB_PUSH_VAPID_PUBLIC_KEY?.trim();
+  const privateKey = process.env.WEB_PUSH_VAPID_PRIVATE_KEY?.trim();
+  const subject = process.env.WEB_PUSH_VAPID_SUBJECT?.trim();
 
   if (!publicKey || !privateKey || !subject) return null;
   return { publicKey, privateKey, subject };

@@ -34,7 +34,7 @@ export async function requestAndSavePushToken(): Promise<
   const permission = await Notification.requestPermission();
   if (permission !== 'granted') return { success: false, reason: 'permission_not_granted' };
 
-  const publicKey = process.env.NEXT_PUBLIC_WEB_PUSH_VAPID_PUBLIC_KEY;
+  const publicKey = process.env.NEXT_PUBLIC_WEB_PUSH_VAPID_PUBLIC_KEY?.trim();
   if (!publicKey) return { success: false, reason: 'web_push_not_configured' };
 
   const registration = await navigator.serviceWorker.register('/service-worker.js', { scope: '/' });
