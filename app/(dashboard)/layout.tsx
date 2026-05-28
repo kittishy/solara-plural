@@ -11,8 +11,8 @@ export default async function DashboardLayout({
   await requireSystemId();
 
   return (
-    <div className="min-h-screen bg-[var(--ios-bg)]">
-      <main className="pb-32">{children}</main>
+    <div className="min-h-[100dvh] bg-[var(--ios-bg)]">
+      <main className="pb-[calc(env(safe-area-inset-bottom,0px)+128px)]">{children}</main>
       <TabBar />
       <NotificationRuntime />
       <NotificationToast />

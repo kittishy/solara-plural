@@ -242,14 +242,20 @@ export default function ChatPage() {
   const activeMember = (membersList ?? []).find((m) => m.id === selectedMemberId);
 
   return (
-    /* Fixed container that fills viewport minus the tab bar (~80px from bottom) */
+    /* Fixed container that fills the dynamic viewport minus the tab bar.
+       top/bottom anchored with safe-area so it works in PWA Chrome and
+       Android WebView (which often reports env() as 0). */
     <div
-      className="fixed inset-x-0 top-0 flex flex-col animate-fade-in bg-[var(--ios-bg)]"
-      style={{ bottom: "80px" }}
+      className="fixed inset-x-0 flex flex-col animate-fade-in bg-[var(--ios-bg)]"
+      style={{
+        top: "0px",
+        bottom: "calc(max(env(safe-area-inset-bottom, 0px), 12px) + 80px)",
+        height: "auto",
+      }}
     >
       {/* Header */}
       <div className="shrink-0 glass border-b border-border/40">
-        <div className="flex items-center justify-between px-4 h-12 pt-[env(safe-area-inset-top,0px)]">
+        <div className="flex items-center justify-between px-4 h-12 pt-[var(--safe-top)]">
           <button
             type="button"
             onClick={() => setShowSidebar(true)}
@@ -407,7 +413,7 @@ export default function ChatPage() {
 
       {/* Input bar — Telegram style */}
       {!chatUnavailableMessage && activeChannelId && (
-        <div className="shrink-0 border-t border-border/40 glass px-3 pt-2 pb-3">
+        <div className="shrink-0 border-t border-border/40 glass px-3 pt-2 pb-[max(env(safe-area-inset-bottom,0px),12px)]">
           <form onSubmit={sendMessage} className="flex items-center gap-2 relative">
             {/* Member avatar — tap to open picker */}
             <button

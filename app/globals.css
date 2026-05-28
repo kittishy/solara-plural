@@ -56,6 +56,13 @@
     /* Separators */
     --separator: rgba(60, 60, 67, 0.12);
     --separator-opaque: #c6c6c8;
+
+    /* Safe area insets — fall back to 0 when the runtime (e.g. Android WebView)
+       does not expose env(); individual elements add their own min spacing. */
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-left: env(safe-area-inset-left, 0px);
+    --safe-right: env(safe-area-inset-right, 0px);
   }
 
   .dark {
@@ -109,12 +116,18 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
+    min-height: 100dvh;
+    /* clip avoids breaking fixed/portal elements that overflow-hidden would clip
+       on Android WebView; horizontal scroll still suppressed. */
+    overflow-x: clip;
   }
 
   body {
     @apply bg-[var(--ios-bg)] text-foreground;
     font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display",
       "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+    min-height: 100dvh;
+    overflow-x: clip;
   }
 
   ::selection {
@@ -138,11 +151,21 @@
 
   /* Safe area support for mobile */
   .safe-bottom {
-    padding-bottom: env(safe-area-inset-bottom, 0px);
+    padding-bottom: var(--safe-bottom);
   }
 
   .safe-top {
-    padding-top: env(safe-area-inset-top, 0px);
+    padding-top: var(--safe-top);
+  }
+
+  /* Guaranteed-minimum variants: floor the gap so Android WebView (which often
+     returns 0 for env(safe-area-inset-*)) still gets breathing room. */
+  .safe-bottom-min {
+    padding-bottom: max(var(--safe-bottom), 12px);
+  }
+
+  .safe-top-min {
+    padding-top: max(var(--safe-top), 8px);
   }
 }
 

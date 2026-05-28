@@ -57,7 +57,12 @@ export function TabBar() {
 
   return (
     <>
-      <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 safe-bottom">
+      <div
+        className="fixed left-1/2 -translate-x-1/2 z-50"
+        style={{
+          bottom: "calc(max(env(safe-area-inset-bottom, 0px), 12px) + 16px)",
+        }}
+      >
         <nav
           className="flex items-center gap-1 px-3 py-2 rounded-ios-2xl shadow-ios-md"
           style={{
