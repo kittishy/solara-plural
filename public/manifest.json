@@ -1,15 +1,19 @@
 {
+  "id": "/?source=pwa",
   "name": "Solara Plural",
   "short_name": "Solara",
   "description": "A warm private space for plural systems to organize members, track fronting, and keep notes.",
-  "start_url": "/",
+  "start_url": "/?source=pwa",
   "scope": "/",
   "display": "standalone",
   "display_override": ["window-controls-overlay", "standalone", "browser"],
   "background_color": "#09070f",
   "theme_color": "#09070f",
   "orientation": "portrait-primary",
+  "lang": "pt-BR",
+  "dir": "ltr",
   "categories": ["productivity", "health", "lifestyle"],
+  "prefer_related_applications": false,
   "icons": [
     {
       "src": "/icons/icon-192.png",
@@ -28,6 +32,35 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
+    },
+    {
+      "src": "/icons/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Front",
+      "short_name": "Front",
+      "description": "Update who's fronting",
+      "url": "/front?source=shortcut",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Notifications",
+      "short_name": "Notifs",
+      "description": "View notifications",
+      "url": "/notifications?source=shortcut",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Chat",
+      "short_name": "Chat",
+      "description": "Open chat",
+      "url": "/chat?source=shortcut",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
     }
   ]
 }

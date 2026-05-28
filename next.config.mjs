@@ -35,6 +35,17 @@ const nextConfig = {
       },
     ];
   },
+  async rewrites() {
+    return [
+      // Serve Digital Asset Links from the spec-required path. Android's TWA
+      // verifier fetches this on launch to confirm the APK can render this
+      // origin fullscreen (and receive Web Push as a real PWA).
+      {
+        source: '/.well-known/assetlinks.json',
+        destination: '/api/well-known/assetlinks',
+      },
+    ];
+  },
   webpack: (config, { dev }) => {
     // Dev hardening for this Windows workspace:
     // avoid flaky chunk/cache states that can cause white/blank screens.

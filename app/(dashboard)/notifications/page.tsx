@@ -116,6 +116,9 @@ export default function NotificationsPage() {
           ? t("notifications.pushUnsupported")
           : t("notifications.pushDisabled");
 
+  const canShowEnableButton =
+    permission === "default" || permission === "granted";
+
   return (
     <div className="animate-fade-in">
       <div className="px-4 pt-14 pb-2">
@@ -145,16 +148,25 @@ export default function NotificationsPage() {
                     : t("notifications.pushDisabledDesc")}
               </p>
             </div>
-            {permission === "default" && (
+            {canShowEnableButton && (
               <Button
                 size="sm"
                 onClick={enablePush}
                 disabled={enabling}
               >
-                {enabling ? t("notifications.enabling") : t("notifications.enable")}
+                {enabling
+                  ? t("notifications.enabling")
+                  : permission === "granted"
+                    ? t("notifications.resync")
+                    : t("notifications.enable")}
               </Button>
             )}
           </div>
+          {permission === "denied" && (
+            <p className="text-caption-1 text-muted-foreground mt-2">
+              {t("notifications.deniedHowTo")}
+            </p>
+          )}
           {pushError && (
             <p className="text-caption-1 text-ios-red mt-2">{pushError}</p>
           )}
