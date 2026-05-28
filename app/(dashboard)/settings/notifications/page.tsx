@@ -6,6 +6,7 @@ import { ArrowLeft, Bell, BellRing, BellOff } from "lucide-react";
 import { GlassCard, GroupedSection, GroupedRow } from "@/components/glass/GlassCard";
 import { Button } from "@/components/ui/button";
 import { requestAndSavePushToken } from "@/lib/notifications/browser";
+import { isNativeAppRuntime } from "@/lib/swr";
 import { useLanguage } from "@/components/providers/LanguageProvider";
 
 const errorKeyMap: Record<string, string> = {
@@ -19,13 +20,17 @@ const errorKeyMap: Record<string, string> = {
 export default function NotificationsSettingsPage() {
   const { t } = useLanguage();
   const [permission, setPermission] = useState<
-    NotificationPermission | "unsupported"
+    NotificationPermission | "unsupported" | "native-app"
   >("default");
   const [enabling, setEnabling] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
     if (typeof window === "undefined") return;
+    if (isNativeAppRuntime() && !("Notification" in window)) {
+      setPermission("native-app");
+      return;
+    }
     if (!("Notification" in window)) {
       setPermission("unsupported");
     } else {
@@ -47,7 +52,9 @@ export default function NotificationsSettingsPage() {
   }
 
   const statusTitle =
-    permission === "granted"
+    permission === "native-app"
+      ? t("notifications.appActive")
+      : permission === "granted"
       ? t("notifications.pushEnabled")
       : permission === "denied"
         ? t("notifications.pushBlocked")
@@ -56,7 +63,9 @@ export default function NotificationsSettingsPage() {
           : t("notifications.pushDisabled");
 
   const statusDesc =
-    permission === "granted"
+    permission === "native-app"
+      ? t("notifications.appActiveDesc")
+      : permission === "granted"
       ? t("notifications.pushEnabledDesc")
       : permission === "denied"
         ? t("notifications.pushBlockedDesc")
@@ -84,7 +93,7 @@ export default function NotificationsSettingsPage() {
       <div className="px-4 pt-4 flex flex-col gap-4">
         <GlassCard padding="lg">
           <div className="flex flex-col items-center gap-3 text-center">
-            {permission === "granted" ? (
+            {permission === "granted" || permission === "native-app" ? (
               <BellRing size={32} className="text-ios-green" />
             ) : permission === "denied" ? (
               <BellOff size={32} className="text-ios-red" />

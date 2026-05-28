@@ -7,7 +7,7 @@ import { LargeTitle } from "@/components/layout/NavBar";
 import { GlassCard } from "@/components/glass/GlassCard";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { apiFetcher, swrKeys } from "@/lib/swr";
+import { apiFetcher, isNativeAppRuntime, swrKeys } from "@/lib/swr";
 import { requestAndSavePushToken } from "@/lib/notifications/browser";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/components/providers/LanguageProvider";
@@ -26,6 +26,8 @@ type NotificationsPayload = {
   notifications: Notification[];
   unreadCount: number;
 };
+
+type PushPermissionState = NotificationPermission | "unsupported" | "native-app";
 
 export default function NotificationsPage() {
   const { t } = useLanguage();
@@ -46,15 +48,17 @@ export default function NotificationsPage() {
     apiFetcher
   );
 
-  const [permission, setPermission] = useState<NotificationPermission | "unsupported">(
-    "default"
-  );
+  const [permission, setPermission] = useState<PushPermissionState>("default");
   const [enabling, setEnabling] = useState(false);
   const [marking, setMarking] = useState(false);
   const [pushError, setPushError] = useState("");
 
   useEffect(() => {
     if (typeof window === "undefined") return;
+    if (isNativeAppRuntime() && !("Notification" in window)) {
+      setPermission("native-app");
+      return;
+    }
     if (!("Notification" in window)) {
       setPermission("unsupported");
     } else {
@@ -108,7 +112,9 @@ export default function NotificationsPage() {
   const unreadCount = data?.unreadCount ?? 0;
 
   const pushStatusLabel =
-    permission === "granted"
+    permission === "native-app"
+      ? t("notifications.appActive")
+      : permission === "granted"
       ? t("notifications.pushEnabled")
       : permission === "denied"
         ? t("notifications.pushBlocked")
@@ -129,7 +135,7 @@ export default function NotificationsPage() {
       <div className="px-4 mb-4">
         <GlassCard padding="md">
           <div className="flex items-center gap-3">
-            {permission === "granted" ? (
+            {permission === "granted" || permission === "native-app" ? (
               <BellRing size={24} className="text-ios-green flex-shrink-0" />
             ) : permission === "denied" ? (
               <BellOff size={24} className="text-ios-red flex-shrink-0" />
@@ -141,7 +147,9 @@ export default function NotificationsPage() {
                 {pushStatusLabel}
               </p>
               <p className="text-caption-1 text-muted-foreground">
-                {permission === "granted"
+                {permission === "native-app"
+                  ? t("notifications.appActiveDesc")
+                  : permission === "granted"
                   ? t("notifications.pushEnabledDesc")
                   : permission === "denied"
                     ? t("notifications.pushBlockedDesc")

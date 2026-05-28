@@ -588,6 +588,7 @@ export const translations = {
     notifications: {
       title: 'Notifications',
       pushEnabled: 'Push enabled',
+      appActive: 'Active in app',
       pushBlocked: 'Push blocked',
       pushDisabled: 'Push disabled',
       enable: 'Enable',
@@ -598,6 +599,7 @@ export const translations = {
       markAllRead: 'Mark {n} as read',
       empty: 'Nothing here yet',
       pushEnabledDesc: 'You receive real-time alerts',
+      appActiveDesc: 'In-app alerts update live',
       pushBlockedDesc: 'Enable in browser settings',
       pushDisabledDesc: 'Enable to receive alerts',
       pushUnsupported: 'Not supported',
@@ -1253,6 +1255,7 @@ export const translations = {
     notifications: {
       title: 'Notificações',
       pushEnabled: 'Push ativado',
+      appActive: 'Ativo no app',
       pushBlocked: 'Push bloqueado',
       pushDisabled: 'Push desativado',
       enable: 'Ativar',
@@ -1263,6 +1266,7 @@ export const translations = {
       markAllRead: 'Marcar {n} como lidas',
       empty: 'Nada por aqui ainda',
       pushEnabledDesc: 'Você recebe alertas em tempo real',
+      appActiveDesc: 'Alertas dentro do app atualizam ao vivo',
       pushBlockedDesc: 'Ative nas configurações do navegador',
       pushDisabledDesc: 'Ative para receber alertas',
       pushUnsupported: 'Não suportado',
@@ -1918,6 +1922,7 @@ export const translations = {
     notifications: {
       title: 'Notificaciones',
       pushEnabled: 'Push activado',
+      appActive: 'Activo en la app',
       pushBlocked: 'Push bloqueado',
       pushDisabled: 'Push desactivado',
       enable: 'Activar',
@@ -1928,6 +1933,7 @@ export const translations = {
       markAllRead: 'Marcar {n} como leídas',
       empty: 'Nada por aquí todavía',
       pushEnabledDesc: 'Recibes alertas en tiempo real',
+      appActiveDesc: 'Las alertas dentro de la app se actualizan en vivo',
       pushBlockedDesc: 'Activa en la configuración del navegador',
       pushDisabledDesc: 'Activa para recibir alertas',
       pushUnsupported: 'No compatible',
