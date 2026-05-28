@@ -3,6 +3,10 @@
 import { useEffect } from "react";
 import { mutate } from "swr";
 import { swrKeys } from "@/lib/swr";
+import {
+  ensureNativeNotificationPermission,
+  showNativeAppNotification,
+} from "@/lib/notifications/native-app";
 
 // Realtime notification runtime.
 //
@@ -50,6 +54,7 @@ export function NotificationRuntime() {
     // hash — so it's safe to run on every PWA load.
     void (async () => {
       try {
+        await ensureNativeNotificationPermission();
         if (!("Notification" in window)) return;
         if (Notification.permission !== "granted") return;
         if (!("serviceWorker" in navigator) || !("PushManager" in window)) return;
@@ -62,6 +67,11 @@ export function NotificationRuntime() {
       window.dispatchEvent(
         new CustomEvent<SolaraNotificationPayload>(SOLARA_NOTIFICATION_EVENT, { detail: payload }),
       );
+      void showNativeAppNotification({
+        id: payload.id,
+        title: payload.title,
+        body: payload.body,
+      });
     };
 
     // --- SSE for live in-app delivery ---
