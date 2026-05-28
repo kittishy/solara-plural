@@ -15,7 +15,7 @@
 // `controllerchange` and revalidates SWR. Net effect: no F5, no close/open,
 // no clearing cache. New deploys land seamlessly.
 
-const VERSION = 'solara-v5';
+const VERSION = 'solara-v6';
 const STATIC_CACHE = `${VERSION}-static`;
 const RUNTIME_CACHE = `${VERSION}-runtime`;
 const API_CACHE = `${VERSION}-api`;
@@ -61,7 +61,8 @@ self.addEventListener('push', (event) => {
   let payload = {};
   try {
     payload = event.data ? event.data.json() : {};
-  } catch {
+  } catch (e) {
+    console.error('[sw] push payload parse failed', e);
     payload = {};
   }
 
@@ -77,25 +78,38 @@ self.addEventListener('push', (event) => {
     // Use `tag` so a burst of pushes for the same notification collapses
     // into a single OS banner instead of spamming the user.
     tag: payload.notificationId ? `solara-${payload.notificationId}` : 'solara-update',
-    renotify: false,
+    renotify: true,
+    // Vibrate on Android — helps surface the notification even when the
+    // device is in silent/silentish profile but vibration is enabled.
+    vibrate: [200, 100, 200],
   };
 
   event.waitUntil((async () => {
-    const clientsList = await self.clients.matchAll({ includeUncontrolled: true, type: 'window' });
+    try {
+      // Notify any open windows so the in-app toast + SWR cache update fire.
+      // We DO NOT skip showNotification anymore even when a window is focused
+      // — Chrome on Android sometimes lies about focus state for installed
+      // PWAs, which silently dropped every push. Showing both (OS banner +
+      // in-app toast) is far better than missing the notification entirely.
+      try {
+        const clientsList = await self.clients.matchAll({ includeUncontrolled: true, type: 'window' });
+        for (const client of clientsList) {
+          client.postMessage({ type: 'solara-push', notificationId: options.data.notificationId });
+        }
+      } catch (e) {
+        console.error('[sw] client postMessage failed', e);
+      }
 
-    // Always wake the app so it refreshes the UI right away.
-    for (const client of clientsList) {
-      client.postMessage({ type: 'solara-push', notificationId: options.data.notificationId });
-    }
-
-    // If a Solara window is currently focused, skip the OS banner — the user
-    // is already looking at the app and the in-app toast (driven by the
-    // postMessage above) is enough. This avoids the noisy double-notify.
-    // Push spec requires userVisibleOnly, so we still call showNotification
-    // when no client is focused.
-    const hasFocusedClient = clientsList.some((client) => client.focused);
-    if (!hasFocusedClient) {
       await self.registration.showNotification(title, options);
+    } catch (e) {
+      console.error('[sw] showNotification failed', e);
+      // Last-ditch fallback: simplest possible notification so the user
+      // still sees something arrived.
+      try {
+        await self.registration.showNotification(title, { body: options.body });
+      } catch (e2) {
+        console.error('[sw] fallback showNotification failed too', e2);
+      }
     }
   })());
 });
