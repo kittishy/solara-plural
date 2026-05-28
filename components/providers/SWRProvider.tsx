@@ -1,7 +1,7 @@
 "use client";
 
 import { SWRConfig } from "swr";
-import { apiFetcher } from "@/lib/swr";
+import { apiFetcher, isNativeAppRuntime } from "@/lib/swr";
 
 // Global SWR defaults tuned for a feel-instant PWA:
 // - `keepPreviousData`: never blank the UI while a refetch happens
@@ -13,13 +13,16 @@ import { apiFetcher } from "@/lib/swr";
 // - `focusThrottleInterval`: don't hammer the API if focus events fire fast
 // - `errorRetryCount`: bounded retries so a flaky network doesn't loop forever
 export function SWRProvider({ children }: { children: React.ReactNode }) {
+  const isNativeApp = isNativeAppRuntime();
+
   return (
     <SWRConfig
       value={{
         fetcher: apiFetcher,
         keepPreviousData: true,
-        dedupingInterval: 4_000,
-        focusThrottleInterval: 10_000,
+        dedupingInterval: isNativeApp ? 1_000 : 4_000,
+        focusThrottleInterval: isNativeApp ? 2_000 : 10_000,
+        refreshInterval: isNativeApp ? 5_000 : 0,
         revalidateOnFocus: true,
         revalidateIfStale: true,
         revalidateOnReconnect: true,

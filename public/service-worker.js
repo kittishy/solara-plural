@@ -6,8 +6,9 @@
 // - /icons/*, /manifest.json, /favicon.ico: stale-while-revalidate.
 // - HTML navigations: network-first with a cache fallback (so a flaky network
 //   never gives a blank screen — last good HTML is served and revalidated).
-// - /api/* GET: stale-while-revalidate so the UI paints instantly with the
-//   last response, then refreshes in the background. POST/PUT/DELETE/PATCH
+// - /api/* GET: stale-while-revalidate unless the page explicitly requests
+//   no-store/no-cache (used by the Android wrapper for live server truth).
+//   POST/PUT/DELETE/PATCH
 //   are never cached.
 //
 // Updates: on `install` we skipWaiting(); on `activate` we clients.claim()
@@ -15,7 +16,7 @@
 // `controllerchange` and revalidates SWR. Net effect: no F5, no close/open,
 // no clearing cache. New deploys land seamlessly.
 
-const VERSION = 'solara-v6';
+const VERSION = 'solara-v7';
 const STATIC_CACHE = `${VERSION}-static`;
 const RUNTIME_CACHE = `${VERSION}-runtime`;
 const API_CACHE = `${VERSION}-api`;
@@ -185,6 +186,12 @@ self.addEventListener('fetch', (event) => {
 
   // Never-cache endpoints (auth/session): always go to network.
   if (isNeverCache(url)) return;
+
+  // Native APK fetches critical API data with `cache: "no-store"` so the
+  // WebView can't paint stale records while the user expects app-like live
+  // behavior. Let those requests bypass the service worker cache entirely.
+  const cacheControl = request.headers.get('cache-control') || '';
+  if (request.cache === 'no-store' || cacheControl.includes('no-cache')) return;
 
   // Hashed Next.js static assets — cache-first, they're immutable.
   if (isStaticAsset(url)) {

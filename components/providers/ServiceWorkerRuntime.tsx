@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { mutate } from "swr";
+import { isNativeAppRuntime } from "@/lib/swr";
 
 // Registers the Solara service worker and wires up seamless updates:
 // - On a new SW being available, we immediately tell it to `skipWaiting`
@@ -17,12 +18,16 @@ export function ServiceWorkerRuntime() {
     if (process.env.NODE_ENV !== "production" && !window.location.hostname) return;
 
     let refreshing = false;
+    const isNativeApp = isNativeAppRuntime();
+    const refreshAll = () => {
+      void mutate(() => true, undefined, { revalidate: true });
+    };
 
     const onControllerChange = () => {
       if (refreshing) return;
       refreshing = true;
       // Wipe SWR caches so the next render fetches from the fresh SW.
-      void mutate(() => true, undefined, { revalidate: true });
+      refreshAll();
     };
 
     navigator.serviceWorker.addEventListener("controllerchange", onControllerChange);
@@ -51,14 +56,26 @@ export function ServiceWorkerRuntime() {
           if (document.visibilityState === "visible") {
             checkForUpdate();
             // Refresh data the user is about to look at.
-            void mutate(() => true, undefined, { revalidate: true });
+            refreshAll();
           }
         };
         document.addEventListener("visibilitychange", onVisible);
 
+        const onNativeResume = () => {
+          checkForUpdate();
+          refreshAll();
+        };
+        window.addEventListener("solara:native-resume", onNativeResume);
+
+        const nativeRefreshInterval = isNativeApp
+          ? window.setInterval(refreshAll, 10_000)
+          : null;
+
         return () => {
           window.clearInterval(interval);
           document.removeEventListener("visibilitychange", onVisible);
+          window.removeEventListener("solara:native-resume", onNativeResume);
+          if (nativeRefreshInterval) window.clearInterval(nativeRefreshInterval);
         };
       })
       .catch(() => undefined);

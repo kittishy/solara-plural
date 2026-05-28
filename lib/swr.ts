@@ -15,8 +15,16 @@ export const swrKeys = {
   customFields: '/api/custom-fields',
 } as const;
 
+export function isNativeAppRuntime() {
+  if (typeof window === 'undefined') return false;
+  return Boolean((window as Window & { Capacitor?: unknown }).Capacitor);
+}
+
 export async function apiFetcher<T>(url: string): Promise<T> {
-  const res = await fetch(url, { credentials: 'same-origin' });
+  const res = await fetch(url, {
+    credentials: 'same-origin',
+    cache: isNativeAppRuntime() ? 'no-store' : 'default',
+  });
   const json = (await res.json().catch(() => null)) as ApiSuccess<T> | ApiFailure | null;
 
   if (!res.ok || !json || json.success !== true) {
