@@ -100,6 +100,15 @@ export async function GET() {
       hasIntegrationsTokenSecret: Boolean(process.env.INTEGRATIONS_TOKEN_SECRET),
       hasNextAuthSecret: Boolean(process.env.NEXTAUTH_SECRET),
     },
+    vapidShape: {
+      publicKeyLength: process.env.NEXT_PUBLIC_WEB_PUSH_VAPID_PUBLIC_KEY?.length ?? 0,
+      publicKeyHead: process.env.NEXT_PUBLIC_WEB_PUSH_VAPID_PUBLIC_KEY?.slice(0, 4) ?? '',
+      publicKeyTail: process.env.NEXT_PUBLIC_WEB_PUSH_VAPID_PUBLIC_KEY?.slice(-4) ?? '',
+      privateKeyLength: process.env.WEB_PUSH_VAPID_PRIVATE_KEY?.length ?? 0,
+      subject: process.env.WEB_PUSH_VAPID_SUBJECT ?? null,
+      publicKeyHasWhitespace: /\s/.test(process.env.NEXT_PUBLIC_WEB_PUSH_VAPID_PUBLIC_KEY ?? ''),
+      publicKeyHasQuotes: /["']/.test(process.env.NEXT_PUBLIC_WEB_PUSH_VAPID_PUBLIC_KEY ?? ''),
+    },
   });
 }
 
