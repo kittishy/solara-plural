@@ -44,7 +44,7 @@ export default function RootLayout({
   return (
     <html lang={getHtmlLang()} suppressHydrationWarning>
       <head>
-        <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
+        <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
       </head>
       <body>
         <ThemeProvider

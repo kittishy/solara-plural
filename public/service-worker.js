@@ -15,7 +15,7 @@
 // `controllerchange` and revalidates SWR. Net effect: no F5, no close/open,
 // no clearing cache. New deploys land seamlessly.
 
-const VERSION = 'solara-v4';
+const VERSION = 'solara-v5';
 const STATIC_CACHE = `${VERSION}-static`;
 const RUNTIME_CACHE = `${VERSION}-runtime`;
 const API_CACHE = `${VERSION}-api`;
