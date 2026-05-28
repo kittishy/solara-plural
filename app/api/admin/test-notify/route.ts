@@ -4,31 +4,34 @@ import { systems } from '@/lib/db/schema';
 import { createNotification } from '@/lib/notifications/create-notification';
 import { err, ok } from '@/lib/api/helpers';
 
-// TEMP test endpoint — sends a test notification to a user by email.
-// Gated by Bearer NEXTAUTH_SECRET. Remove after verifying notifications work.
+// TEMP test endpoint — sends a test notification to the project owner only.
+// No auth needed (hardcoded recipient + simple rate limit). Remove after
+// notifications are verified working.
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
+const ALLOWED_EMAIL = 'solara.julia.a@gmail.com';
+
+const globalForRateLimit = globalThis as unknown as { __solaraTestNotifyLast?: number };
+const MIN_INTERVAL_MS = 5_000;
+
 export async function POST(request: Request) {
-  const secret = process.env.NEXTAUTH_SECRET;
-  if (!secret) return err('Server not configured.', 500);
+  const now = Date.now();
+  const last = globalForRateLimit.__solaraTestNotifyLast ?? 0;
+  if (now - last < MIN_INTERVAL_MS) {
+    return err('Too frequent. Wait a few seconds.', 429);
+  }
+  globalForRateLimit.__solaraTestNotifyLast = now;
 
-  const auth = request.headers.get('authorization') ?? '';
-  const expected = `Bearer ${secret}`;
-  if (auth !== expected) return err('Forbidden.', 403);
-
-  let body: { email?: string; title?: string; body?: string } = {};
-  try { body = await request.json(); } catch { return err('Invalid JSON.', 400); }
-
-  const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : '';
-  if (!email) return err('email is required.', 400);
+  let body: { title?: string; body?: string } = {};
+  try { body = await request.json(); } catch { /* empty body ok */ }
 
   const recipient = await db.query.systems.findFirst({
     columns: { id: true, name: true, email: true },
-    where: eq(systems.email, email),
+    where: eq(systems.email, ALLOWED_EMAIL),
   });
-  if (!recipient) return err(`No system found for ${email}.`, 404);
+  if (!recipient) return err(`No system found for ${ALLOWED_EMAIL}.`, 404);
 
   const title = body.title?.trim() || 'Solara test notification';
   const messageBody = body.body?.trim() || 'If you see this, push + in-app delivery are working.';
