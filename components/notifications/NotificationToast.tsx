@@ -69,7 +69,7 @@ export function NotificationToast() {
 
   return (
     <div
-      className="fixed top-3 left-1/2 -translate-x-1/2 z-[60] flex flex-col gap-2 pointer-events-none w-[min(420px,calc(100%-1.5rem))]"
+      className="fixed top-[calc(var(--safe-top)+0.75rem)] left-1/2 -translate-x-1/2 z-[60] flex flex-col gap-2 pointer-events-none w-[min(420px,calc(100%-1.5rem))]"
       aria-live="polite"
       role="status"
     >

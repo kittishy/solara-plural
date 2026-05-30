@@ -10,7 +10,7 @@ export default function PrivacySettingsPage() {
 
   return (
     <div className="animate-fade-in pb-8">
-      <div className="sticky top-0 z-40 glass border-b border-border/40">
+      <div className="sticky top-0 z-40 glass border-b border-border/40 pt-[var(--safe-top)]">
         <div className="flex items-center px-4 h-11">
           <Link
             href="/settings"

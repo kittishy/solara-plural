@@ -199,7 +199,7 @@ export default function IntegrationsPage() {
   return (
     <div className="animate-fade-in">
       {/* Sticky nav bar */}
-      <header className="sticky top-0 z-40 flex items-center h-11 px-4 glass border-b border-border/40">
+      <header className="sticky top-0 z-40 flex items-center h-11 px-4 pt-[var(--safe-top)] box-content glass border-b border-border/40">
         <div className="flex-1 flex items-center">
           <button
             onClick={() => router.push("/settings")}

@@ -1,7 +1,8 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { SWRConfig } from "swr";
-import { apiFetcher, isNativeAppRuntime } from "@/lib/swr";
+import { apiFetcher, isAppRuntime } from "@/lib/swr";
 
 // Global SWR defaults tuned for a feel-instant PWA:
 // - `keepPreviousData`: never blank the UI while a refetch happens
@@ -12,17 +13,26 @@ import { apiFetcher, isNativeAppRuntime } from "@/lib/swr";
 // - `revalidateIfStale` + `revalidateOnReconnect`: catch up automatically
 // - `focusThrottleInterval`: don't hammer the API if focus events fire fast
 // - `errorRetryCount`: bounded retries so a flaky network doesn't loop forever
+//
+// Inside the installed app (TWA / PWA / native shell) we additionally poll on
+// an interval so fronting, notifications, and members stay live without the
+// user having to leave and re-enter a tab. The runtime is only knowable on the
+// client, so we resolve it after mount and let SWRConfig pick up the change.
 export function SWRProvider({ children }: { children: React.ReactNode }) {
-  const isNativeApp = isNativeAppRuntime();
+  const [isApp, setIsApp] = useState(false);
+
+  useEffect(() => {
+    setIsApp(isAppRuntime());
+  }, []);
 
   return (
     <SWRConfig
       value={{
         fetcher: apiFetcher,
         keepPreviousData: true,
-        dedupingInterval: isNativeApp ? 1_000 : 4_000,
-        focusThrottleInterval: isNativeApp ? 2_000 : 10_000,
-        refreshInterval: isNativeApp ? 5_000 : 0,
+        dedupingInterval: isApp ? 1_000 : 4_000,
+        focusThrottleInterval: isApp ? 2_000 : 10_000,
+        refreshInterval: isApp ? 5_000 : 0,
         revalidateOnFocus: true,
         revalidateIfStale: true,
         revalidateOnReconnect: true,

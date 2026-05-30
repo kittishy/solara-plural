@@ -15,15 +15,58 @@ export const swrKeys = {
   customFields: '/api/custom-fields',
 } as const;
 
+// True only inside a Capacitor native shell. Kept narrow because the
+// Capacitor-only code paths (LocalNotifications plugin, etc.) genuinely
+// require `window.Capacitor` to exist.
 export function isNativeAppRuntime() {
   if (typeof window === 'undefined') return false;
   return Boolean((window as Window & { Capacitor?: unknown }).Capacitor);
 }
 
+// True when running as an installed/standalone app: an Android TWA (the APK
+// we ship via PWABuilder), an installed PWA, or iOS "Add to Home Screen".
+//
+// This is the case the old code missed entirely — it only checked for
+// `window.Capacitor`, which a TWA never exposes. As a result none of the
+// "app-like" tuning (live data, cache bypass) ever kicked in inside the
+// actual shipped APK, so users saw stale data until they switched tabs.
+export function isStandaloneApp() {
+  if (typeof window === 'undefined') return false;
+
+  const mql = typeof window.matchMedia === 'function' ? window.matchMedia : null;
+  const displayModeStandalone = Boolean(
+    mql &&
+      (mql('(display-mode: standalone)').matches ||
+        mql('(display-mode: fullscreen)').matches ||
+        mql('(display-mode: minimal-ui)').matches ||
+        mql('(display-mode: window-controls-overlay)').matches),
+  );
+
+  // iOS Safari home-screen webapp.
+  const iosStandalone =
+    (window.navigator as Navigator & { standalone?: boolean }).standalone === true;
+
+  // PWABuilder/Bubblewrap TWA: Chrome launches the page with an
+  // `android-app://<package>` referrer on the initial document load.
+  const twaReferrer =
+    typeof document !== 'undefined' && document.referrer.startsWith('android-app://');
+
+  return displayModeStandalone || iosStandalone || twaReferrer;
+}
+
+// The "app experience" = a Capacitor native shell OR an installed standalone
+// app (TWA / PWA). All live-data tuning keys off this so the shipped APK and
+// installed PWA behave like a real app, not a cached web page.
+export function isAppRuntime() {
+  return isNativeAppRuntime() || isStandaloneApp();
+}
+
 export async function apiFetcher<T>(url: string): Promise<T> {
   const res = await fetch(url, {
     credentials: 'same-origin',
-    cache: isNativeAppRuntime() ? 'no-store' : 'default',
+    // In the app, always read server truth — bypass the service worker's
+    // stale-while-revalidate API cache so we never paint stale records.
+    cache: isAppRuntime() ? 'no-store' : 'default',
   });
   const json = (await res.json().catch(() => null)) as ApiSuccess<T> | ApiFailure | null;
 

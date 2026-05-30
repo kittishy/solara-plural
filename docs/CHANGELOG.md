@@ -5,6 +5,15 @@
 
 ---
 
+## [fix] — 2026-05-30
+
+### Fixed
+- **Installed app (TWA/PWA) now detected for live data** — the shipped Android app is a PWABuilder **TWA**, which never exposes `window.Capacitor`. The old `isNativeAppRuntime()` only checked for Capacitor, so none of the "app-like" tuning (service-worker cache bypass + background polling) ever activated inside the real APK. Result: users saw stale data until they switched tabs and came back. Added `isStandaloneApp()` (display-mode standalone/fullscreen/WCO, iOS `navigator.standalone`, `android-app://` referrer) and `isAppRuntime()` = native ∪ standalone. `apiFetcher`, `SWRProvider`, and `ServiceWorkerRuntime` now key live-data behavior off `isAppRuntime()`, so the TWA and installed PWA refresh in real time without manual tab switching.
+- **Settings sub-page headers cut off under the status bar** — every Settings tab (`profile`, `theme`, `notifications`, `privacy`, `custom-fields`, `import`, `integrations`, `delete-account`) hand-rolled its own `sticky top-0` header without safe-area handling, unlike the shared `NavBar`. Added `pt-[var(--safe-top)]` so they no longer collide with the status bar / notch in the standalone app (no-op on the web where the inset is 0).
+- **In-app notification toast tucked under the status bar** — `NotificationToast` was pinned at a fixed `top-3`; now offset by `var(--safe-top)` so it clears the notch in the installed app.
+
+> **Note for deployment — TWA push delivery:** Web Push in the TWA requires (1) the APK to be built with PWABuilder **Notification delegation = ON** and (2) the `TWA_PACKAGE_NAME` + `TWA_SHA256_FINGERPRINTS` env vars set so `/.well-known/assetlinks.json` verifies the APK. Without both, Android runs the app as a Custom Tab and silently drops Web Push. The code path is correct; this is operational config. See `docs/GENERATE_APK.md`.
+
 ## [fix] — 2026-04-25
 
 ### Fixed
