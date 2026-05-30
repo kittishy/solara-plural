@@ -35,15 +35,23 @@ export async function POST(request: Request) {
     }
 
     const buf = NodeBuffer.from(await file.arrayBuffer());
+    // catbox.moe: free AND permanent (files never expire), unlike uguu.se
+    // which deletes uploads after a few hours. Same simple multipart POST.
+    // An optional CATBOX_USERHASH ties uploads to an account so they can be
+    // managed/deleted later, but anonymous uploads are permanent too.
+    const fields: Record<string, string> = { reqtype: "fileupload" };
+    const userHash = process.env.CATBOX_USERHASH?.trim();
+    if (userHash) fields.userhash = userHash;
+
     const { body, contentType } = encodeMultipart(
-      {},
-      "files[]",
+      fields,
+      "fileToUpload",
       file.name,
       buf,
       file.type || "application/octet-stream",
     );
 
-    const res = await fetch("https://uguu.se/upload", {
+    const res = await fetch("https://catbox.moe/user/api.php", {
       method: "POST",
       body: body as unknown as BodyInit,
       headers: {
@@ -52,18 +60,16 @@ export async function POST(request: Request) {
       },
     });
 
-    if (!res.ok) {
-      const text = await res.text();
-      return Response.json({ error: text || "Upload failed" }, { status: 502 });
+    const text = (await res.text()).trim();
+
+    if (!res.ok || !text.startsWith("http")) {
+      return Response.json(
+        { error: text || "Upload failed" },
+        { status: 502 },
+      );
     }
 
-    const json = await res.json() as { success: boolean; files?: { url: string }[] };
-    if (!json.success || !json.files?.[0]?.url) {
-      return Response.json({ error: "Upload failed: unexpected response" }, { status: 502 });
-    }
-
-    const url = json.files[0].url;
-    return Response.json({ url });
+    return Response.json({ url: text });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Upload failed";
     return Response.json({ error: message }, { status: 500 });

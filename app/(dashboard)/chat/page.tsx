@@ -441,7 +441,7 @@ export default function ChatPage() {
             </button>
 
             {/* Input pill */}
-            <div className="flex-1 flex items-center gap-1.5 h-10 px-3 rounded-full bg-secondary">
+            <div className="flex-1 min-w-0 flex items-center gap-1.5 h-10 px-3 rounded-full bg-secondary">
               <button
                 type="button"
                 onClick={() => { setShowEmojiPicker((v) => !v); }}
