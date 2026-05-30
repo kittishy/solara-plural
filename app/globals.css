@@ -250,3 +250,15 @@ body::before {
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
 }
+
+/* Installed-app (TWA / PWA) status-bar handling.
+   Android TWAs are drawn edge-to-edge behind the status bar but often report
+   env(safe-area-inset-top) as 0, so sticky headers render under the clock and
+   battery. When launched as an installed app, floor the top inset to a real
+   status-bar height. The media query does not match on the open web, so
+   browser behaviour (and real iOS notch insets, which are larger) is kept. */
+@media all and (display-mode: standalone), all and (display-mode: fullscreen), all and (display-mode: minimal-ui) {
+  :root {
+    --safe-top: max(env(safe-area-inset-top, 0px), 32px);
+  }
+}
