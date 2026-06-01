@@ -1,4 +1,4 @@
-import { and, eq, isNull } from 'drizzle-orm';
+import { and, count, eq, isNull } from 'drizzle-orm';
 import { db } from '@/lib/db';
 import { notifications } from '@/lib/db/schema';
 import { ok, requireAuth } from '@/lib/api/helpers';
@@ -37,7 +37,9 @@ export async function GET(request: Request) {
     limit,
   });
 
-  const unreadCountRows = await db.select({ id: notifications.id })
+  // Count in SQL instead of materializing every unread row just to read
+  // `.length` — keeps the badge query cheap as history grows.
+  const [unreadCountRow] = await db.select({ value: count() })
     .from(notifications)
     .where(and(
       eq(notifications.recipientSystemId, auth.systemId),
@@ -49,7 +51,7 @@ export async function GET(request: Request) {
       ...row,
       data: parseData(row.data),
     })),
-    unreadCount: unreadCountRows.length,
+    unreadCount: unreadCountRow?.value ?? 0,
   }, 200, {
     headers: {
       'Cache-Control': 'private, max-age=0, s-maxage=10, stale-while-revalidate=20',

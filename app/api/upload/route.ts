@@ -1,6 +1,19 @@
 import { Buffer as NodeBuffer } from "node:buffer";
+import { requireAuth } from "@/lib/api/helpers";
+import { consumeRateLimit, getClientIp } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
+
+// Only the media types the app actually uploads (avatars + chat images).
+// Anything else is rejected so the endpoint can't be used as a generic
+// file-laundering proxy through our catbox account.
+const ALLOWED_UPLOAD_TYPES = new Set([
+  "image/png",
+  "image/jpeg",
+  "image/webp",
+  "image/gif",
+  "image/avif",
+]);
 
 function encodeMultipart(fields: Record<string, string>, fileField: string, fileName: string, fileBuf: NodeBuffer, fileType: string): { body: NodeBuffer; contentType: string } {
   const boundary = "----Solara" + Math.random().toString(36).slice(2, 10);
@@ -23,11 +36,34 @@ function encodeMultipart(fields: Record<string, string>, fileField: string, file
 }
 
 export async function POST(request: Request) {
+  // Uploads cost our bandwidth and write to a shared catbox account, so the
+  // endpoint must be authenticated and not an open relay.
+  const auth = await requireAuth();
+  if (auth.error) return auth.error;
+
+  const rate = consumeRateLimit(
+    `upload:${auth.systemId}:${getClientIp(request)}`,
+    { limit: 30, windowMs: 10 * 60 * 1000 },
+  );
+  if (!rate.allowed) {
+    return Response.json(
+      { error: "Too many uploads. Please slow down." },
+      { status: 429, headers: { "Retry-After": String(rate.retryAfterSeconds) } },
+    );
+  }
+
   try {
     const formData = await request.formData();
     const file = formData.get("file") as File | null;
     if (!file) {
       return Response.json({ error: "No file provided" }, { status: 400 });
+    }
+
+    if (!ALLOWED_UPLOAD_TYPES.has(file.type)) {
+      return Response.json(
+        { error: "Only PNG, JPEG, WebP, GIF, or AVIF images can be uploaded" },
+        { status: 415 },
+      );
     }
 
     if (file.size > 20 * 1024 * 1024) {

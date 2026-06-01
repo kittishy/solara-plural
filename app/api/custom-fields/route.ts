@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { db } from '@/lib/db';
 import { customFields } from '@/lib/db/schema';
 import { err, ok, requireAuth, parseJsonRecord } from '@/lib/api/helpers';
+import { CACHE_FRESH_LONG } from '@/lib/api/cache-headers';
 import {
   normalizeCustomFieldDescription,
   normalizeCustomFieldName,
@@ -27,7 +28,7 @@ export async function GET() {
       ...field,
       options: parseStoredCustomFieldOptions(field.options),
     })),
-  });
+  }, 200, { headers: { ...CACHE_FRESH_LONG } });
 }
 
 export async function POST(request: Request) {
