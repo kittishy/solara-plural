@@ -71,6 +71,9 @@ callback.txt
 mailmap.txt
 filter_claude.py
 .gemini/
+
+# IDE (JetBrains / IntelliJ)
+.idea/
 docs/AGENT_SWARM_REFERENCES.md
 
 # env files (contain secrets)
