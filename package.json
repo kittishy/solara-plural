@@ -20,6 +20,7 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
+    "db:copy-from-turso": "node scripts/migrate-turso-to-supabase.cjs",
     "vapid:generate": "node scripts/generate-vapid-keys.cjs"
   },
   "dependencies": {
@@ -46,6 +47,7 @@
     "next-themes": "^0.4.6",
     "node-vibrant": "^4.0.4",
     "nodemailer": "^7.0.13",
+    "postgres": "^3.4.9",
     "react": "^18",
     "react-dom": "^18",
     "react-markdown": "^10.1.0",
