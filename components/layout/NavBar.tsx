@@ -29,7 +29,7 @@ export function NavBar({
     <header
       className={cn(
         "sticky top-0 z-40 flex items-center h-11 px-4 pt-[var(--safe-top)] box-content",
-        !transparent && "glass border-b border-border/40",
+        !transparent && "glass-bar border-b border-[var(--tabbar-border)]",
         className
       )}
     >

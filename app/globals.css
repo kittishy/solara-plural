@@ -211,6 +211,16 @@
     border: 1px solid rgba(255, 255, 255, 0.4);
   }
 
+  /* Translucent top/bottom bar (NavBar, TabBar) — same blur as glass but
+     WITHOUT the full white ring `.glass` paints on every edge. Callers add a
+     single hairline separator (border-b / border-t) using --tabbar-border.
+     This is what fixes the stray white line around the nav bar. */
+  .glass-bar {
+    background: var(--tabbar-bg);
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+  }
+
   .dark .glass-subtle {
     background: rgba(28, 28, 30, 0.5);
     border: 1px solid rgba(255, 255, 255, 0.06);

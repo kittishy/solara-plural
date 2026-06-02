@@ -66,7 +66,7 @@ export function TabBar() {
         }}
       >
         <nav
-          className="flex items-center gap-1 px-3 py-2 rounded-ios-2xl shadow-ios-md"
+          className="flex items-center gap-1 px-3 py-2 rounded-ios-2xl shadow-ios-md dark:shadow-ios-dark"
           style={{
             background: "var(--tabbar-bg)",
             backdropFilter: "blur(40px) saturate(200%)",

@@ -28,15 +28,39 @@ function supportsViewTransitions(): boolean {
   );
 }
 
+function prefersReducedMotion(): boolean {
+  if (typeof window === "undefined" || !window.matchMedia) return false;
+  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+
+/**
+ * The View Transitions API does **not** apply `prefers-reduced-motion`
+ * automatically (see `.craft/animation-discipline.md`); we have to opt out
+ * here so users who set "reduce motion" never see the shared-element morph.
+ * `shouldUseViewTransitions` is the policy decision; the two helpers above
+ * are the building blocks (capability + preference).
+ */
+function shouldUseViewTransitions(): boolean {
+  return supportsViewTransitions() && !prefersReducedMotion();
+}
+
 /** Run a DOM-mutating callback inside a view transition when available. */
 export function withViewTransition(callback: () => void | Promise<void>) {
-  if (!supportsViewTransitions()) {
+  if (!shouldUseViewTransitions()) {
     void callback();
     return;
   }
-  const start = (document as unknown as { startViewTransition: StartViewTransition })
-    .startViewTransition;
-  start(() => callback());
+  // Call it *on* document — a detached `const f = document.startViewTransition`
+  // then `f()` throws "Illegal invocation" and would swallow the navigation.
+  // The try/catch is a hard guarantee that the callback (the actual nav) always
+  // runs even if the transition API misbehaves on some engine.
+  try {
+    (
+      document as unknown as { startViewTransition: StartViewTransition }
+    ).startViewTransition(() => callback());
+  } catch {
+    void callback();
+  }
 }
 
 /** The shared view-transition-name used for hero avatar morphs. */
@@ -48,7 +72,7 @@ export const HERO_AVATAR = "solara-hero";
  * nodes sharing a name is an error).
  */
 export function tagHero(el: HTMLElement | null, name: string = HERO_AVATAR) {
-  if (!el || !supportsViewTransitions()) return;
+  if (!el || !shouldUseViewTransitions()) return;
   el.style.setProperty("view-transition-name", name);
   const clear = () => {
     el.style.removeProperty("view-transition-name");
