@@ -1,110 +1,12 @@
 {
   "version": "7",
-  "dialect": "sqlite",
+  "dialect": "postgresql",
   "entries": [
     {
       "idx": 0,
-      "version": "6",
-      "when": 1777140900992,
-      "tag": "0000_acoustic_wraith",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "6",
-      "when": 1777288100253,
-      "tag": "0001_parallel_bucky",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "6",
-      "when": 1777289205613,
-      "tag": "0002_spooky_pepper_potts",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "6",
-      "when": 1777290398967,
-      "tag": "0003_opposite_firebird",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "6",
-      "when": 1777363200000,
-      "tag": "0004_safe_hummingbird",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "6",
-      "when": 1777493403629,
-      "tag": "0005_melted_riptide",
-      "breakpoints": true
-    },
-    {
-      "idx": 6,
-      "version": "6",
-      "when": 1777689849102,
-      "tag": "0006_member_external_links",
-      "breakpoints": true
-    },
-    {
-      "idx": 7,
-      "version": "6",
-      "when": 1778353196499,
-      "tag": "0007_silly_cyclops",
-      "breakpoints": true
-    },
-    {
-      "idx": 8,
-      "version": "6",
-      "when": 1778409600000,
-      "tag": "0008_partners",
-      "breakpoints": true
-    },
-    {
-      "idx": 9,
-      "version": "6",
-      "when": 1778445600000,
-      "tag": "0009_password_reset_tokens",
-      "breakpoints": true
-    },
-    {
-      "idx": 10,
-      "version": "6",
-      "when": 1778460000000,
-      "tag": "0010_custom_fields",
-      "breakpoints": true
-    },
-    {
-      "idx": 11,
-      "version": "6",
-      "when": 1778515200000,
-      "tag": "0011_partner_extras_and_privacy",
-      "breakpoints": true
-    },
-    {
-      "idx": 12,
-      "version": "6",
-      "when": 1778758370837,
-      "tag": "0012_flippant_krista_starr",
-      "breakpoints": true
-    },
-    {
-      "idx": 13,
-      "version": "6",
-      "when": 1778942326889,
-      "tag": "0013_broad_pete_wisdom",
-      "breakpoints": true
-    },
-    {
-      "idx": 14,
-      "version": "6",
-      "when": 1748304000000,
-      "tag": "0014_composite_indexes_perf",
+      "version": "7",
+      "when": 1780434345014,
+      "tag": "0000_shiny_thunderbolt_ross",
       "breakpoints": true
     }
   ]

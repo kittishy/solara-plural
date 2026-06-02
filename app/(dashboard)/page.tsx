@@ -16,8 +16,7 @@ import { HomeContent } from "./HomeContent";
 export default async function DashboardPage() {
   const systemId = await requireSystemId();
 
-  // Batch all independent reads into a single libsql round-trip.
-  // 8 queries → 1 HTTP request to Turso (saves ~7 round-trips of latency).
+  // Run all independent reads concurrently against the Postgres pool.
   const [
     [system],
     [memberCountRow],
@@ -27,7 +26,7 @@ export default async function DashboardPage() {
     [friendCountRow],
     [partnerCountRow],
     recentHistory,
-  ] = await db.batch([
+  ] = await Promise.all([
     db.select({ name: systems.name, description: systems.description })
       .from(systems).where(eq(systems.id, systemId)).limit(1),
     db.select({ value: count() }).from(members).where(
@@ -97,7 +96,7 @@ export default async function DashboardPage() {
   let recentMembers: RecentMemberRow[] = [];
 
   if (frontingIds.length > 0 && recentlyFrontedIds.length > 0) {
-    const [fronting, recent] = await db.batch([
+    const [fronting, recent] = await Promise.all([
       db.select(memberCols).from(members).where(
         and(eq(members.systemId, systemId), inArray(members.id, frontingIds))
       ),

@@ -1,26 +1,25 @@
-import { createClient } from '@libsql/client';
-import { drizzle, type LibSQLDatabase } from 'drizzle-orm/libsql';
-import { sql } from 'drizzle-orm';
+import { drizzle, type PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import postgres from 'postgres';
 import * as schema from './schema';
 
-type SchemaDB = LibSQLDatabase<typeof schema>;
+type SchemaDB = PostgresJsDatabase<typeof schema>;
 
 let _db: SchemaDB | undefined;
 
 function initDb(): SchemaDB {
   if (_db) return _db;
-  const url = process.env.DATABASE_URL;
-  if (!url) throw new Error('DATABASE_URL environment variable is not set');
-  const client = createClient({ url, authToken: process.env.DATABASE_AUTH_TOKEN });
+  const url = process.env.SUPABASE_DATABASE_URL ?? process.env.DATABASE_URL;
+  if (!url) throw new Error('SUPABASE_DATABASE_URL environment variable is not set');
+  // The app runs against the Supabase transaction pooler (port 6543). pgBouncer
+  // in transaction mode does not support prepared statements, so disable them.
+  const client = postgres(url, { prepare: false });
   _db = drizzle(client, { schema });
-  // SQLite disables FK enforcement by default. Enabling it here ensures that
-  // ON DELETE CASCADE / ON DELETE RESTRICT constraints are enforced at runtime.
-  void _db.run(sql`PRAGMA foreign_keys = ON`);
+  // Postgres enforces foreign keys natively — no PRAGMA needed.
   return _db;
 }
 
-// Proxy defers createClient until first actual use so that importing this
-// module during Next.js build (when DATABASE_URL is absent) does not crash.
+// Proxy defers connecting until first actual use so that importing this
+// module during Next.js build (when the URL is absent) does not crash.
 export const db: SchemaDB = new Proxy({} as SchemaDB, {
   get(_, prop: string | symbol) {
     const instance = initDb();
