@@ -7,9 +7,11 @@ import { LargeTitle } from "@/components/layout/NavBar";
 import { GlassCard } from "@/components/glass/GlassCard";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { apiFetcher, isNativeAppRuntime, swrKeys } from "@/lib/swr";
 import { requestAndSavePushToken } from "@/lib/notifications/browser";
 import { cn } from "@/lib/utils";
+import { useHaptics } from "@/lib/haptics";
 import { useLanguage } from "@/components/providers/LanguageProvider";
 
 type Notification = {
@@ -31,6 +33,7 @@ type PushPermissionState = NotificationPermission | "unsupported" | "native-app"
 
 export default function NotificationsPage() {
   const { t } = useLanguage();
+  const { selection, success } = useHaptics();
 
   function formatRelative(value: string | number | Date) {
     const ms = Date.now() - new Date(value).getTime();
@@ -86,6 +89,7 @@ export default function NotificationsPage() {
   }
 
   async function markRead(id: string) {
+    selection();
     await fetch(`/api/notifications/${id}`, {
       method: "PATCH",
       credentials: "same-origin",
@@ -96,6 +100,7 @@ export default function NotificationsPage() {
   }
 
   async function markAllRead() {
+    success();
     setMarking(true);
     try {
       await fetch("/api/notifications/read-all", {
@@ -213,10 +218,7 @@ export default function NotificationsPage() {
               ))}
             </div>
           ) : notifications.length === 0 ? (
-            <div className="py-12 text-center text-muted-foreground text-subheadline">
-              <Bell size={32} className="mx-auto text-muted-foreground/40 mb-2" />
-              {t("notifications.empty")}
-            </div>
+            <EmptyState icon={Bell} title={t("notifications.empty")} tint="var(--ios-indigo)" />
           ) : (
             notifications.map((n) => {
               const isUnread = !n.readAt;

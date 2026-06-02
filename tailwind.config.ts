@@ -133,13 +133,16 @@ const config: Config = {
         "ios-lg": "60px",
       },
       boxShadow: {
-        ios: "0 4px 16px rgba(0, 0, 0, 0.08), 0 1px 4px rgba(0, 0, 0, 0.04)",
+        // Softer, more diffuse, faintly warm (brown-black) floats with a
+        // hairline top highlight so cards read "lit from above" — premium glass
+        // instead of the hard generic drop shadow.
+        ios: "inset 0 1px 0 0 rgba(255, 255, 255, 0.6), 0 1px 2px rgba(28, 20, 12, 0.05), 0 8px 24px rgba(28, 20, 12, 0.07)",
         "ios-md":
-          "0 8px 32px rgba(0, 0, 0, 0.10), 0 2px 8px rgba(0, 0, 0, 0.06)",
+          "inset 0 1px 0 0 rgba(255, 255, 255, 0.6), 0 2px 6px rgba(28, 20, 12, 0.06), 0 14px 36px rgba(28, 20, 12, 0.09)",
         "ios-lg":
-          "0 16px 48px rgba(0, 0, 0, 0.14), 0 4px 16px rgba(0, 0, 0, 0.08)",
+          "inset 0 1px 0 0 rgba(255, 255, 255, 0.7), 0 4px 12px rgba(28, 20, 12, 0.07), 0 24px 56px rgba(28, 20, 12, 0.12)",
         "ios-dark":
-          "0 8px 32px rgba(0, 0, 0, 0.40), 0 2px 8px rgba(0, 0, 0, 0.20)",
+          "inset 0 1px 0 0 rgba(255, 255, 255, 0.05), 0 2px 8px rgba(0, 0, 0, 0.4), 0 14px 36px rgba(0, 0, 0, 0.32)",
       },
       keyframes: {
         "fade-in": {

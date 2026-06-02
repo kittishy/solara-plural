@@ -2,17 +2,20 @@
 
 import useSWR, { mutate } from "swr";
 import Link from "next/link";
-import { Plus, Search, Minus, Sun, X } from "lucide-react";
+import { Plus, Search, Minus, Sun, X, Users } from "lucide-react";
 import { useState, useMemo, useCallback } from "react";
 import { LargeTitle } from "@/components/layout/NavBar";
 import { GlassCard } from "@/components/glass/GlassCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { BottomSheet } from "@/components/glass/BottomSheet";
 import { apiFetcher, swrKeys } from "@/lib/swr";
 import DynamicAvatarImage from "@/components/ui/DynamicAvatarImage";
 import { useLanguage } from "@/components/providers/LanguageProvider";
+import { useViewTransitionRouter, HERO_AVATAR } from "@/lib/view-transition";
+import { useHaptics } from "@/lib/haptics";
 import { cn } from "@/lib/utils";
 
 type Member = {
@@ -29,6 +32,19 @@ type FrontEntry = { memberIds: string[] };
 
 export default function MembersPage() {
   const { t } = useLanguage();
+  const { push } = useViewTransitionRouter();
+  const { selection } = useHaptics();
+
+  // Navigate to a member with a shared-avatar morph: the tapped avatar grows
+  // into the profile header. Falls back to instant nav on unsupported browsers.
+  const openMember = useCallback(
+    (e: React.MouseEvent<HTMLAnchorElement>, id: string) => {
+      e.preventDefault();
+      const hero = e.currentTarget.querySelector<HTMLElement>("[data-hero-avatar]");
+      push(`/members/${id}`, { hero });
+    },
+    [push]
+  );
 
   const { data, isLoading } = useSWR<{ data: Member[]; total: number }>(
     "/api/members?limit=500",
@@ -60,8 +76,9 @@ export default function MembersPage() {
 
   const openSheet = useCallback((e: React.MouseEvent, member: Member) => {
     e.stopPropagation();
+    selection();
     setSelectedMember(member);
-  }, []);
+  }, [selection]);
 
   const closeSheet = useCallback(() => {
     setSelectedMember(null);
@@ -179,19 +196,21 @@ export default function MembersPage() {
               ))}
             </div>
           ) : filtered.length === 0 ? (
-            <div className="py-12 text-center flex flex-col items-center gap-3">
-              <p className="text-muted-foreground text-subheadline">
-                {search ? t("members.noMembersFound") : t("members.noMembers")}
-              </p>
-              {!search && (
-                <Button asChild variant="outline" size="sm">
-                  <Link href="/members/new">
-                    <Plus size={16} />
-                    {t("members.addMember")}
-                  </Link>
-                </Button>
-              )}
-            </div>
+            <EmptyState
+              icon={Users}
+              title={search ? t("members.noMembersFound") : t("members.noMembers")}
+              description={search ? undefined : t("members.emptyDescription")}
+              action={
+                !search ? (
+                  <Button asChild variant="outline" size="sm">
+                    <Link href="/members/new">
+                      <Plus size={16} />
+                      {t("members.addMember")}
+                    </Link>
+                  </Button>
+                ) : undefined
+              }
+            />
           ) : (
             filtered.map((member) => {
               const isFronting = frontingSet.has(member.id);
@@ -202,9 +221,12 @@ export default function MembersPage() {
                 >
                   <Link
                     href={`/members/${member.id}`}
-                    className="flex-1 flex items-center gap-3 px-4 py-3 active:bg-muted/50 ios-transition min-w-0"
+                    onClick={(e) => openMember(e, member.id)}
+                    className="flex-1 flex items-center gap-3 px-4 py-3 active:bg-muted/50 ios-transition min-w-0 solara-pressable"
+                    style={{ ["--press-scale" as string]: "0.99" }}
                   >
                     <div
+                      data-hero-avatar
                       className="w-11 h-11 rounded-full overflow-hidden flex items-center justify-center flex-shrink-0"
                       style={{ background: member.color ? `${member.color}22` : "#8E8E9322" }}
                     >

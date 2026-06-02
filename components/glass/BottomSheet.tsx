@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { haptic } from "@/lib/haptics";
 import { useLanguage } from "@/components/providers/LanguageProvider";
 
 interface BottomSheetProps {
@@ -24,6 +25,8 @@ export function BottomSheet({
 
   useEffect(() => {
     if (!open) return;
+    // A soft tactile "lift" as the sheet rises into view.
+    haptic("medium");
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => {
@@ -55,7 +58,7 @@ export function BottomSheet({
       <div
         className={cn(
           "relative w-full sm:max-w-md mx-auto sm:mb-0 rounded-t-ios-2xl sm:rounded-ios-2xl",
-          "bg-[var(--ios-bg-secondary)] shadow-ios-lg",
+          "bg-[var(--ios-bg-secondary)] shadow-ios-lg dark:shadow-ios-dark",
           "animate-slide-up max-h-[90vh] overflow-hidden flex flex-col",
           "safe-bottom",
           className

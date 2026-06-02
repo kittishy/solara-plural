@@ -20,10 +20,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { BottomSheet } from "@/components/glass/BottomSheet";
 import { apiFetcher, swrKeys } from "@/lib/swr";
 import DynamicAvatarImage from "@/components/ui/DynamicAvatarImage";
 import { cn } from "@/lib/utils";
+import { useHaptics } from "@/lib/haptics";
 import { useLanguage } from "@/components/providers/LanguageProvider";
 
 type SystemSummary = {
@@ -96,6 +98,7 @@ function SystemAvatar({
 
 export default function FriendsPage() {
   const { t } = useLanguage();
+  const { success, selection } = useHaptics();
   const { data, isLoading } = useSWR<FriendsPayload>(
     swrKeys.friends,
     apiFetcher
@@ -133,6 +136,7 @@ export default function FriendsPage() {
       setInviteEmail("");
       setInviteMessage("");
       setShowInvite(false);
+      success();
       void mutate(swrKeys.friends);
     } finally {
       setSending(false);
@@ -140,6 +144,9 @@ export default function FriendsPage() {
   }
 
   async function respondRequest(id: string, action: "accept" | "decline") {
+    // Accepting a friend is a happy commit; declining is a lighter tick.
+    if (action === "accept") success();
+    else selection();
     await fetch(`/api/friends/requests/${id}`, {
       method: "POST",
       credentials: "same-origin",
@@ -150,6 +157,7 @@ export default function FriendsPage() {
   }
 
   async function unblock(systemId: string) {
+    selection();
     await fetch(`/api/friends/blocks/${systemId}`, {
       method: "DELETE",
       credentials: "same-origin",
@@ -184,9 +192,9 @@ export default function FriendsPage() {
           {tabs.map((tabItem) => (
             <button
               key={tabItem.id}
-              onClick={() => setTab(tabItem.id)}
+              onClick={() => { if (tab !== tabItem.id) selection(); setTab(tabItem.id); }}
               className={cn(
-                "flex-1 px-3 py-1.5 rounded-ios-sm text-caption-1 font-semibold ios-transition whitespace-nowrap",
+                "flex-1 px-3 py-1.5 rounded-ios-sm text-caption-1 font-semibold ios-press whitespace-nowrap",
                 tab === tabItem.id
                   ? "bg-white dark:bg-ios-gray-3/30 text-foreground shadow-sm"
                   : "text-muted-foreground"
@@ -215,15 +223,24 @@ export default function FriendsPage() {
             </div>
           ) : tab === "friends" ? (
             friends.length === 0 ? (
-              <div className="py-12 text-center text-muted-foreground text-subheadline">
-                {t("friends.noFriends")}
-              </div>
+              <EmptyState
+                icon={UsersIcon}
+                title={t("friends.noFriends")}
+                description={t("friends.emptyDescription")}
+                action={
+                  <Button variant="outline" size="sm" onClick={() => setShowInvite(true)}>
+                    <UserPlus size={16} />
+                    {t("friends.addFriend")}
+                  </Button>
+                }
+              />
             ) : (
               friends.map((f) => (
                 <div key={f.friendshipId} className="flex items-center border-b border-border/50 last:border-0">
                   <a
                     href={`/systems/${f.id}`}
-                    className="flex-1 flex items-center gap-3 px-4 py-3 active:bg-muted/50 ios-transition min-w-0"
+                    className="flex-1 flex items-center gap-3 px-4 py-3 active:bg-muted/50 ios-transition min-w-0 solara-pressable"
+                    style={{ ["--press-scale" as string]: "0.99" }}
                   >
                     <SystemAvatar system={f} />
                     <div className="flex-1 min-w-0">
@@ -278,9 +295,7 @@ export default function FriendsPage() {
             )
           ) : tab === "received" ? (
             incoming.length === 0 ? (
-              <div className="py-12 text-center text-muted-foreground text-subheadline">
-                {t("friends.noReceived")}
-              </div>
+              <EmptyState icon={Mail} title={t("friends.noReceived")} tint="var(--ios-green)" />
             ) : (
               incoming.map((r) => (
                 <div
@@ -317,9 +332,7 @@ export default function FriendsPage() {
             )
           ) : tab === "sent" ? (
             outgoing.length === 0 ? (
-              <div className="py-12 text-center text-muted-foreground text-subheadline">
-                {t("friends.noSent")}
-              </div>
+              <EmptyState icon={UserPlus} title={t("friends.noSent")} tint="var(--ios-orange)" />
             ) : (
               outgoing.map((r) => (
                 <div
@@ -346,9 +359,7 @@ export default function FriendsPage() {
             )
           ) : (
             blockedByMe.length === 0 ? (
-              <div className="py-12 text-center text-muted-foreground text-subheadline">
-                {t("friends.noBlocked")}
-              </div>
+              <EmptyState icon={Ban} title={t("friends.noBlocked")} tint="var(--ios-gray)" />
             ) : (
               blockedByMe.map((b) => (
                 <div

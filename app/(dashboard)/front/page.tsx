@@ -13,6 +13,7 @@ import { BottomSheet } from "@/components/glass/BottomSheet";
 import { apiFetcher, swrKeys, revalidateMembersAndFront } from "@/lib/swr";
 import DynamicAvatarImage from "@/components/ui/DynamicAvatarImage";
 import { cn } from "@/lib/utils";
+import { useHaptics } from "@/lib/haptics";
 import { useLanguage } from "@/components/providers/LanguageProvider";
 
 type Member = {
@@ -72,6 +73,7 @@ function MemberAvatar({ member, size = 12 }: { member: Member; size?: number }) 
 
 export default function FrontPage() {
   const { t, language } = useLanguage();
+  const { success, selection, warning } = useHaptics();
   const { data: currentFront, isLoading: loadingFront } = useSWR<FrontEntry | null>(
     swrKeys.front,
     apiFetcher
@@ -100,6 +102,10 @@ export default function FrontPage() {
     setUpdating(true);
     try {
       const isFronting = frontingSet.has(memberId);
+      // Stepping forward to front = a confirming "success"; stepping back =
+      // a lighter "selection" tick.
+      if (isFronting) selection();
+      else success();
       const newIds = isFronting
         ? frontingIds.filter((id) => id !== memberId)
         : [...frontingIds, memberId];
@@ -123,6 +129,7 @@ export default function FrontPage() {
 
   async function endFront() {
     if (updating) return;
+    warning();
     setUpdating(true);
     try {
       await fetch("/api/front", { method: "DELETE", credentials: "same-origin" });

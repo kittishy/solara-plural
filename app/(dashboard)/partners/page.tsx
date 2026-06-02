@@ -10,10 +10,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { BottomSheet } from "@/components/glass/BottomSheet";
 import { apiFetcher, swrKeys } from "@/lib/swr";
 import DynamicAvatarImage from "@/components/ui/DynamicAvatarImage";
 import { cn } from "@/lib/utils";
+import { useHaptics } from "@/lib/haptics";
 import { useLanguage } from "@/components/providers/LanguageProvider";
 
 type PartnerSystem = {
@@ -80,6 +82,7 @@ function SystemAvatar({ system, size = 44 }: { system: PartnerSystem; size?: num
 
 export default function PartnersPage() {
   const { t } = useLanguage();
+  const { success, selection } = useHaptics();
   const { data, isLoading } = useSWR<PartnersPayload>(
     swrKeys.partners,
     apiFetcher
@@ -114,6 +117,7 @@ export default function PartnersPage() {
       setInviteEmail("");
       setInviteMessage("");
       setShowInvite(false);
+      success();
       void mutate(swrKeys.partners);
     } finally {
       setSending(false);
@@ -121,6 +125,8 @@ export default function PartnersPage() {
   }
 
   async function respondRequest(id: string, action: "accept" | "decline") {
+    if (action === "accept") success();
+    else selection();
     await fetch(`/api/partners/requests/${id}`, {
       method: "POST",
       credentials: "same-origin",
@@ -154,9 +160,9 @@ export default function PartnersPage() {
           {tabs.map((tabItem) => (
             <button
               key={tabItem.id}
-              onClick={() => setTab(tabItem.id)}
+              onClick={() => { if (tab !== tabItem.id) selection(); setTab(tabItem.id); }}
               className={cn(
-                "flex-1 px-3 py-1.5 rounded-ios-sm text-caption-1 font-semibold ios-transition",
+                "flex-1 px-3 py-1.5 rounded-ios-sm text-caption-1 font-semibold ios-press",
                 tab === tabItem.id
                   ? "bg-white dark:bg-ios-gray-3/30 text-foreground shadow-sm"
                   : "text-muted-foreground"
@@ -184,16 +190,25 @@ export default function PartnersPage() {
             </div>
           ) : tab === "current" ? (
             partners.length === 0 ? (
-              <div className="py-12 text-center text-muted-foreground text-subheadline">
-                <Heart size={32} className="mx-auto text-muted-foreground/40 mb-2" />
-                {t("partners.noPartners")}
-              </div>
+              <EmptyState
+                icon={Heart}
+                title={t("partners.noPartners")}
+                description={t("partners.emptyDescription")}
+                tint="var(--ios-pink)"
+                action={
+                  <Button variant="outline" size="sm" onClick={() => setShowInvite(true)}>
+                    <Heart size={16} />
+                    {t("partners.sendRequest")}
+                  </Button>
+                }
+              />
             ) : (
               partners.map((p) => (
                 <Link
                   key={p.partnershipId}
                   href={`/partners/${p.partnershipId}`}
-                  className="flex items-center gap-3 px-4 py-3.5 border-b border-border/50 last:border-0 active:bg-muted/50 ios-transition"
+                  className="flex items-center gap-3 px-4 py-3.5 border-b border-border/50 last:border-0 active:bg-muted/50 ios-transition solara-pressable"
+                  style={{ ["--press-scale" as string]: "0.99" }}
                 >
                   <SystemAvatar system={p} />
                   <div className="flex-1 min-w-0">
@@ -211,9 +226,7 @@ export default function PartnersPage() {
             )
           ) : tab === "received" ? (
             incoming.length === 0 ? (
-              <div className="py-12 text-center text-muted-foreground text-subheadline">
-                {t("partners.noReceived")}
-              </div>
+              <EmptyState icon={Mail} title={t("partners.noReceived")} tint="var(--ios-pink)" />
             ) : (
               incoming.map((r) => (
                 <div
@@ -250,9 +263,7 @@ export default function PartnersPage() {
             )
           ) : (
             outgoing.length === 0 ? (
-              <div className="py-12 text-center text-muted-foreground text-subheadline">
-                {t("partners.noSent")}
-              </div>
+              <EmptyState icon={Heart} title={t("partners.noSent")} tint="var(--ios-orange)" />
             ) : (
               outgoing.map((r) => (
                 <div

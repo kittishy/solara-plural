@@ -5,8 +5,10 @@ import Link from "next/link";
 import { ArrowLeft, Bell, BellRing, BellOff } from "lucide-react";
 import { GlassCard, GroupedSection, GroupedRow } from "@/components/glass/GlassCard";
 import { Button } from "@/components/ui/button";
+import { PermissionPrimer } from "@/components/onboarding/PermissionPrimer";
 import { requestAndSavePushToken } from "@/lib/notifications/browser";
 import { isNativeAppRuntime } from "@/lib/swr";
+import { useHaptics } from "@/lib/haptics";
 import { useLanguage } from "@/components/providers/LanguageProvider";
 
 const errorKeyMap: Record<string, string> = {
@@ -19,11 +21,13 @@ const errorKeyMap: Record<string, string> = {
 
 export default function NotificationsSettingsPage() {
   const { t } = useLanguage();
+  const { success, error: errorHaptic } = useHaptics();
   const [permission, setPermission] = useState<
     NotificationPermission | "unsupported" | "native-app"
   >("default");
   const [enabling, setEnabling] = useState(false);
   const [error, setError] = useState("");
+  const [primerOpen, setPrimerOpen] = useState(false);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -45,10 +49,22 @@ export default function NotificationsSettingsPage() {
     if (!result.success) {
       const key = errorKeyMap[result.reason] ?? "notifications.errors.unknown";
       setError(t(key as Parameters<typeof t>[0]));
+      errorHaptic();
     } else {
       setPermission("granted");
+      success();
     }
     setEnabling(false);
+  }
+
+  // Already-granted users (resync) skip the explainer; new users see the
+  // pre-permission primer first so the OS popup never appears cold.
+  function handleEnableClick() {
+    if (permission === "granted") {
+      void enable();
+    } else {
+      setPrimerOpen(true);
+    }
   }
 
   const statusTitle =
@@ -107,7 +123,7 @@ export default function NotificationsSettingsPage() {
               </p>
             </div>
             {(permission === "default" || permission === "granted") && (
-              <Button onClick={enable} disabled={enabling}>
+              <Button onClick={handleEnableClick} disabled={enabling}>
                 {enabling
                   ? t("notifications.enabling")
                   : permission === "granted"
@@ -141,6 +157,23 @@ export default function NotificationsSettingsPage() {
           </p>
         </div>
       </div>
+
+      <PermissionPrimer
+        open={primerOpen}
+        onClose={() => setPrimerOpen(false)}
+        onAllow={enable}
+        icon={BellRing}
+        title={t("notifications.primer.title")}
+        description={t("notifications.primer.body")}
+        benefits={[
+          t("notifications.primer.b1"),
+          t("notifications.primer.b2"),
+          t("notifications.primer.b3"),
+        ]}
+        allowLabel={t("notifications.primer.allow")}
+        laterLabel={t("notifications.primer.later")}
+        tint="var(--ios-green)"
+      />
     </div>
   );
 }

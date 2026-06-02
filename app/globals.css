@@ -4,25 +4,28 @@
 
 @layer base {
   :root {
-    /* shadcn/ui semantic tokens */
-    --background: 240 5% 96%;
-    --foreground: 240 10% 4%;
+    /* shadcn/ui semantic tokens.
+       Neutrals carry a faint warm hue (~34°) instead of the cold blue-grey
+       (240°) of stock iOS — just enough to read "designed & cozy", never beige.
+       Cards stay pure white so they lift off the warm canvas. */
+    --background: 36 16% 96%;
+    --foreground: 24 12% 8%;
     --card: 0 0% 100%;
-    --card-foreground: 240 10% 4%;
+    --card-foreground: 24 12% 8%;
     --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 4%;
+    --popover-foreground: 24 12% 8%;
     --primary: 211 100% 50%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 240 5% 90%;
-    --secondary-foreground: 240 10% 20%;
-    --muted: 240 5% 92%;
-    --muted-foreground: 240 4% 46%;
-    --accent: 240 5% 90%;
-    --accent-foreground: 240 10% 20%;
+    --secondary: 36 12% 90%;
+    --secondary-foreground: 30 8% 18%;
+    --muted: 36 12% 92%;
+    --muted-foreground: 30 5% 45%;
+    --accent: 36 12% 90%;
+    --accent-foreground: 30 8% 18%;
     --destructive: 4 86% 58%;
     --destructive-foreground: 0 0% 100%;
-    --border: 240 6% 88%;
-    --input: 240 6% 88%;
+    --border: 36 10% 87%;
+    --input: 36 10% 87%;
     --ring: 211 100% 50%;
     --radius: 14px;
 
@@ -38,19 +41,20 @@
     --ios-indigo: #5856d6;
     --ios-gray: #8e8e93;
 
-    /* iOS backgrounds */
-    --ios-bg: #f2f2f7;
+    /* iOS backgrounds — warm-neutral canvas; white stays for raised surfaces */
+    --ios-bg: #f4f2ef;
     --ios-bg-secondary: #ffffff;
-    --ios-bg-tertiary: #f2f2f7;
-    --ios-grouped-bg: #f2f2f7;
+    --ios-bg-tertiary: #f4f2ef;
+    --ios-grouped-bg: #f4f2ef;
 
-    /* Glass effect */
-    --glass-bg: rgba(255, 255, 255, 0.72);
-    --glass-border: rgba(255, 255, 255, 0.6);
-    --glass-blur: blur(40px) saturate(180%);
+    /* Glass effect — tint warmed a touch so it sits with the canvas, and a
+       slightly richer saturation for that liquid-glass pop. */
+    --glass-bg: rgba(255, 253, 250, 0.72);
+    --glass-border: rgba(255, 255, 255, 0.65);
+    --glass-blur: blur(40px) saturate(190%);
 
     /* Tab bar */
-    --tabbar-bg: rgba(249, 249, 249, 0.88);
+    --tabbar-bg: rgba(250, 248, 245, 0.9);
     --tabbar-border: rgba(0, 0, 0, 0.06);
 
     /* Separators */
@@ -63,14 +67,22 @@
     --safe-bottom: env(safe-area-inset-bottom, 0px);
     --safe-left: env(safe-area-inset-left, 0px);
     --safe-right: env(safe-area-inset-right, 0px);
+
+    /* On-screen keyboard height, kept live by KeyboardProvider via the
+       visualViewport API. 0 when no keyboard is shown. Inputs/footers read
+       this so content rises with the keyboard instead of hiding behind it. */
+    --keyboard-inset: 0px;
+
+    /* Shared spring curve — one easing for the whole app (the RN-Ease feel). */
+    --solara-spring: cubic-bezier(0.32, 0.72, 0, 1);
   }
 
   .dark {
     --background: 0 0% 0%;
     --foreground: 0 0% 98%;
-    --card: 240 4% 11%;
+    --card: 30 5% 11%;
     --card-foreground: 0 0% 98%;
-    --popover: 240 4% 11%;
+    --popover: 30 5% 11%;
     --popover-foreground: 0 0% 98%;
     --primary: 211 100% 50%;
     --primary-foreground: 0 0% 100%;
@@ -86,10 +98,10 @@
     --input: 240 4% 18%;
     --ring: 211 100% 50%;
 
-    /* iOS dark backgrounds */
+    /* iOS dark backgrounds — surfaces warmed a hair off pure grey */
     --ios-bg: #000000;
-    --ios-bg-secondary: #1c1c1e;
-    --ios-bg-tertiary: #2c2c2e;
+    --ios-bg-secondary: #1c1b1a;
+    --ios-bg-tertiary: #2b2a28;
     --ios-grouped-bg: #000000;
 
     /* Glass effect dark */
@@ -110,6 +122,20 @@
   * {
     @apply border-border;
     -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Universal press feel: every enabled <button> and role=button springs on
+     tap unless it opts out with [data-no-press]. Elements with their own
+     press class (.ios-press/.solara-pressable) define a stronger :active and
+     win by specificity, so this is purely a floor for anything missed. */
+  button:not(:disabled):not([data-no-press]),
+  [role="button"]:not([data-no-press]) {
+    touch-action: manipulation;
+    transition: transform 0.2s var(--solara-spring), opacity 0.18s ease;
+  }
+  button:not(:disabled):not([data-no-press]):active,
+  [role="button"]:not([data-no-press]):active {
+    transform: scale(0.97);
   }
 
   html {
@@ -217,16 +243,116 @@
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
-  /* Active press effect */
+  /* Active press effect — now springy, so every existing `ios-press`
+     element across the app gets the premium Pressto-style feel for free. */
+  .ios-press {
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    transition: transform 0.22s var(--solara-spring), opacity 0.18s ease;
+  }
   .ios-press:active {
-    transform: scale(0.97);
-    opacity: 0.8;
-    transition: transform 0.1s ease, opacity 0.1s ease;
+    transform: scale(0.96);
+    opacity: 0.82;
+    transition: transform 0.08s ease, opacity 0.08s ease;
+  }
+
+  /* Pressable primitive — the "Pressto" feel. Springs back on release.
+     Intensity is tuned per element via --press-scale (default 0.96). */
+  .solara-pressable {
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    transition: transform 0.22s var(--solara-spring), opacity 0.18s ease,
+      filter 0.18s ease;
+    will-change: transform;
+  }
+  .solara-pressable:active {
+    transform: scale(var(--press-scale, 0.96));
+  }
+  .solara-pressable[data-pressed="true"] {
+    transform: scale(var(--press-scale, 0.96));
   }
 
   /* Member color accent utilities */
   .member-accent {
     --member-color: var(--m-color, #007aff);
+  }
+
+  /* Staggered list entrance — children fade+rise in sequence. Apply
+     `solara-stagger` to a container; each direct child animates with an
+     index-based delay set inline via --i. */
+  .solara-stagger > * {
+    opacity: 0;
+    animation: solara-rise 0.42s var(--solara-spring) forwards;
+    animation-delay: calc(var(--i, 0) * 45ms);
+  }
+
+  @keyframes solara-rise {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes solara-zoom-in {
+    from {
+      opacity: 0;
+      transform: scale(0.92);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  .animate-zoom-in {
+    animation: solara-zoom-in 0.32s var(--solara-spring);
+  }
+}
+
+/* ── Shared-element transitions (View Transitions API) ──────────────────
+   A persona avatar "grows" into the profile screen, conversations open
+   with a soft zoom. Each shared node gets a unique view-transition-name
+   (see lib/view-transition.ts). Unsupported browsers ignore all of this
+   and navigate instantly. */
+@media (prefers-reduced-motion: no-preference) {
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation-duration: 0.32s;
+    animation-timing-function: var(--solara-spring);
+  }
+
+  /* Shared avatar morph: matched old/new nodes cross-fade + scale smoothly. */
+  ::view-transition-group(*) {
+    animation-duration: 0.4s;
+    animation-timing-function: var(--solara-spring);
+  }
+}
+
+/* ── Reduced motion ─────────────────────────────────────────────────────
+   Honour the OS setting everywhere: kill entrance/transition animation but
+   keep opacity legible. Haptics already self-disable (see lib/haptics.ts). */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+  .solara-stagger > * {
+    opacity: 1;
+  }
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
   }
 }
 
@@ -242,6 +368,28 @@ body::before {
   filter: blur(var(--solara-wallpaper-blur, 0px));
   opacity: calc(1 - var(--solara-wallpaper-dim, 0));
   pointer-events: none;
+}
+
+/* Ambient aurora — a soft warm "sun" glow (the Solara identity) paired with a
+   faint violet wash, fixed behind all content. This is the single biggest lift
+   away from the flat "iOS Settings" canvas. Kept very low-opacity so it reads
+   as atmosphere, not decoration. Reduced-texture users keep it (it's cheap,
+   no blur); it sits above the body colour and below the wallpaper-aware app. */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(118% 72% at 12% -8%, rgba(255, 176, 107, 0.13), transparent 56%),
+    radial-gradient(122% 78% at 108% 2%, rgba(150, 112, 255, 0.10), transparent 56%);
+}
+
+.dark body::after {
+  background:
+    radial-gradient(118% 72% at 12% -8%, rgba(255, 150, 80, 0.08), transparent 56%),
+    radial-gradient(122% 78% at 108% 2%, rgba(140, 104, 255, 0.10), transparent 58%);
 }
 
 /* Reduce texture option */

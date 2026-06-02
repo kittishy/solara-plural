@@ -19,6 +19,7 @@ import useSWR from "swr";
 import { cn } from "@/lib/utils";
 import { BottomSheet } from "@/components/glass/BottomSheet";
 import { useLanguage } from "@/components/providers/LanguageProvider";
+import { useHaptics } from "@/lib/haptics";
 import { apiFetcher, swrKeys } from "@/lib/swr";
 
 const tabHrefs = ["/", "/members", "/front", "/chat"];
@@ -28,6 +29,7 @@ export function TabBar() {
   const pathname = usePathname();
   const [sheetOpen, setSheetOpen] = useState(false);
   const { t } = useLanguage();
+  const { selection } = useHaptics();
 
   const tabs = [
     { href: "/", icon: Home, label: t("nav.home") },
@@ -79,12 +81,14 @@ export function TabBar() {
               <Link
                 key={href}
                 href={href}
+                onPointerDown={() => { if (!isActive) selection(); }}
                 className={cn(
-                  "flex flex-col items-center gap-0.5 px-4 py-1.5 rounded-ios-lg ios-transition select-none min-w-[56px]",
+                  "flex flex-col items-center gap-0.5 px-4 py-1.5 rounded-ios-lg ios-transition solara-pressable min-w-[56px]",
                   isActive
                     ? "text-ios-blue"
                     : "text-muted-foreground hover:text-foreground"
                 )}
+                style={{ ["--press-scale" as string]: "0.92" }}
               >
                 <Icon
                   size={24}
@@ -107,12 +111,14 @@ export function TabBar() {
           <button
             type="button"
             onClick={() => setSheetOpen(true)}
+            onPointerDown={() => selection()}
             className={cn(
-              "flex flex-col items-center gap-0.5 px-4 py-1.5 rounded-ios-lg ios-transition select-none min-w-[56px]",
+              "flex flex-col items-center gap-0.5 px-4 py-1.5 rounded-ios-lg ios-transition solara-pressable min-w-[56px]",
               isMaisActive
                 ? "text-ios-blue"
                 : "text-muted-foreground hover:text-foreground"
             )}
+            style={{ ["--press-scale" as string]: "0.92" }}
           >
             <div className="relative">
               <Grid3X3

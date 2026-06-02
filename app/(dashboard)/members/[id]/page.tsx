@@ -161,6 +161,9 @@ export default async function MemberDetailPage({
           style={{
             background: `${memberColor}22`,
             border: `3px solid ${memberColor}66`,
+            // Shared-element target: matches the list avatar tagged by
+            // lib/view-transition.ts (HERO_AVATAR), so it morphs in on nav.
+            ["viewTransitionName" as string]: "solara-hero",
           }}
         >
           {member.avatarUrl ? (

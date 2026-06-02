@@ -9,6 +9,7 @@ import { LargeTitle } from "@/components/layout/NavBar";
 import DynamicAvatarImage from "@/components/ui/DynamicAvatarImage";
 import { Badge } from "@/components/ui/badge";
 import { useLanguage } from "@/components/providers/LanguageProvider";
+import { useHaptics } from "@/lib/haptics";
 import { parseStoredTags } from "@/lib/members/fields";
 import { apiFetcher, swrKeys } from "@/lib/swr";
 
@@ -94,6 +95,7 @@ export function HomeContent({
   currentFrontSnapshot,
 }: Props) {
   const { t, language } = useLanguage();
+  const { selection, warning } = useHaptics();
   const [updating, setUpdating] = useState(false);
   const [now, setNow] = useState(() => Date.now());
 
@@ -148,6 +150,7 @@ export function HomeContent({
 
   async function toggleMember(memberId: string) {
     if (updating) return;
+    selection();
     setUpdating(true);
     const newIds = frontingIds.filter((id) => id !== memberId);
     // Optimistic: paint the new state immediately. SWR will reconcile with the
@@ -185,6 +188,7 @@ export function HomeContent({
 
   async function endFront() {
     if (updating) return;
+    warning();
     setUpdating(true);
     try {
       await mutateFront(

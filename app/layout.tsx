@@ -6,6 +6,7 @@ import { LanguageProvider } from "@/components/providers/LanguageProvider";
 import { ThemeRuntime } from "@/components/providers/ThemeRuntime";
 import { SWRProvider } from "@/components/providers/SWRProvider";
 import { ServiceWorkerRuntime } from "@/components/providers/ServiceWorkerRuntime";
+import { KeyboardProvider } from "@/components/providers/KeyboardProvider";
 import { cookies } from "next/headers";
 import { DEFAULT_LANGUAGE, LANGUAGES, LANGUAGE_COOKIE_KEY, isLanguage } from "@/lib/i18n";
 
@@ -59,6 +60,7 @@ export default function RootLayout({
             </SWRProvider>
             <ThemeRuntime />
             <ServiceWorkerRuntime />
+            <KeyboardProvider />
           </SessionProvider>
         </ThemeProvider>
       </body>

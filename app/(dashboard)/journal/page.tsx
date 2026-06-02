@@ -7,6 +7,7 @@ import { LargeTitle } from "@/components/layout/NavBar";
 import { GlassCard } from "@/components/glass/GlassCard";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { apiFetcher, swrKeys } from "@/lib/swr";
 import { useLanguage } from "@/components/providers/LanguageProvider";
 
@@ -73,29 +74,27 @@ export default function JournalPage() {
               ))}
             </div>
           ) : entries.length === 0 ? (
-            <div className="py-12 text-center flex flex-col items-center gap-3">
-              <BookOpen size={36} className="text-muted-foreground/40" />
-              <div>
-                <p className="text-body font-semibold text-foreground">
-                  {t("journal.noEntries")}
-                </p>
-                <p className="text-subheadline text-muted-foreground mt-1">
-                  {t("journal.recordThoughts")}
-                </p>
-              </div>
-              <Button asChild variant="outline" size="sm">
-                <Link href="/journal/new">
-                  <Plus size={16} />
-                  {t("journal.new")}
-                </Link>
-              </Button>
-            </div>
+            <EmptyState
+              icon={BookOpen}
+              title={t("journal.noEntries")}
+              description={t("journal.recordThoughts")}
+              tint="var(--ios-purple)"
+              action={
+                <Button asChild variant="outline" size="sm">
+                  <Link href="/journal/new">
+                    <Plus size={16} />
+                    {t("journal.new")}
+                  </Link>
+                </Button>
+              }
+            />
           ) : (
             entries.map((entry) => (
               <Link
                 key={entry.id}
                 href={`/journal/${entry.id}`}
-                className="flex flex-col gap-1.5 px-4 py-4 border-b border-border/50 last:border-0 active:bg-muted/50 ios-transition"
+                className="flex flex-col gap-1.5 px-4 py-4 border-b border-border/50 last:border-0 active:bg-muted/50 ios-transition solara-pressable"
+                style={{ ["--press-scale" as string]: "0.99" }}
               >
                 <div className="flex items-center justify-between gap-2">
                   <p className="text-caption-1 text-muted-foreground">

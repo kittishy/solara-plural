@@ -8,8 +8,10 @@ import { LargeTitle } from "@/components/layout/NavBar";
 import { GlassCard } from "@/components/glass/GlassCard";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { apiFetcher, swrKeys } from "@/lib/swr";
 import { useLanguage } from "@/components/providers/LanguageProvider";
+import { useHaptics } from "@/lib/haptics";
 import { cn } from "@/lib/utils";
 
 type Note = {
@@ -31,6 +33,7 @@ function formatDate(value: string | number | Date, lang: string) {
 
 export default function NotesPage() {
   const { t, language } = useLanguage();
+  const { selection } = useHaptics();
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
   const { data, isLoading } = useSWR<Note[]>(swrKeys.notes, apiFetcher);
   const notes = data ?? [];
@@ -55,9 +58,9 @@ export default function NotesPage() {
       {categories.length > 0 && (
         <div className="px-4 mb-3 flex gap-1.5 overflow-x-auto scrollbar-none">
           <button
-            onClick={() => setCategoryFilter(null)}
+            onClick={() => { selection(); setCategoryFilter(null); }}
             className={cn(
-              "px-3 py-1.5 rounded-full text-caption-1 font-semibold whitespace-nowrap ios-transition",
+              "px-3 py-1.5 rounded-full text-caption-1 font-semibold whitespace-nowrap ios-press",
               categoryFilter === null
                 ? "bg-ios-blue text-white"
                 : "bg-secondary text-muted-foreground"
@@ -68,9 +71,9 @@ export default function NotesPage() {
           {categories.map((cat) => (
             <button
               key={cat}
-              onClick={() => setCategoryFilter(cat)}
+              onClick={() => { selection(); setCategoryFilter(cat); }}
               className={cn(
-                "px-3 py-1.5 rounded-full text-caption-1 font-semibold whitespace-nowrap ios-transition",
+                "px-3 py-1.5 rounded-full text-caption-1 font-semibold whitespace-nowrap ios-press",
                 categoryFilter === cat
                   ? "bg-ios-blue text-white"
                   : "bg-ios-blue/10 text-ios-blue"
@@ -95,31 +98,29 @@ export default function NotesPage() {
               ))}
             </div>
           ) : filtered.length === 0 ? (
-            <div className="py-12 text-center flex flex-col items-center gap-3">
-              <FileText size={36} className="text-muted-foreground/40" />
-              <div>
-                <p className="text-body font-semibold text-foreground">
-                  {categoryFilter
-                    ? t("notes.noNotesInCategory", { category: categoryFilter })
-                    : t("notes.noNotes")}
-                </p>
-                <p className="text-subheadline text-muted-foreground mt-1">
-                  {t("notes.createFirst")}
-                </p>
-              </div>
-              <Button asChild variant="outline" size="sm">
-                <Link href="/notes/new">
-                  <Plus size={16} />
-                  {t("notes.new")}
-                </Link>
-              </Button>
-            </div>
+            <EmptyState
+              icon={FileText}
+              title={categoryFilter
+                ? t("notes.noNotesInCategory", { category: categoryFilter })
+                : t("notes.noNotes")}
+              description={t("notes.createFirst")}
+              tint="var(--ios-teal)"
+              action={
+                <Button asChild variant="outline" size="sm">
+                  <Link href="/notes/new">
+                    <Plus size={16} />
+                    {t("notes.new")}
+                  </Link>
+                </Button>
+              }
+            />
           ) : (
             filtered.map((note) => (
               <Link
                 key={note.id}
                 href={`/notes/${note.id}`}
-                className="flex flex-col gap-1.5 px-4 py-3.5 border-b border-border/50 last:border-0 active:bg-muted/50 ios-transition"
+                className="flex flex-col gap-1.5 px-4 py-3.5 border-b border-border/50 last:border-0 active:bg-muted/50 ios-transition solara-pressable"
+                style={{ ["--press-scale" as string]: "0.99" }}
               >
                 <div className="flex items-center justify-between gap-2">
                   <p className="text-body font-semibold text-foreground truncate flex items-center gap-1.5">

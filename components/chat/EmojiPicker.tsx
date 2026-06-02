@@ -106,7 +106,7 @@ export function EmojiPicker({ open, onClose, onSelect }: EmojiPickerProps) {
   return (
     <div
       ref={panelRef}
-      className="absolute bottom-full left-2 right-2 mb-2 z-50 max-h-64 overflow-y-auto rounded-ios-2xl bg-[var(--ios-bg-secondary)] shadow-ios-lg border border-border/40 p-2 animate-slide-up"
+      className="absolute bottom-full left-2 right-2 mb-2 z-50 max-h-64 overflow-y-auto rounded-ios-2xl bg-[var(--ios-bg-secondary)] shadow-ios-lg dark:shadow-ios-dark border border-border/40 p-2 animate-slide-up"
     >
       {CATEGORIES.map((cat) => (
         <div key={cat.label}>

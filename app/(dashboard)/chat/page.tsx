@@ -21,11 +21,13 @@ import { LargeTitle } from "@/components/layout/NavBar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { BottomSheet } from "@/components/glass/BottomSheet";
 import { apiFetcher, swrKeys } from "@/lib/swr";
 import DynamicAvatarImage from "@/components/ui/DynamicAvatarImage";
 import { EmojiPicker } from "@/components/chat/EmojiPicker";
 import { cn } from "@/lib/utils";
+import { useHaptics } from "@/lib/haptics";
 import { useLanguage } from "@/components/providers/LanguageProvider";
 
 type Channel = { id: string; name: string; sortOrder?: number };
@@ -53,6 +55,7 @@ function shouldShowDateSeparator(prev: Message | null, curr: Message) {
 
 export default function ChatPage() {
   const { t, language } = useLanguage();
+  const { send: sendHaptic, selection } = useHaptics();
 
   function formatTime(value: string | number | Date) {
     return new Date(value).toLocaleTimeString(language, { hour: "2-digit", minute: "2-digit" });
@@ -189,6 +192,7 @@ export default function ChatPage() {
         }),
       });
       if (res.ok) {
+        sendHaptic();
         setMessageText("");
         void mutate(`/api/chat?channelId=${activeChannelId}`);
       }
@@ -249,8 +253,13 @@ export default function ChatPage() {
       className="fixed inset-x-0 flex flex-col animate-fade-in bg-[var(--ios-bg)]"
       style={{
         top: "0px",
-        bottom: "calc(max(env(safe-area-inset-bottom, 0px), 12px) + 80px)",
+        // Sit above the tab bar normally; when the on-screen keyboard opens,
+        // ride directly on top of it (KeyboardProvider keeps the var live) so
+        // the composer is never hidden and the message list shrinks to fit.
+        bottom:
+          "max(var(--keyboard-inset, 0px), calc(max(env(safe-area-inset-bottom, 0px), 12px) + 80px))",
         height: "auto",
+        transition: "bottom 0.25s var(--solara-spring)",
       }}
     >
       {/* Header */}
@@ -307,12 +316,12 @@ export default function ChatPage() {
             ))}
           </div>
         ) : messages.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full gap-3 pb-8 text-muted-foreground">
-            <MessageCircle size={40} className="text-muted-foreground/30" />
-            <div className="text-center">
-              <p className="text-body font-semibold">{t("chat.emptyTitle")}</p>
-              <p className="text-subheadline mt-0.5">{t("chat.emptySubtitle")}</p>
-            </div>
+          <div className="flex h-full items-center justify-center pb-8">
+            <EmptyState
+              icon={MessageCircle}
+              title={t("chat.emptyTitle")}
+              description={t("chat.emptySubtitle")}
+            />
           </div>
         ) : (
           <div className="flex flex-col gap-0.5">
@@ -539,7 +548,7 @@ export default function ChatPage() {
           {/* System option */}
           <button
             type="button"
-            onClick={() => { setSelectedMemberId(null); setShowMemberPicker(false); setMemberSearch(""); }}
+            onClick={() => { selection(); setSelectedMemberId(null); setShowMemberPicker(false); setMemberSearch(""); }}
             className={cn(
               "flex items-center gap-3 px-3 py-3 rounded-ios-lg ios-press ios-transition",
               !selectedMemberId ? "bg-ios-blue/10" : "hover:bg-secondary"
@@ -568,7 +577,7 @@ export default function ChatPage() {
             <button
               key={m.id}
               type="button"
-              onClick={() => { setSelectedMemberId(m.id); setShowMemberPicker(false); setMemberSearch(""); }}
+              onClick={() => { selection(); setSelectedMemberId(m.id); setShowMemberPicker(false); setMemberSearch(""); }}
               className={cn(
                 "flex items-center gap-3 px-3 py-3 rounded-ios-lg ios-press ios-transition",
                 selectedMemberId === m.id ? "bg-ios-blue/10" : "hover:bg-secondary"
