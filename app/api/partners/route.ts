@@ -203,7 +203,21 @@ export async function GET() {
     })
     .filter((r): r is NonNullable<typeof r> => Boolean(r));
 
-  return ok({ partners: partnerList, incomingRequests: incoming, outgoingRequests: outgoing });
+  return ok(
+    { partners: partnerList, incomingRequests: incoming, outgoingRequests: outgoing },
+    200,
+    {
+      headers: {
+        // Short edge cache so a returning user (or the polling installed app)
+        // reuses the recent payload while we revalidate in the background.
+        // Friends/partners listings are not persisted client-side (see
+        // `NEVER_PERSIST_PREFIXES` in lib/swr-cache-provider.ts) because they
+        // carry shared real-time state, so the edge cache is the only "warm"
+        // layer — kept short to stay correct when a partner updates.
+        'Cache-Control': 'private, max-age=0, s-maxage=20, stale-while-revalidate=60',
+      },
+    },
+  );
 }
 
 export async function POST(request: Request) {

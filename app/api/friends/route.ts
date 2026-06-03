@@ -336,21 +336,35 @@ export async function GET() {
     })
     .filter((entry): entry is NonNullable<typeof entry> => Boolean(entry));
 
-  return ok({
-    account: {
-      id: account.id,
-      name: account.name,
-      accountType: account.accountType,
-      email: account.email,
+  return ok(
+    {
+      account: {
+        id: account.id,
+        name: account.name,
+        accountType: account.accountType,
+        email: account.email,
+      },
+      friends,
+      incomingRequests: incoming,
+      outgoingRequests: outgoing,
+      blocks: {
+        blockedByMe,
+        blockedMe,
+      },
     },
-    friends,
-    incomingRequests: incoming,
-    outgoingRequests: outgoing,
-    blocks: {
-      blockedByMe,
-      blockedMe,
+    200,
+    {
+      headers: {
+        // Short edge cache so a returning user (or the polling installed app)
+        // reuses the recent payload while we revalidate in the background.
+        // Friends listings are not persisted client-side (see
+        // `NEVER_PERSIST_PREFIXES` in lib/swr-cache-provider.ts) because they
+        // carry shared real-time state, so the edge cache is the only "warm"
+        // layer — kept short to stay correct when a friend updates.
+        'Cache-Control': 'private, max-age=0, s-maxage=20, stale-while-revalidate=60',
+      },
     },
-  });
+  );
 }
 
 // POST /api/friends

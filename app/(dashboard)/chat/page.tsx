@@ -16,7 +16,7 @@ import {
   ImageUp,
   Loader2,
 } from "lucide-react";
-import ReactMarkdown from "react-markdown";
+import dynamic from "next/dynamic";
 import { LargeTitle } from "@/components/layout/NavBar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,6 +29,10 @@ import { EmojiPicker } from "@/components/chat/EmojiPicker";
 import { cn } from "@/lib/utils";
 import { useHaptics } from "@/lib/haptics";
 import { useLanguage } from "@/components/providers/LanguageProvider";
+
+// Markdown renderer is only needed once chat is open — load it lazily so the
+// markdown parser stays out of the chat route's initial JS bundle.
+const ReactMarkdown = dynamic(() => import("react-markdown"), { ssr: false });
 
 type Channel = { id: string; name: string; sortOrder?: number };
 type Message = {

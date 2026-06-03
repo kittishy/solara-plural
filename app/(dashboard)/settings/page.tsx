@@ -1,6 +1,7 @@
 "use client";
 
 import { useSession, signOut } from "next-auth/react";
+import { clearPersistentSwrCache } from "@/lib/swr-cache-provider";
 import { useState } from "react";
 import Link from "next/link";
 import {
@@ -71,6 +72,9 @@ export default function SettingsPage() {
 
   async function handleSignOut() {
     setSigningOut(true);
+    // Wipe this device's persisted SWR cache before leaving so the next user
+    // on a shared device never sees the previous account's data.
+    clearPersistentSwrCache();
     await signOut({ callbackUrl: localizePathname("/login", language) });
   }
 

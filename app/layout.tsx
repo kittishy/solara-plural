@@ -9,6 +9,7 @@ import { ServiceWorkerRuntime } from "@/components/providers/ServiceWorkerRuntim
 import { KeyboardProvider } from "@/components/providers/KeyboardProvider";
 import { cookies } from "next/headers";
 import { DEFAULT_LANGUAGE, LANGUAGES, LANGUAGE_COOKIE_KEY, isLanguage } from "@/lib/i18n";
+import { getCachedSession } from "@/lib/auth/session";
 
 export const metadata: Metadata = {
   title: "Solara",
@@ -37,11 +38,15 @@ function getHtmlLang() {
   return LANGUAGES.find((entry) => entry.code === language)?.htmlLang ?? "en";
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  // JWT session (no DB hit) — seeds the client SessionProvider so useSession()
+  // and the persistent SWR cache have the user id from the first render.
+  const session = await getCachedSession();
+
   return (
     <html lang={getHtmlLang()} suppressHydrationWarning>
       <head>
@@ -54,7 +59,7 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <SessionProvider>
+          <SessionProvider session={session}>
             <SWRProvider>
               <LanguageProvider>{children}</LanguageProvider>
             </SWRProvider>
