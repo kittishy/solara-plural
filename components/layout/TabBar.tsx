@@ -81,6 +81,9 @@ export function TabBar() {
               <Link
                 key={href}
                 href={href}
+                // Always-mounted nav → eagerly prefetch the primary routes so
+                // tapping a tab paints instantly (bundle + RSC already warm).
+                prefetch
                 onPointerDown={() => { if (!isActive) selection(); }}
                 className={cn(
                   "flex flex-col items-center gap-0.5 px-4 py-1.5 rounded-ios-lg ios-transition solara-pressable min-w-[56px]",

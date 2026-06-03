@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, AlertTriangle } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
+import { clearPersistentSwrCache } from "@/lib/swr-cache-provider";
 import { localizePathname } from "@/lib/i18n";
 import { useLanguage } from "@/components/providers/LanguageProvider";
 import { GlassCard } from "@/components/glass/GlassCard";
@@ -49,6 +50,7 @@ export default function DeleteAccountPage() {
         setError(json.error ?? t("common.error"));
         return;
       }
+      clearPersistentSwrCache();
       await signOut({ callbackUrl: localizePathname("/login", language) });
     } finally {
       setSubmitting(false);
