@@ -60,11 +60,41 @@ export function clearPersistentSwrCache(): void {
 // Factory compatible with SWRConfig's `provider`. Pass the current user id so
 // the cache is isolated per account. Returns an in-memory-only cache when there
 // is no user (logged out / SSR) so nothing is ever persisted under a wrong key.
+//
+// Listener lifecycle: a single tab only ever has one logical session active, so
+// we attach `visibilitychange` / `pagehide` / `beforeunload` ONCE per page load
+// (see `ensureListeners` below). Each new provider just swaps the function they
+// call via `currentPersist`. This keeps the listener count at O(1) regardless
+// of how many times the user logs in/out, and lets the previous user's `Map`
+// (closed over by the previous `persist`) become GC-eligible immediately.
+let currentPersist: (() => void) | null = null;
+let listenersAttached = false;
+
+function ensureListeners(): void {
+  if (listenersAttached || typeof window === 'undefined') return;
+  listenersAttached = true;
+  const flush = () => currentPersist?.();
+  // visibilitychange fires when the tab/installed-app is hidden — the most
+  // reliable "user is leaving" signal on mobile + TWA.
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') flush();
+  });
+  // pagehide covers bfcache navigations and is more reliable than beforeunload
+  // on mobile Safari / Chrome.
+  window.addEventListener('pagehide', flush);
+  // beforeunload covers desktop browser tab close.
+  window.addEventListener('beforeunload', flush);
+}
+
 export function createPersistentProvider(userId: string | null) {
   return (): Cache => {
     const map = new Map<string, AnyState>();
 
     if (typeof window === 'undefined' || !userId) {
+      // No user means we have nothing to persist under. Drop any previously
+      // installed persist hook so a backgrounded tab in the logged-out state
+      // can never write the prior user's in-memory Map back to disk.
+      currentPersist = null;
       return map as unknown as Cache;
     }
 
@@ -111,15 +141,10 @@ export function createPersistentProvider(userId: string | null) {
       }
     };
 
-    // Persist when the page is backgrounded or closed. `visibilitychange` and
-    // `pagehide` are the reliable signals on mobile / installed PWA / TWA;
-    // `beforeunload` covers desktop browser tab close.
-    const onHide = () => {
-      if (document.visibilityState === 'hidden') persist();
-    };
-    document.addEventListener('visibilitychange', onHide);
-    window.addEventListener('pagehide', persist);
-    window.addEventListener('beforeunload', persist);
+    // Hand this provider's persist to the singleton listeners. Any prior
+    // `persist` (and the Map it captured) becomes GC-eligible at this point.
+    currentPersist = persist;
+    ensureListeners();
 
     return map as unknown as Cache;
   };
