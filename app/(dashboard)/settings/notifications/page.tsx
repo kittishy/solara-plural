@@ -30,6 +30,7 @@ export default function NotificationsSettingsPage() {
   const [primerOpen, setPrimerOpen] = useState(false);
   const [testing, setTesting] = useState(false);
   const [testMsg, setTestMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [diag, setDiag] = useState<string>("");
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -50,6 +51,22 @@ export default function NotificationsSettingsPage() {
       else if (state === "unsupported") setPermission("unsupported");
       else if (state === "denied") setPermission("denied");
       else setPermission("default"); // default OR granted-no-sub: offer enable
+
+      // Live device diagnostics (build marker tells us if the new code loaded).
+      try {
+        const perm = "Notification" in window ? Notification.permission : "n/a";
+        let sub = "no";
+        try {
+          const reg = await navigator.serviceWorker.ready;
+          const s = await reg.pushManager.getSubscription();
+          if (s) sub = "yes…" + s.endpoint.slice(-14);
+        } catch { sub = "err"; }
+        const ctrl = navigator.serviceWorker?.controller ? "y" : "n";
+        const ua = /SamsungBrowser/.test(navigator.userAgent)
+          ? "samsung"
+          : /Chrome/.test(navigator.userAgent) ? "chrome" : "other";
+        if (!cancelled) setDiag(`build b8 · perm=${perm} · sub=${sub} · sw=${ctrl} · ${ua} · state=${state}`);
+      } catch { /* ignore */ }
     };
     void refresh();
 
@@ -208,6 +225,11 @@ export default function NotificationsSettingsPage() {
                   </p>
                 )}
               </>
+            )}
+            {diag && (
+              <p className="text-caption-2 text-muted-foreground/70 font-mono break-all mt-1">
+                {diag}
+              </p>
             )}
           </div>
         </GlassCard>
