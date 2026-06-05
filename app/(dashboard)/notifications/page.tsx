@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { apiFetcher, isNativeAppRuntime, swrKeys } from "@/lib/swr";
-import { requestAndSavePushToken } from "@/lib/notifications/browser";
+import { requestAndSavePushToken, getPushEnabledState } from "@/lib/notifications/browser";
 import { cn } from "@/lib/utils";
 import { useHaptics } from "@/lib/haptics";
 import { useLanguage } from "@/components/providers/LanguageProvider";
@@ -62,11 +62,30 @@ export default function NotificationsPage() {
       setPermission("native-app");
       return;
     }
-    if (!("Notification" in window)) {
-      setPermission("unsupported");
-    } else {
-      setPermission(Notification.permission);
-    }
+
+    let cancelled = false;
+    // An existing push subscription is the source of truth. Samsung Internet in
+    // a standalone PWA reports Notification.permission "default" even after the
+    // user granted it, which falsely showed "Push disabled" + an Enable button
+    // that re-prompted forever. Trust the subscription instead.
+    const refresh = async () => {
+      const state = await getPushEnabledState();
+      if (cancelled) return;
+      if (state === "enabled") setPermission("granted");
+      else if (state === "unsupported") setPermission("unsupported");
+      else if (state === "denied") setPermission("denied");
+      else setPermission("default");
+    };
+    void refresh();
+
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") void refresh();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      cancelled = true;
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
   }, []);
 
   async function enablePush() {

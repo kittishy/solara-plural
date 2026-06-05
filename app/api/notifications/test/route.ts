@@ -1,7 +1,7 @@
 import { and, eq, isNull } from 'drizzle-orm';
 import { createId } from '@paralleldrive/cuid2';
 import { db } from '@/lib/db';
-import { notificationDeliveries, notificationPushTokens } from '@/lib/db/schema';
+import { notificationDeliveries, notificationPushTokens, notifications } from '@/lib/db/schema';
 import { requireAuth } from '@/lib/api/helpers';
 import { NextResponse } from 'next/server';
 import { decryptPushSubscription } from '@/lib/notifications/tokens';
@@ -44,7 +44,39 @@ export async function POST() {
     }
   });
 
+  if (sendable.length === 0) {
+    // Tokens exist but none could be decrypted — a crypto/secret problem, not a
+    // delivery one. Surface it distinctly instead of a generic failure.
+    return NextResponse.json(
+      { success: false, error: 'decrypt_failed', data: { tokens: tokens.length, decryptable: 0 } },
+      { status: 500 },
+    );
+  }
+
+  const now = new Date();
   const notificationId = 'selftest-' + createId();
+
+  // The notification row MUST exist before delivery rows — notification_deliveries
+  // has a FK to notifications.id. (Skipping this was the bug that made every
+  // self-test return a 500 / "Couldn't deliver" even when the push was sent.)
+  // Best-effort: if logging fails we still report the real send outcome below.
+  let loggable = true;
+  try {
+    await db.insert(notifications).values({
+      id: notificationId,
+      recipientSystemId: auth.systemId,
+      actorSystemId: null,
+      type: 'system_test',
+      title: 'Solara',
+      body: 'Tudo certo! Suas notificações estão ativas. 🌟',
+      data: null,
+      readAt: now, // self-test: don't leave an unread badge behind
+      createdAt: now,
+    });
+  } catch {
+    loggable = false;
+  }
+
   const results = await sendPushMessages(sendable.map((item) => ({
     subscription: item.subscription,
     title: 'Solara',
@@ -53,27 +85,31 @@ export async function POST() {
     url: '/notifications',
   })));
 
-  const now = new Date();
-  const perDevice = await Promise.all(results.map(async (result, index) => {
+  const devices = await Promise.all(results.map(async (result, index) => {
     const item = sendable[index];
-    if (!item) return null;
 
-    await db.insert(notificationDeliveries).values({
-      id: createId(),
-      notificationId,
-      pushTokenId: item.tokenRow.id,
-      status: result.success ? 'sent' : 'failed',
-      errorCode: result.errorCode,
-      attempts: 1,
-      sentAt: result.success ? now : null,
-      createdAt: now,
-      updatedAt: now,
-    });
+    if (loggable) {
+      try {
+        await db.insert(notificationDeliveries).values({
+          id: createId(),
+          notificationId,
+          pushTokenId: item.tokenRow.id,
+          status: result.success ? 'sent' : 'failed',
+          errorCode: result.errorCode,
+          attempts: 1,
+          sentAt: result.success ? now : null,
+          createdAt: now,
+          updatedAt: now,
+        });
+      } catch { /* logging is best-effort — never mask the real send result */ }
+    }
 
     if (!result.success && shouldRevokePushSubscription(result.errorCode)) {
-      await db.update(notificationPushTokens)
-        .set({ revokedAt: now, updatedAt: now })
-        .where(eq(notificationPushTokens.id, item.tokenRow.id));
+      try {
+        await db.update(notificationPushTokens)
+          .set({ revokedAt: now, updatedAt: now })
+          .where(eq(notificationPushTokens.id, item.tokenRow.id));
+      } catch { /* ignore */ }
     }
 
     let endpointHost = 'unknown';
@@ -87,8 +123,7 @@ export async function POST() {
     };
   }));
 
-  const devices = perDevice.filter(Boolean);
-  const sent = devices.filter((d) => d?.success).length;
+  const sent = devices.filter((d) => d.success).length;
 
   return NextResponse.json({
     success: sent > 0,

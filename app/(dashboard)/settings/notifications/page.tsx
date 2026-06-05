@@ -112,7 +112,17 @@ export default function NotificationsSettingsPage() {
         setTestMsg({ ok: false, text: t("notifications.testNoSubs") });
         errorHaptic();
       } else {
-        setTestMsg({ ok: false, text: t("notifications.testFailed") });
+        // Surface the real per-device push-service error so failures are
+        // diagnosable instead of a generic "couldn't deliver".
+        type Dev = { endpointHost?: string; platform?: string; errorCode?: string | null };
+        const devices: Dev[] = Array.isArray(json?.data?.devices) ? json.data.devices : [];
+        const detail = json?.error
+          ? String(json.error)
+          : devices.map((d) => `${d.platform ?? "?"}:${d.errorCode ?? "ok"}`).join(", ");
+        setTestMsg({
+          ok: false,
+          text: t("notifications.testFailed") + (detail ? ` (${detail})` : ""),
+        });
         errorHaptic();
       }
     } catch {
