@@ -13,6 +13,32 @@ function urlBase64ToUint8Array(value: string) {
   return outputArray;
 }
 
+// Classify where this subscription was created so server-side diagnostics can
+// tell an installed Android TWA apart from a plain browser/PWA tab. The TWA is
+// the wrapper that actually delivers push on phones, so knowing a token came
+// from one ('twa') vs a desktop browser ('web') is the difference between
+// "users have the working app" and "they don't".
+function detectRuntimeContext(): 'twa' | 'standalone' | 'web' {
+  if (typeof window === 'undefined') return 'web';
+  try {
+    if (typeof document !== 'undefined' && document.referrer.startsWith('android-app://')) {
+      return 'twa';
+    }
+    const mql = (q: string) => window.matchMedia && window.matchMedia(q).matches;
+    if (
+      mql('(display-mode: standalone)') ||
+      mql('(display-mode: fullscreen)') ||
+      mql('(display-mode: minimal-ui)') ||
+      (window.navigator as Navigator & { standalone?: boolean }).standalone === true
+    ) {
+      return 'standalone';
+    }
+  } catch {
+    /* ignore */
+  }
+  return 'web';
+}
+
 export async function registerSolaraServiceWorker() {
   if (typeof window === 'undefined' || !('serviceWorker' in navigator)) return null;
   try {
@@ -67,7 +93,7 @@ export async function requestAndSavePushToken(): Promise<
     method: 'POST',
     credentials: 'same-origin',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ subscription: subscriptionJson }),
+    body: JSON.stringify({ subscription: subscriptionJson, context: detectRuntimeContext() }),
   });
 
   if (!res.ok) return { success: false, reason: 'subscription_save_failed' };

@@ -28,6 +28,8 @@ export default function NotificationsSettingsPage() {
   const [enabling, setEnabling] = useState(false);
   const [error, setError] = useState("");
   const [primerOpen, setPrimerOpen] = useState(false);
+  const [testing, setTesting] = useState(false);
+  const [testMsg, setTestMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -55,6 +57,33 @@ export default function NotificationsSettingsPage() {
       success();
     }
     setEnabling(false);
+  }
+
+  async function sendTest() {
+    setTesting(true);
+    setTestMsg(null);
+    try {
+      const res = await fetch("/api/notifications/test", {
+        method: "POST",
+        credentials: "same-origin",
+        cache: "no-store",
+      });
+      const json = await res.json().catch(() => null);
+      if (res.ok && json?.success) {
+        setTestMsg({ ok: true, text: t("notifications.testSent") });
+        success();
+      } else if (json?.error === "no_active_subscriptions") {
+        setTestMsg({ ok: false, text: t("notifications.testNoSubs") });
+        errorHaptic();
+      } else {
+        setTestMsg({ ok: false, text: t("notifications.testFailed") });
+        errorHaptic();
+      }
+    } catch {
+      setTestMsg({ ok: false, text: t("notifications.testFailed") });
+      errorHaptic();
+    }
+    setTesting(false);
   }
 
   // Already-granted users (resync) skip the explainer; new users see the
@@ -138,6 +167,28 @@ export default function NotificationsSettingsPage() {
             )}
             {error && (
               <p className="text-subheadline text-ios-red">{error}</p>
+            )}
+            {(permission === "granted" || permission === "native-app") && (
+              <>
+                <Button
+                  variant="secondary"
+                  onClick={sendTest}
+                  disabled={testing}
+                >
+                  {testing
+                    ? t("notifications.sendingTest")
+                    : t("notifications.sendTest")}
+                </Button>
+                {testMsg && (
+                  <p
+                    className={`text-subheadline ${
+                      testMsg.ok ? "text-ios-green" : "text-ios-red"
+                    }`}
+                  >
+                    {testMsg.text}
+                  </p>
+                )}
+              </>
             )}
           </div>
         </GlassCard>

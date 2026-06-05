@@ -39,6 +39,16 @@ export async function POST(request: Request) {
   const subscription = readSubscription(parsed.data.subscription);
   if (!subscription) return err('Missing push subscription.');
 
+  // Where the subscription was created: 'twa' (installed Android app),
+  // 'standalone' (installed PWA), or 'web' (plain browser tab). Lets us tell
+  // whether real users actually have the push-capable app installed.
+  const allowedContexts = ['twa', 'standalone', 'web'] as const;
+  const rawContext = parsed.data.context;
+  const platform = typeof rawContext === 'string'
+    && (allowedContexts as readonly string[]).includes(rawContext)
+    ? rawContext
+    : 'web';
+
   const now = new Date();
   const tokenHash = hashPushEndpoint(subscription.endpoint);
   const userAgent = request.headers.get('user-agent')?.slice(0, 500) ?? null;
@@ -54,7 +64,7 @@ export async function POST(request: Request) {
     const [updated] = await db.update(notificationPushTokens)
       .set({
         encryptedToken: encryptPushSubscription(subscription.json),
-        platform: 'web',
+        platform,
         userAgent,
         lastSeenAt: now,
         revokedAt: null,
@@ -71,7 +81,7 @@ export async function POST(request: Request) {
     systemId: auth.systemId,
     tokenHash,
     encryptedToken: encryptPushSubscription(subscription.json),
-    platform: 'web',
+    platform,
     userAgent,
     lastSeenAt: now,
     revokedAt: null,
