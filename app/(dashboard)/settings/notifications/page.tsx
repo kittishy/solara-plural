@@ -6,7 +6,7 @@ import { ArrowLeft, Bell, BellRing, BellOff } from "lucide-react";
 import { GlassCard, GroupedSection, GroupedRow } from "@/components/glass/GlassCard";
 import { Button } from "@/components/ui/button";
 import { PermissionPrimer } from "@/components/onboarding/PermissionPrimer";
-import { requestAndSavePushToken } from "@/lib/notifications/browser";
+import { requestAndSavePushToken, getPushEnabledState } from "@/lib/notifications/browser";
 import { isNativeAppRuntime } from "@/lib/swr";
 import { useHaptics } from "@/lib/haptics";
 import { useLanguage } from "@/components/providers/LanguageProvider";
@@ -37,11 +37,30 @@ export default function NotificationsSettingsPage() {
       setPermission("native-app");
       return;
     }
-    if (!("Notification" in window)) {
-      setPermission("unsupported");
-    } else {
-      setPermission(Notification.permission);
-    }
+
+    let cancelled = false;
+    // Re-read the real state on mount AND every time the screen regains focus.
+    // An existing push subscription is the source of truth: Samsung Internet in
+    // a standalone PWA can report permission "default" even after granting,
+    // which used to make this screen flip back to "Enable" and re-prompt.
+    const refresh = async () => {
+      const state = await getPushEnabledState();
+      if (cancelled) return;
+      if (state === "enabled") setPermission("granted");
+      else if (state === "unsupported") setPermission("unsupported");
+      else if (state === "denied") setPermission("denied");
+      else setPermission("default"); // default OR granted-no-sub: offer enable
+    };
+    void refresh();
+
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") void refresh();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      cancelled = true;
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
   }, []);
 
   async function enable() {

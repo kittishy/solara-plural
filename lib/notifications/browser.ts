@@ -48,6 +48,30 @@ export async function registerSolaraServiceWorker() {
   }
 }
 
+// Source-of-truth push state. Some browsers (notably Samsung Internet in an
+// installed/standalone PWA) report `Notification.permission === "default"` even
+// AFTER the user granted it, which made the settings screen show "Enable" again
+// and re-prompt forever. An existing push subscription is a far more reliable
+// signal that the user is actually set up, so we prefer it.
+export async function getPushEnabledState(): Promise<
+  'enabled' | 'granted-no-sub' | 'denied' | 'default' | 'unsupported'
+> {
+  if (typeof window === 'undefined') return 'default';
+  if (!('Notification' in window)) return 'unsupported';
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) return 'unsupported';
+
+  try {
+    const registration = await navigator.serviceWorker.ready;
+    const sub = await registration.pushManager.getSubscription();
+    if (sub) return 'enabled';
+  } catch { /* fall through to permission-based answer */ }
+
+  const perm = Notification.permission;
+  if (perm === 'granted') return 'granted-no-sub';
+  if (perm === 'denied') return 'denied';
+  return 'default';
+}
+
 export async function requestAndSavePushToken(): Promise<
   { success: true; endpoint: string } | { success: false; reason: string }
 > {
@@ -63,22 +87,35 @@ export async function requestAndSavePushToken(): Promise<
   const publicKey = process.env.NEXT_PUBLIC_WEB_PUSH_VAPID_PUBLIC_KEY?.trim();
   if (!publicKey) return { success: false, reason: 'web_push_not_configured' };
 
-  const registration = await navigator.serviceWorker.register('/service-worker.js', { scope: '/' });
+  await navigator.serviceWorker.register('/service-worker.js', { scope: '/' });
+  // Use the READY (active) registration. Calling getSubscription() on a freshly
+  // returned registration whose worker is still "installing" can resolve to
+  // null even when a subscription exists — which made us re-subscribe and mint
+  // a brand-new endpoint on every visit.
+  const registration = await navigator.serviceWorker.ready;
   const expectedKey = urlBase64ToUint8Array(publicKey);
 
   let existing = await registration.pushManager.getSubscription();
 
-  // If a subscription exists but was created with a different VAPID public
-  // key (e.g. before the key was configured in production), it's dead —
-  // the server can't push to it. Drop it and re-subscribe with the current key.
+  // If a subscription exists but was created with a DIFFERENT VAPID public key
+  // it's dead (the server can't push to it) — drop it and re-subscribe.
+  //
+  // Critical: only treat it as a mismatch when the browser actually EXPOSES the
+  // key. Samsung Internet (and some others) return `applicationServerKey:
+  // null`, so the old `instanceof ArrayBuffer` check was false every time →
+  // we unsubscribed + re-subscribed on every enable/visit. That churn minted a
+  // new endpoint each time, 410'd the previous one, never delivered, and made
+  // the UI endlessly re-prompt. When the key isn't exposed we KEEP the existing
+  // subscription (re-subscribe is idempotent server-side via the endpoint hash).
   if (existing) {
     const existingKey = existing.options?.applicationServerKey;
-    const matches = existingKey instanceof ArrayBuffer
-      && existingKey.byteLength === expectedKey.byteLength
-      && new Uint8Array(existingKey).every((byte, i) => byte === expectedKey[i]);
-    if (!matches) {
-      try { await existing.unsubscribe(); } catch { /* ignore */ }
-      existing = null;
+    if (existingKey instanceof ArrayBuffer) {
+      const matches = existingKey.byteLength === expectedKey.byteLength
+        && new Uint8Array(existingKey).every((byte, i) => byte === expectedKey[i]);
+      if (!matches) {
+        try { await existing.unsubscribe(); } catch { /* ignore */ }
+        existing = null;
+      }
     }
   }
 
