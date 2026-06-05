@@ -98,6 +98,30 @@ export default function NotificationsSettingsPage() {
   async function sendTest() {
     setTesting(true);
     setTestMsg(null);
+
+    // First, a LOCAL banner straight from the service worker — no network, no
+    // FCM. This isolates the two failure modes:
+    //   • local shows but push doesn't  → FCM background delivery (battery
+    //     optimization) — the device just isn't waking for background pushes.
+    //   • local does NOT show           → notification permission/display is
+    //     blocked on this browser (perm not truly granted).
+    let localResult = "?";
+    try {
+      if (Notification.permission !== "granted") {
+        const p = await Notification.requestPermission();
+        localResult = p !== "granted" ? `perm=${p}` : "local-ok";
+      }
+      const reg = await navigator.serviceWorker.ready;
+      await reg.showNotification("Solara", {
+        body: "Notificação de teste local 🌟",
+        tag: "solara-localtest",
+        icon: "/icons/icon-192.png",
+      });
+      if (localResult === "?") localResult = "local-ok";
+    } catch (e) {
+      localResult = "local-blocked:" + (e instanceof Error ? e.name : "err");
+    }
+
     try {
       const res = await fetch("/api/notifications/test", {
         method: "POST",
@@ -106,7 +130,7 @@ export default function NotificationsSettingsPage() {
       });
       const json = await res.json().catch(() => null);
       if (res.ok && json?.success) {
-        setTestMsg({ ok: true, text: t("notifications.testSent") });
+        setTestMsg({ ok: true, text: `${t("notifications.testSent")} · ${localResult}` });
         success();
       } else if (json?.error === "no_active_subscriptions") {
         setTestMsg({ ok: false, text: t("notifications.testNoSubs") });
@@ -121,12 +145,12 @@ export default function NotificationsSettingsPage() {
           : devices.map((d) => `${d.platform ?? "?"}:${d.errorCode ?? "ok"}`).join(", ");
         setTestMsg({
           ok: false,
-          text: t("notifications.testFailed") + (detail ? ` (${detail})` : ""),
+          text: t("notifications.testFailed") + (detail ? ` (${detail})` : "") + ` · ${localResult}`,
         });
         errorHaptic();
       }
     } catch {
-      setTestMsg({ ok: false, text: t("notifications.testFailed") });
+      setTestMsg({ ok: false, text: `${t("notifications.testFailed")} · ${localResult}` });
       errorHaptic();
     }
     setTesting(false);
