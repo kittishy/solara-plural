@@ -13,6 +13,7 @@ import {
   Eye,
   EyeOff,
   Layers,
+  UserMinus,
 } from "lucide-react";
 import { LargeTitle } from "@/components/layout/NavBar";
 import { GlassCard } from "@/components/glass/GlassCard";
@@ -113,6 +114,8 @@ export default function FriendsPage() {
   const [sending, setSending] = useState(false);
   const [inviteError, setInviteError] = useState("");
   const [sharingFriend, setSharingFriend] = useState<{ id: string; name: string } | null>(null);
+  const [removingFriend, setRemovingFriend] = useState<{ id: string; name: string } | null>(null);
+  const [removing, setRemoving] = useState(false);
 
   async function sendRequest(e: React.FormEvent) {
     e.preventDefault();
@@ -163,6 +166,24 @@ export default function FriendsPage() {
       credentials: "same-origin",
     });
     void mutate(swrKeys.friends);
+  }
+
+  async function removeFriend(friendSystemId: string) {
+    setRemoving(true);
+    try {
+      const res = await fetch(`/api/friends/${friendSystemId}`, {
+        method: "DELETE",
+        credentials: "same-origin",
+      });
+      if (res.ok) {
+        // A firmer tick to confirm a connection was undone.
+        selection();
+        setRemovingFriend(null);
+        void mutate(swrKeys.friends);
+      }
+    } finally {
+      setRemoving(false);
+    }
   }
 
   const friends = data?.friends ?? [];
@@ -285,10 +306,17 @@ export default function FriendsPage() {
                   </a>
                   <button
                     onClick={() => setSharingFriend({ id: f.id, name: f.name })}
-                    className="flex-shrink-0 mr-3 w-8 h-8 rounded-full bg-secondary flex items-center justify-center ios-press text-muted-foreground"
+                    className="flex-shrink-0 w-8 h-8 rounded-full bg-secondary flex items-center justify-center ios-press text-muted-foreground"
                     aria-label={t("sharing.title")}
                   >
                     <Shield size={15} />
+                  </button>
+                  <button
+                    onClick={() => setRemovingFriend({ id: f.id, name: f.name })}
+                    className="flex-shrink-0 ml-2 mr-3 w-8 h-8 rounded-full bg-secondary flex items-center justify-center ios-press text-ios-red"
+                    aria-label={t("friends.removeFriend")}
+                  >
+                    <UserMinus size={15} />
                   </button>
                 </div>
               ))
@@ -448,6 +476,38 @@ export default function FriendsPage() {
           onClose={() => setSharingFriend(null)}
         />
       )}
+
+      {/* Remove friend confirmation sheet */}
+      <BottomSheet
+        open={!!removingFriend}
+        onClose={() => { if (!removing) setRemovingFriend(null); }}
+        title={t("friends.removeConfirmTitle")}
+      >
+        <div className="flex flex-col gap-4">
+          <p className="text-body text-muted-foreground text-center">
+            {t("friends.removeConfirmMessage", { name: removingFriend?.name ?? "" })}
+          </p>
+          <div className="flex flex-col gap-2">
+            <Button
+              variant="destructive"
+              className="w-full"
+              disabled={removing}
+              onClick={() => { if (removingFriend) void removeFriend(removingFriend.id); }}
+            >
+              <UserMinus size={16} />
+              {removing ? t("friends.removing") : t("friends.removeConfirmAction")}
+            </Button>
+            <Button
+              variant="secondary"
+              className="w-full"
+              disabled={removing}
+              onClick={() => setRemovingFriend(null)}
+            >
+              {t("friends.cancel")}
+            </Button>
+          </div>
+        </div>
+      </BottomSheet>
     </div>
   );
 }
