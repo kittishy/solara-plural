@@ -116,6 +116,7 @@ export default function FriendsPage() {
   const [sharingFriend, setSharingFriend] = useState<{ id: string; name: string } | null>(null);
   const [removingFriend, setRemovingFriend] = useState<{ id: string; name: string } | null>(null);
   const [removing, setRemoving] = useState(false);
+  const [removeError, setRemoveError] = useState("");
 
   async function sendRequest(e: React.FormEvent) {
     e.preventDefault();
@@ -170,6 +171,7 @@ export default function FriendsPage() {
 
   async function removeFriend(friendSystemId: string) {
     setRemoving(true);
+    setRemoveError("");
     try {
       const res = await fetch(`/api/friends/${friendSystemId}`, {
         method: "DELETE",
@@ -180,7 +182,11 @@ export default function FriendsPage() {
         selection();
         setRemovingFriend(null);
         void mutate(swrKeys.friends);
+      } else {
+        setRemoveError(t("friends.removeError"));
       }
+    } catch {
+      setRemoveError(t("friends.removeError"));
     } finally {
       setRemoving(false);
     }
@@ -312,7 +318,7 @@ export default function FriendsPage() {
                     <Shield size={15} />
                   </button>
                   <button
-                    onClick={() => setRemovingFriend({ id: f.id, name: f.name })}
+                    onClick={() => { setRemoveError(""); setRemovingFriend({ id: f.id, name: f.name }); }}
                     className="flex-shrink-0 ml-2 mr-3 w-8 h-8 rounded-full bg-secondary flex items-center justify-center ios-press text-ios-red"
                     aria-label={t("friends.removeFriend")}
                   >
@@ -480,13 +486,18 @@ export default function FriendsPage() {
       {/* Remove friend confirmation sheet */}
       <BottomSheet
         open={!!removingFriend}
-        onClose={() => { if (!removing) setRemovingFriend(null); }}
+        onClose={() => { if (!removing) { setRemovingFriend(null); setRemoveError(""); } }}
         title={t("friends.removeConfirmTitle")}
       >
         <div className="flex flex-col gap-4">
           <p className="text-body text-muted-foreground text-center">
             {t("friends.removeConfirmMessage", { name: removingFriend?.name ?? "" })}
           </p>
+          {removeError && (
+            <p className="text-subheadline text-ios-red text-center">
+              {removeError}
+            </p>
+          )}
           <div className="flex flex-col gap-2">
             <Button
               variant="destructive"
@@ -501,7 +512,7 @@ export default function FriendsPage() {
               variant="secondary"
               className="w-full"
               disabled={removing}
-              onClick={() => setRemovingFriend(null)}
+              onClick={() => { setRemovingFriend(null); setRemoveError(""); }}
             >
               {t("friends.cancel")}
             </Button>

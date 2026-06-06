@@ -666,6 +666,7 @@ export const translations = {
       removeConfirmMessage: 'You and {name} will stop sharing who is fronting. You can always send a new request later.',
       removeConfirmAction: 'Remove',
       removing: 'Removing...',
+      removeError: 'Error removing friend. Please try again.',
     },
     partners: {
       title: 'Partnerships',
@@ -1355,6 +1356,7 @@ export const translations = {
       removeConfirmMessage: 'Você e {name} deixarão de compartilhar quem está na frente. Você pode enviar um novo pedido depois.',
       removeConfirmAction: 'Remover',
       removing: 'Removendo...',
+      removeError: 'Erro ao remover amizade. Tente novamente.',
     },
     partners: {
       title: 'Parcerias',
@@ -2044,6 +2046,7 @@ export const translations = {
       removeConfirmMessage: 'Tú y {name} dejarán de compartir quién está al frente. Puedes enviar una nueva solicitud más tarde.',
       removeConfirmAction: 'Eliminar',
       removing: 'Eliminando...',
+      removeError: 'Error al eliminar amistad. Inténtalo de nuevo.',
     },
     partners: {
       title: 'Parejas',
