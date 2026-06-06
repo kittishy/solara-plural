@@ -169,6 +169,11 @@ export default function FriendsPage() {
     void mutate(swrKeys.friends);
   }
 
+  function resetRemoveState() {
+    setRemovingFriend(null);
+    setRemoveError("");
+  }
+
   async function removeFriend(friendSystemId: string) {
     setRemoving(true);
     setRemoveError("");
@@ -185,7 +190,8 @@ export default function FriendsPage() {
       } else {
         setRemoveError(t("friends.removeError"));
       }
-    } catch {
+    } catch (err) {
+      console.error("Failed to remove friend", err);
       setRemoveError(t("friends.removeError"));
     } finally {
       setRemoving(false);
@@ -486,7 +492,7 @@ export default function FriendsPage() {
       {/* Remove friend confirmation sheet */}
       <BottomSheet
         open={!!removingFriend}
-        onClose={() => { if (!removing) { setRemovingFriend(null); setRemoveError(""); } }}
+        onClose={() => { if (!removing) resetRemoveState(); }}
         title={t("friends.removeConfirmTitle")}
       >
         <div className="flex flex-col gap-4">
@@ -512,7 +518,7 @@ export default function FriendsPage() {
               variant="secondary"
               className="w-full"
               disabled={removing}
-              onClick={() => { setRemovingFriend(null); setRemoveError(""); }}
+              onClick={resetRemoveState}
             >
               {t("friends.cancel")}
             </Button>
