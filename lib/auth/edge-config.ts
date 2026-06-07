@@ -7,6 +7,7 @@ export const authConfig = {
       if (user) {
         token.systemId = user.id;
         token.accountType = user.accountType === 'singlet' ? 'singlet' : 'system';
+        token.isAdmin = user.isAdmin === true;
       }
       return token;
     },
@@ -15,6 +16,7 @@ export const authConfig = {
         session.user.id = token.systemId as string;
       }
       session.user.accountType = (token.accountType as 'system' | 'singlet' | undefined) ?? 'system';
+      session.user.isAdmin = token.isAdmin === true;
       return session;
     },
   },

@@ -8,6 +8,13 @@
       "when": 1780434345014,
       "tag": "0000_shiny_thunderbolt_ross",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1780861124615,
+      "tag": "0001_admin_panel",
+      "breakpoints": true
     }
   ]
 }

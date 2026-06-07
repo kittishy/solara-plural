@@ -19,6 +19,7 @@ import {
   RefreshCw,
   AlertTriangle,
   GitFork,
+  ShieldCheck,
 } from "lucide-react";
 import { LargeTitle } from "@/components/layout/NavBar";
 import { GroupedSection, GroupedRow } from "@/components/glass/GlassCard";
@@ -132,6 +133,25 @@ export default function SettingsPage() {
           </GroupedSection>
         </Link>
       </div>
+
+      {/* Admin panel — only visible to admin accounts */}
+      {(session?.user as { isAdmin?: boolean } | undefined)?.isAdmin && (
+        <div className="px-4 mb-6">
+          <p className="text-footnote font-semibold text-muted-foreground uppercase tracking-wide mb-2 px-1">
+            Administração
+          </p>
+          <GroupedSection>
+            <Link href={localizePathname("/admin", language)}>
+              <GroupedRow
+                label="Painel de administração"
+                icon={<ShieldCheck size={18} />}
+                chevron
+                className="cursor-pointer"
+              />
+            </Link>
+          </GroupedSection>
+        </div>
+      )}
 
       {/* Appearance */}
       <div className="px-4 mb-6">
