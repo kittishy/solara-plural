@@ -8,7 +8,7 @@ import { localizePathname } from "@/lib/i18n";
 import { GlassCard } from "@/components/glass/GlassCard";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, ShieldCheck, ShieldOff, Ban, KeyRound, Trash2, Copy, Check } from "lucide-react";
+import { ArrowLeft, ShieldCheck, Ban, KeyRound, Trash2, Copy, Check } from "lucide-react";
 
 interface AccountDetail {
   id: string;
@@ -204,14 +204,6 @@ export default function AdminUserDetailPage() {
             <div className="flex flex-wrap gap-2">
               <Button variant="outline" disabled={busy} onClick={handleSuspend}>
                 <Ban size={16} /> {account.suspendedAt ? "Remover suspensão" : "Suspender"}
-              </Button>
-              <Button
-                variant="outline"
-                disabled={busy}
-                onClick={() => patch({ isAdmin: account.isAdmin !== 1 })}
-              >
-                {account.isAdmin === 1 ? <ShieldOff size={16} /> : <ShieldCheck size={16} />}
-                {account.isAdmin === 1 ? "Remover admin" : "Tornar admin"}
               </Button>
               <Button variant="outline" disabled={busy} onClick={handleResetPassword}>
                 <KeyRound size={16} /> Redefinir senha

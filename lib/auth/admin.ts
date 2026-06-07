@@ -11,8 +11,8 @@ import { isAdminEmail } from './admin-allowlist';
 export { getAdminEmailAllowlist, isAdminEmail } from './admin-allowlist';
 
 /**
- * Resolve admin status from the JWT-backed session. The session already carries
- * `isAdmin`, computed at sign-in from both the DB flag and the env allowlist.
+ * Resolve admin status from the JWT-backed session. The session carries
+ * `isAdmin`, computed at sign-in solely from the hardcoded owner email.
  */
 export const getIsAdmin = cache(async (): Promise<boolean> => {
   const session = await auth();
@@ -38,12 +38,12 @@ export const resolveAdmin = cache(async (): Promise<
   });
   if (!account || account.suspendedAt) return null;
 
-  const allowlisted = isAdminEmail(account.email);
-  const isAdmin = account.isAdmin === 1 || allowlisted;
-  if (!isAdmin) return null;
+  // The owner email is the ONLY thing that grants admin access. The database
+  // flag never grants access on its own, so admin can't be handed to another
+  // account by editing data — it only mirrors the email check for display.
+  if (!isAdminEmail(account.email)) return null;
 
-  // Persist the flag the first time a bootstrap (allowlisted) admin is seen.
-  if (allowlisted && account.isAdmin !== 1) {
+  if (account.isAdmin !== 1) {
     await db.update(systems).set({ isAdmin: 1 }).where(eq(systems.id, systemId));
   }
 
