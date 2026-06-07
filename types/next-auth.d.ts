@@ -4,6 +4,7 @@ import 'next-auth/jwt';
 declare module 'next-auth' {
   interface User {
     accountType?: 'system' | 'singlet';
+    isAdmin?: boolean;
   }
 
   interface Session {
@@ -13,6 +14,7 @@ declare module 'next-auth' {
       email?: string | null;
       image?: string | null;
       accountType?: 'system' | 'singlet';
+      isAdmin?: boolean;
     };
   }
 }
@@ -21,5 +23,6 @@ declare module 'next-auth/jwt' {
   interface JWT {
     systemId?: string;
     accountType?: 'system' | 'singlet';
+    isAdmin?: boolean;
   }
 }

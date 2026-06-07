@@ -11,6 +11,14 @@ export const systems = pgTable('systems', {
   email:        text('email').notNull().unique(),
   passwordHash: text('password_hash').notNull(),
   accountType:  text('account_type').notNull().default('system'),
+  // Admin panel: elevated accounts can reach the /admin area. The env allowlist
+  // (ADMIN_EMAILS) is the source of truth for bootstrapping; this flag mirrors
+  // grants made from within the panel so access survives env changes.
+  isAdmin:      integer('is_admin').notNull().default(0),
+  // Moderation: a non-null value means the account is suspended and cannot sign
+  // in. The reason is surfaced to the user on the blocked login attempt.
+  suspendedAt:     timestamp('suspended_at', { mode: 'date' }),
+  suspendedReason: text('suspended_reason'),
   deletionRequestedAt: timestamp('deletion_requested_at', { mode: 'date' }),
   deletionScheduledFor: timestamp('deletion_scheduled_for', { mode: 'date' }),
   createdAt:    timestamp('created_at', { mode: 'date' }).notNull().defaultNow(),
@@ -385,7 +393,60 @@ export const systemChatMessages = pgTable('system_chat_messages', {
   createdIdx: index('idx_system_chat_messages_created_at').on(t.createdAt),
 }));
 
+// ---------------------------------------------------------------------------
+// Admin panel
+// ---------------------------------------------------------------------------
+
+// Global key/value app settings managed from the admin panel. Used for the
+// maintenance-mode switch and other operational toggles. Values are JSON
+// strings so a single table can hold heterogeneous config.
+export const appSettings = pgTable('app_settings', {
+  key:          text('key').primaryKey(),
+  value:        text('value'),
+  updatedBySystemId: text('updated_by_system_id').references(() => systems.id, { onDelete: 'set null' }),
+  updatedAt:    timestamp('updated_at', { mode: 'date' }).notNull().defaultNow(),
+});
+
+// Broadcast announcements authored by an admin. When `active` is set these can
+// be surfaced in-app and (optionally) fanned out as push notifications.
+export const adminAnnouncements = pgTable('admin_announcements', {
+  id:              text('id').primaryKey(),
+  title:           text('title').notNull(),
+  body:            text('body').notNull(),
+  level:           text('level').notNull().default('info'), // info | warning | critical
+  active:          integer('active').notNull().default(1),
+  pushedAt:        timestamp('pushed_at', { mode: 'date' }),
+  authorSystemId:  text('author_system_id').references(() => systems.id, { onDelete: 'set null' }),
+  createdAt:       timestamp('created_at', { mode: 'date' }).notNull().defaultNow(),
+  updatedAt:       timestamp('updated_at', { mode: 'date' }).notNull().defaultNow(),
+}, (t) => ({
+  activeIdx:  index('idx_admin_announcements_active').on(t.active),
+  createdIdx: index('idx_admin_announcements_created_at').on(t.createdAt),
+}));
+
+// Append-only audit trail of privileged actions taken in the admin panel.
+export const adminAuditLog = pgTable('admin_audit_log', {
+  id:              text('id').primaryKey(),
+  actorSystemId:   text('actor_system_id').references(() => systems.id, { onDelete: 'set null' }),
+  actorEmail:      text('actor_email'),
+  action:          text('action').notNull(),
+  targetType:      text('target_type'),
+  targetId:        text('target_id'),
+  metadata:        text('metadata'), // JSON string
+  createdAt:       timestamp('created_at', { mode: 'date' }).notNull().defaultNow(),
+}, (t) => ({
+  actorIdx:   index('idx_admin_audit_log_actor').on(t.actorSystemId),
+  actionIdx:  index('idx_admin_audit_log_action').on(t.action),
+  createdIdx: index('idx_admin_audit_log_created_at').on(t.createdAt),
+}));
+
 // Inferred Types
+export type AppSetting = typeof appSettings.$inferSelect;
+export type NewAppSetting = typeof appSettings.$inferInsert;
+export type AdminAnnouncement = typeof adminAnnouncements.$inferSelect;
+export type NewAdminAnnouncement = typeof adminAnnouncements.$inferInsert;
+export type AdminAuditLogEntry = typeof adminAuditLog.$inferSelect;
+export type NewAdminAuditLogEntry = typeof adminAuditLog.$inferInsert;
 export type SystemChatChannel = typeof systemChatChannels.$inferSelect;
 export type NewSystemChatChannel = typeof systemChatChannels.$inferInsert;
 export type SystemChatMessage = typeof systemChatMessages.$inferSelect;
