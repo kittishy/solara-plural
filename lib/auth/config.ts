@@ -42,7 +42,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           name: system.name,
           email: system.email,
           accountType: system.accountType === 'singlet' ? 'singlet' : 'system',
-          isAdmin: system.isAdmin === 1 || isAdminEmail(system.email),
+          // Admin access is locked to the hardcoded owner email only.
+          isAdmin: isAdminEmail(system.email),
         };
       },
     }),

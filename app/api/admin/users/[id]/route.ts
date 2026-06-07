@@ -92,18 +92,8 @@ export async function PATCH(
     }
   }
 
-  if (typeof body.isAdmin === 'boolean') {
-    // The env allowlist always wins; refuse to demote a bootstrap admin so the
-    // owner can never lock themselves out of their own panel.
-    if (!body.isAdmin && isAdminEmail(account.email)) {
-      return err('This account is in the ADMIN_EMAILS allowlist and cannot be demoted here', 400);
-    }
-    if (!body.isAdmin && account.id === gate.admin.systemId) {
-      return err('You cannot remove your own admin access', 400);
-    }
-    updates.isAdmin = body.isAdmin ? 1 : 0;
-    audited.isAdmin = body.isAdmin;
-  }
+  // Admin access is locked to the hardcoded owner email and cannot be granted
+  // to any other account, so there is intentionally no "make admin" action.
 
   if (Object.keys(audited).length === 0) return err('No supported fields to update', 400);
 
