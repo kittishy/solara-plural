@@ -8,10 +8,10 @@ import {
   hashPasswordResetToken,
   isPasswordStrongEnough,
 } from '@/lib/auth/password-reset';
-import { consumeRateLimit, getClientIp } from '@/lib/rate-limit';
+import { consumeDurableRateLimit, getClientIp } from '@/lib/rate-limit';
 
 export async function POST(request: Request) {
-  const ipLimit = consumeRateLimit(
+  const ipLimit = await consumeDurableRateLimit(
     `password-reset-confirm:ip:${getClientIp(request)}`,
     { limit: 20, windowMs: 15 * 60 * 1000 },
   );
@@ -38,7 +38,7 @@ export async function POST(request: Request) {
 
   const now = new Date();
   const tokenHash = hashPasswordResetToken(token);
-  const tokenLimit = consumeRateLimit(
+  const tokenLimit = await consumeDurableRateLimit(
     `password-reset-confirm:token:${tokenHash}`,
     { limit: 5, windowMs: 15 * 60 * 1000 },
   );

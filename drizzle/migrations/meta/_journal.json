@@ -15,6 +15,13 @@
       "when": 1780861124615,
       "tag": "0001_admin_panel",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1781121371874,
+      "tag": "0002_slippery_dust",
+      "breakpoints": true
     }
   ]
 }

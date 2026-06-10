@@ -11,7 +11,7 @@ import {
   hashPasswordResetToken,
   normalizeEmail,
 } from '@/lib/auth/password-reset';
-import { consumeRateLimit, getClientIp } from '@/lib/rate-limit';
+import { consumeDurableRateLimit, getClientIp } from '@/lib/rate-limit';
 
 function buildResetUrl(request: Request, token: string): string {
   const url = new URL('/reset-password', process.env.NEXTAUTH_URL ?? request.url);
@@ -20,7 +20,7 @@ function buildResetUrl(request: Request, token: string): string {
 }
 
 export async function POST(request: Request) {
-  const ipLimit = consumeRateLimit(
+  const ipLimit = await consumeDurableRateLimit(
     `password-reset-request:ip:${getClientIp(request)}`,
     { limit: 10, windowMs: 15 * 60 * 1000 },
   );
@@ -40,7 +40,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: true });
   }
 
-  const emailLimit = consumeRateLimit(
+  const emailLimit = await consumeDurableRateLimit(
     `password-reset-request:email:${email}`,
     { limit: 3, windowMs: 60 * 60 * 1000 },
   );

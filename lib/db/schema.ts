@@ -40,6 +40,17 @@ export const passwordResetTokens = pgTable('password_reset_tokens', {
   expiresAtIdx: index('idx_password_reset_tokens_expires_at').on(t.expiresAt),
 }));
 
+// Durable rate limiting for public auth surfaces (register, password reset).
+// Serverless instances don't share memory, so counters live in Postgres; rows
+// are upserted atomically and expire by reset_at.
+export const rateLimits = pgTable('rate_limits', {
+  key:     text('key').primaryKey(),
+  count:   integer('count').notNull().default(1),
+  resetAt: timestamp('reset_at', { mode: 'date' }).notNull(),
+}, (t) => ({
+  resetAtIdx: index('idx_rate_limits_reset_at').on(t.resetAt),
+}));
+
 // System Friend Requests
 export const systemFriendRequests = pgTable('system_friend_requests', {
   id:               text('id').primaryKey(),
@@ -391,6 +402,16 @@ export const systemChatMessages = pgTable('system_chat_messages', {
   systemIdx:  index('idx_system_chat_messages_system_id').on(t.systemId),
   channelIdx: index('idx_system_chat_messages_channel_id').on(t.channelId),
   createdIdx: index('idx_system_chat_messages_created_at').on(t.createdAt),
+}));
+
+// Chat read state — when this account last opened each channel. Unread badges
+// are computed as messages newer than last_read_at.
+export const chatChannelReads = pgTable('chat_channel_reads', {
+  systemId:   text('system_id').notNull().references(() => systems.id, { onDelete: 'cascade' }),
+  channelId:  text('channel_id').notNull().references(() => systemChatChannels.id, { onDelete: 'cascade' }),
+  lastReadAt: timestamp('last_read_at', { mode: 'date' }).notNull().defaultNow(),
+}, (t) => ({
+  pk: uniqueIndex('ux_chat_channel_reads').on(t.systemId, t.channelId),
 }));
 
 // ---------------------------------------------------------------------------

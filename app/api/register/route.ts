@@ -4,7 +4,7 @@ import { eq } from 'drizzle-orm';
 import { createId } from '@paralleldrive/cuid2';
 import bcrypt from 'bcryptjs';
 import { err, ok, parseJsonRecord } from '@/lib/api/helpers';
-import { consumeRateLimit, getClientIp } from '@/lib/rate-limit';
+import { consumeDurableRateLimit, getClientIp } from '@/lib/rate-limit';
 
 // Pragmatic email shape check — not a full RFC validator, just enough to keep
 // obvious garbage out of the accounts table.
@@ -12,7 +12,7 @@ const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export async function POST(request: Request) {
   // Public sign-up surface: throttle per IP to blunt automated account spam.
-  const rate = consumeRateLimit(
+  const rate = await consumeDurableRateLimit(
     `register:ip:${getClientIp(request)}`,
     { limit: 5, windowMs: 60 * 60 * 1000 },
   );
