@@ -1,0 +1,14 @@
+node_modules/
+.next/
+.git/
+
+.env
+.env.local
+.env.production
+
+.skills/
+.agents/
+.claude/
+
+tmp-*
+tmp-preview-shots/

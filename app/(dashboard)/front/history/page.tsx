@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { BottomSheet } from "@/components/glass/BottomSheet";
+import { FrontStats } from "@/components/front/FrontStats";
 import { apiFetcher, swrKeys } from "@/lib/swr";
 import { useLanguage } from "@/components/providers/LanguageProvider";
 
@@ -173,6 +174,12 @@ export default function FrontHistoryPage() {
           </button>
         </div>
       </div>
+
+      {!isLoading && entries.length > 0 && (
+        <div className="px-4 pt-4">
+          <FrontStats entries={entries} members={members} />
+        </div>
+      )}
 
       <div className="px-4 pt-4">
         <GlassCard padding="none" className="overflow-hidden">

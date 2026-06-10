@@ -5,6 +5,27 @@
 
 ---
 
+## [feature/fix] — 2026-06-10
+
+### Fixed
+- **Production login outage (admin-panel migration missing)** — the `/admin` code merged on 2026-06-06 shipped to Vercel before its database migration was applied: `systems.is_admin/suspended_at/suspended_reason` and the `app_settings`/`admin_announcements`/`admin_audit_log` tables did not exist in the Supabase production DB, so the login query (which selects every schema column) and the dashboard layout's maintenance-mode check crashed. Applied `0001_admin_panel` to production (additive only). **Lesson: Drizzle migrations are NOT applied automatically on deploy — apply to Supabase before/with any schema-touching merge.** The new CI (below) plus this changelog note are the guardrails.
+- **Push notifications silently not delivered** — `createNotification` fired push delivery as a floating promise; on Vercel the function freezes right after the response, killing in-flight sends at random. Delivery is now wrapped in `waitUntil` (`@vercel/functions`), web push sends carry `TTL: 24h` + `urgency: high`, and transient push-service failures (429/5xx) get one spaced retry.
+- **Theme customization had almost no visible effect** — `applyCustomTheme` wrote `--theme-*` variables that no CSS consumed, and Tailwind's `text-ios-blue`/`bg-ios-blue` were compiled hex. The custom theme engine now derives EVERY consumed token (shadcn semantic tokens, `--ios-*`, glass/tab-bar/separator vars) from the user's 6 colours, and `ios.blue` reads `var(--ios-blue-rgb)` so the accent applies everywhere (with alpha support). Restoring defaults now actually clears overrides (new `clearCustomTheme`), letting the light/dark mode palettes work again.
+- **CI never ran** — `.github/workflows/ci.yml` triggered on `main`, but the repository default branch is `master`. Now triggers on `master` pushes and all PRs.
+- **a11y lint warnings** — lucide `Image` icon renamed (false-positive alt-text), color picker sliders got `aria-valuenow/min/max`, members page memoizes `allMembers`.
+
+### Added
+- **Native Android push (FCM) committed** — Capacitor `@capacitor/push-notifications` client registration (`lib/notifications/native-push.ts`), Firebase Admin sender (`lib/notifications/fcm.ts`), `POST/DELETE /api/notifications/native-tokens` (platform `android-fcm`, tokens encrypted at rest), wired into `createNotification` and the self-test endpoint. Requires `FIREBASE_SERVICE_ACCOUNT_JSON` on Vercel.
+- **Real-time chat over SSE** — new `/api/chat/stream` (in-process broker + 3s DB poll, same design as the notifications stream) replaces the 5s polling; messages on the open channel paint instantly, a 30s SWR interval remains as fallback.
+- **Chat unread badges** — `chat_channel_reads` table + `POST /api/chat/channels/[id]/read`; channel list returns `unreadCount`, sidebar shows per-channel badges and the channels button shows an unread dot.
+- **High-contrast mode** — optional toggle in Settings → Theme → Options (`data-solara-high-contrast`): stronger text/borders, near-opaque surfaces, no glass blur or ambient wash. Both light and dark palettes covered.
+- **Front statistics** — `FrontStats` card on Front History: total front time per member with 7d/30d/all period filter, computed client-side from history (ongoing fronts count up to now; sessions clamped to the window).
+- **Notes search** — title+content text search on the notes page, combined with the category filter.
+- **Durable rate limiting** — `rate_limits` Postgres table with atomic upsert replaces the per-instance in-memory limiter on register and password-reset routes (fails open to the memory limiter if the DB is unreachable). Resolves ISSUE-014.
+
+### Security
+- `npm audit fix` + `ws` override to `^8.21.0` (memory-disclosure advisory). Remaining production advisories require breaking upgrades (Next 15/16, nodemailer 8, firebase-admin transitive) — tracked in ISSUE-009.
+
 ## [fix] — 2026-05-30
 
 ### Fixed
@@ -57,6 +78,7 @@
 ## [Unreleased]
 
 ### Added
+- Native Android APK push delivery via Capacitor FCM tokens, Firebase Admin fanout, `/api/notifications/native-tokens`, and per-device self-test diagnostics for `android-fcm`.
 - Isolated Expo/React Native Android app in `mobile-app`, with TypeScript, Expo Router tabs, EAS Build profiles, EAS Update setup, Android package `app.solara.plural`, and docs for APK/OTA/repository separation
 - Defensive unit coverage for token encryption, password reset helpers, custom fields, friend visibility helpers, front helpers, and in-memory rate limiting
 - Password reset flow with `/forgot-password`, `/reset-password`, hashed one-time reset tokens, and optional Resend email delivery

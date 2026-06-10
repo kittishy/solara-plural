@@ -95,15 +95,15 @@
 
 - [ ] Tags/groups for members
 - [ ] Groups/subsystems with nesting plan
-- [ ] Member search and filter
-- [ ] Note search
-- [ ] Front tracker: add note to entry
+- [x] Member search and filter
+- [x] Note search (2026-06-10: title+content search on notes page)
+- [x] Front tracker: add note to entry
 - [ ] Front tiers: primary, co-front, co-conscious
-- [ ] Member color picker (full palette)
-- [ ] Member avatar image upload
+- [x] Member color picker (full palette)
+- [x] Member avatar image upload
 - [x] Custom fields for member profiles
-- [ ] Accessibility settings: text size, reduced motion, contrast notes
-- [ ] Basic statistics (total front time per member)
+- [x] Accessibility settings: high contrast toggle + reduced textures + OS reduced-motion honored (2026-06-10; text size still pending)
+- [x] Basic statistics (total front time per member) (2026-06-10: FrontStats on history page, 7d/30d/all)
 - [x] PWA manifest + service worker
 
 ---
@@ -126,11 +126,11 @@
 ## v1.0 — Stable
 
 - [ ] Email/magic link auth option
-- [ ] Light mode support
+- [x] Light mode support (2026-06-10: light/dark/system toggle now actually works — custom colors no longer leave stale overrides; `clearCustomTheme` restores mode palettes)
 - [ ] Full accessibility audit
 - [ ] Performance audit
-- [ ] Data retention/deletion settings
-- [ ] Account deletion
+- [x] Data retention/deletion settings
+- [x] Account deletion
 
 ---
 
@@ -149,7 +149,7 @@ See IDEAS.md for the full backlog of feature ideas.
 - [ ] Add mobile-safe auth/session API on the web backend
 - [ ] Persist native tokens with Expo SecureStore after the auth adapter exists
 - [ ] Replace bundled preview writes with authenticated API writes
-- [ ] Add Android push notification strategy after the native auth boundary is stable
+- [x] Add Android push notification strategy via Capacitor Push Notifications + FCM native tokens
 
 ---
 
@@ -288,9 +288,9 @@ See IDEAS.md for the full backlog of feature ideas.
 - [x] API routes: `GET/POST /api/chat`, `DELETE /api/chat/[id]`, `GET/POST /api/chat/channels`, `DELETE /api/chat/channels/[id]`
 
 ### Next (chat backlog)
-- [ ] Real-time WebSocket push (replace 5s polling)
+- [x] Real-time delivery (2026-06-10: SSE stream `/api/chat/stream` — broker + DB poll — replaced 5s polling)
 - [ ] Message edit (append-only edit history)
-- [ ] Read/unread indicators per channel
+- [x] Read/unread indicators per channel (2026-06-10: `chat_channel_reads` + sidebar badges)
 - [ ] Typing indicators
 - [ ] @member mention autocomplete
 - [ ] Link previews

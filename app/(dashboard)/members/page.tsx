@@ -57,7 +57,7 @@ export default function MembersPage() {
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
   const [updating, setUpdating] = useState(false);
 
-  const allMembers = data?.data ?? [];
+  const allMembers = useMemo(() => data?.data ?? [], [data]);
 
   const frontingSet = useMemo(
     () => new Set(currentFront?.memberIds ?? []),

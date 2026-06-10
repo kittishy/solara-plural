@@ -173,6 +173,9 @@ export function MemberColorPicker({ value, onChange }: MemberColorPickerProps) {
         }}
         role="slider"
         aria-label={t("members.colorSatBright")}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={Math.round(s * 100)}
       >
         <div
           className="absolute w-4 h-4 rounded-full border-2 border-white shadow-md pointer-events-none -translate-x-1/2 -translate-y-1/2"
@@ -196,6 +199,9 @@ export function MemberColorPicker({ value, onChange }: MemberColorPickerProps) {
         }}
         role="slider"
         aria-label={t("members.colorHue")}
+        aria-valuemin={0}
+        aria-valuemax={360}
+        aria-valuenow={Math.round(h)}
       >
         <div
           className="absolute w-5 h-5 rounded-full border-2 border-white shadow-md pointer-events-none -translate-x-1/2 -translate-y-1/2 top-1/2"

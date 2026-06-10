@@ -92,6 +92,9 @@ Production PWA install should use real PNG icons, at least 192x192 and 512x512, 
 **Expected Behavior:**
 Plan and test a framework upgrade separately, or choose a patched compatible version if one becomes available.
 
+**Notes / Workaround:**
+2026-06-10: non-breaking fixes applied (`npm audit fix` + `ws` override to `^8.21.0`). Remaining: Next 14 advisories (need Next 15/16), nodemailer 7→8, firebase-admin transitives. Plan the Next 15 upgrade in a dedicated branch.
+
 ### [ISSUE-013] Drizzle migration journal and snapshots need reconciliation
 
 **Status:** Open
@@ -109,15 +112,29 @@ Do not regenerate migrations until production migration state is checked. Prefer
 
 ### [ISSUE-014] Auth rate limiting is local-only and should move to durable storage
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** Medium
 **Area:** Security | Auth
 
 **Description:**
 Password reset endpoints now have an in-memory limiter, which helps local/runtime instances but is not a global limit across Vercel serverless instances.
 
+**Resolved in:** 2026-06-10 — `rate_limits` Postgres table with atomic upsert (`consumeDurableRateLimit`), used by register and password-reset routes; fails open to the in-memory limiter on DB errors.
+
+### [ISSUE-016] Drizzle migrations are not applied automatically on deploy
+
+**Status:** Open (process guardrail)
+**Priority:** High
+**Area:** Database | Deploy | Process
+
+**Description:**
+The 2026-06-06 admin-panel merge deployed code referencing `systems.is_admin` and new admin tables before `0001_admin_panel` was applied to the Supabase production database, breaking production login until 2026-06-10. There is no automated migration step in the deploy pipeline.
+
 **Expected Behavior:**
-Public auth surfaces should use a durable shared limiter, such as Upstash Redis/KV or a database-backed failed-attempt table, before broader public use.
+Every schema-touching merge must apply its migration to production Supabase before (or together with) the deploy. Options to automate: a Vercel build step running `drizzle-kit migrate`, or applying via Supabase MCP/CLI as part of the release checklist.
+
+**Notes / Workaround:**
+`0001_admin_panel` and `0002_rate_limits_chat_reads` were applied manually via Supabase on 2026-06-10.
 
 ## Resolved Issues
 

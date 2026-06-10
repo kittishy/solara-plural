@@ -2,11 +2,12 @@
 
 import useSWR from "swr";
 import Link from "next/link";
-import { Plus, FileText, Lock } from "lucide-react";
-import { useState } from "react";
+import { Plus, FileText, Lock, Search } from "lucide-react";
+import { useMemo, useState } from "react";
 import { LargeTitle } from "@/components/layout/NavBar";
 import { GlassCard } from "@/components/glass/GlassCard";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { apiFetcher, swrKeys } from "@/lib/swr";
@@ -35,13 +36,22 @@ export default function NotesPage() {
   const { t, language } = useLanguage();
   const { selection } = useHaptics();
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
   const { data, isLoading } = useSWR<Note[]>(swrKeys.notes, apiFetcher);
-  const notes = data ?? [];
+  const notes = useMemo(() => data ?? [], [data]);
 
   const categories = Array.from(new Set(notes.map((n) => n.category).filter(Boolean) as string[]));
-  const filtered = categoryFilter
-    ? notes.filter((n) => n.category === categoryFilter)
-    : notes;
+  const filtered = useMemo(() => {
+    const byCategory = categoryFilter
+      ? notes.filter((n) => n.category === categoryFilter)
+      : notes;
+    const query = search.trim().toLowerCase();
+    if (!query) return byCategory;
+    return byCategory.filter((n) =>
+      (n.title ?? "").toLowerCase().includes(query) ||
+      n.content.toLowerCase().includes(query)
+    );
+  }, [notes, categoryFilter, search]);
 
   return (
     <div className="animate-fade-in">
@@ -53,6 +63,23 @@ export default function NotesPage() {
           </Link>
         </Button>
       </div>
+
+      {/* Search */}
+      {(notes.length > 0 || search) && (
+        <div className="px-4 mb-3 relative">
+          <Search
+            size={16}
+            className="absolute left-7 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none"
+          />
+          <Input
+            type="search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder={t("notes.searchPlaceholder")}
+            className="pl-9"
+          />
+        </div>
+      )}
 
       {/* Category filter */}
       {categories.length > 0 && (
@@ -100,10 +127,12 @@ export default function NotesPage() {
           ) : filtered.length === 0 ? (
             <EmptyState
               icon={FileText}
-              title={categoryFilter
-                ? t("notes.noNotesInCategory", { category: categoryFilter })
-                : t("notes.noNotes")}
-              description={t("notes.createFirst")}
+              title={search.trim()
+                ? t("notes.noSearchResults", { query: search.trim() })
+                : categoryFilter
+                  ? t("notes.noNotesInCategory", { category: categoryFilter })
+                  : t("notes.noNotes")}
+              description={search.trim() ? undefined : t("notes.createFirst")}
               tint="var(--ios-teal)"
               action={
                 <Button asChild variant="outline" size="sm">
