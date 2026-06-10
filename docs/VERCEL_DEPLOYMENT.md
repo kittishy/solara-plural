@@ -37,6 +37,7 @@ PASSWORD_RESET_FROM_EMAIL="Solara Plural <reset@example.com>"
 NEXT_PUBLIC_WEB_PUSH_VAPID_PUBLIC_KEY=your-public-vapid-key
 WEB_PUSH_VAPID_PRIVATE_KEY=your-private-vapid-key
 WEB_PUSH_VAPID_SUBJECT=mailto:you@example.com
+FIREBASE_SERVICE_ACCOUNT_JSON=your-firebase-admin-service-account-json-or-base64
 ```
 
 Local development can keep these in `.env.local`. Never commit `.env.local`.
@@ -51,6 +52,7 @@ vercel env add INTEGRATIONS_TOKEN_SECRET --sensitive
 vercel env add INTEGRATIONS_LEGACY_TOKEN_SECRET --sensitive
 vercel env add RESEND_API_KEY --sensitive
 vercel env add WEB_PUSH_VAPID_PRIVATE_KEY --sensitive
+vercel env add FIREBASE_SERVICE_ACCOUNT_JSON --sensitive
 ```
 
 `NEXTAUTH_URL` should match the deployed site URL for production. For this project, use `https://solara-plural.vercel.app`. The `solara.vercel.app` alias is not owned by this project, so do not point auth there.
@@ -76,6 +78,10 @@ vercel env add WEB_PUSH_VAPID_PRIVATE_KEY --sensitive
       (Production + Preview). Push subscriptions encrypt with a dedicated key chain
       (`PUSH_SUBSCRIPTION_SECRET` → `INTEGRATIONS_TOKEN_SECRET` → `NEXTAUTH_SECRET`),
       so push delivery survives a missing integrations secret in production.
+- [ ] Android APK native push env is set before expecting APK push delivery:
+      `FIREBASE_SERVICE_ACCOUNT_JSON` in Vercel Production and Preview. This is
+      the Firebase Admin service account used by the server to send FCM messages
+      to `android-fcm` tokens registered by the Capacitor APK.
 - [ ] `INTEGRATIONS_TOKEN_SECRET` is set for **PluralKit integration tokens**
       (push tokens have their own fallback chain — see above).
 - [ ] Remote image hostnames are restricted before public production use.
@@ -128,7 +134,7 @@ Plural system data is sensitive. Treat logs, URLs, analytics, imports, and expor
 - Do not claim end-to-end encryption with the current architecture.
 - Make export easy to reach before onboarding more than the first trusted users.
 - Treat push notifications as convenience only. The in-app notification center is the durable source of notification history.
-- Keep web push payloads minimal; avoid placing notes, private member details, or unshared front data in FCM payloads.
+- Keep web push and FCM payloads minimal; avoid placing notes, private member details, or unshared front data in push payloads.
 
 ---
 

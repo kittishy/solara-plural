@@ -7,7 +7,12 @@ import { GlassCard, GroupedSection, GroupedRow } from "@/components/glass/GlassC
 import { Button } from "@/components/ui/button";
 import { PermissionPrimer } from "@/components/onboarding/PermissionPrimer";
 import { requestAndSavePushToken, getPushEnabledState } from "@/lib/notifications/browser";
-import { isNativeAppRuntime } from "@/lib/swr";
+import {
+  getNativePushState,
+  isCapacitorNative,
+  registerNativePush,
+  type NativePushRegistrationResult,
+} from "@/lib/notifications/native-push";
 import { useHaptics } from "@/lib/haptics";
 import { useLanguage } from "@/components/providers/LanguageProvider";
 
@@ -31,13 +36,10 @@ export default function NotificationsSettingsPage() {
   const [testing, setTesting] = useState(false);
   const [testMsg, setTestMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [diag, setDiag] = useState<string>("");
+  const [nativeMode, setNativeMode] = useState(false);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    if (isNativeAppRuntime() && !("Notification" in window)) {
-      setPermission("native-app");
-      return;
-    }
 
     let cancelled = false;
     // Re-read the real state on mount AND every time the screen regains focus.
@@ -45,6 +47,18 @@ export default function NotificationsSettingsPage() {
     // a standalone PWA can report permission "default" even after granting,
     // which used to make this screen flip back to "Enable" and re-prompt.
     const refresh = async () => {
+      if (isCapacitorNative()) {
+        setNativeMode(true);
+        const nativeState = await getNativePushState();
+        if (cancelled) return;
+        if (nativeState === "enabled") setPermission("native-app");
+        else if (nativeState === "denied") setPermission("denied");
+        else setPermission("default");
+        setDiag(`build fcm1 · native=${nativeState} · platform=android-fcm`);
+        return;
+      }
+
+      setNativeMode(false);
       const state = await getPushEnabledState();
       if (cancelled) return;
       if (state === "enabled") setPermission("granted");
@@ -80,9 +94,30 @@ export default function NotificationsSettingsPage() {
     };
   }, []);
 
+  function nativeErrorMessage(result: NativePushRegistrationResult) {
+    if (result.success) return "";
+    if (result.reason === "permission_denied") return t("notifications.errors.denied");
+    if (result.reason === "token_save_failed") return t("notifications.errors.saveFailed");
+    return t("notifications.errors.unknown");
+  }
+
   async function enable() {
     setEnabling(true);
     setError("");
+    if (nativeMode) {
+      const result = await registerNativePush();
+      if (result.success) {
+        setPermission("native-app");
+        setDiag(`build fcm1 · native=enabled · token=...${result.tokenTail}`);
+        success();
+      } else {
+        setError(nativeErrorMessage(result));
+        errorHaptic();
+      }
+      setEnabling(false);
+      return;
+    }
+
     const result = await requestAndSavePushToken();
     if (!result.success) {
       const key = errorKeyMap[result.reason] ?? "notifications.errors.unknown";
@@ -106,7 +141,16 @@ export default function NotificationsSettingsPage() {
     //   • local does NOT show           → notification permission/display is
     //     blocked on this browser (perm not truly granted).
     let localResult = "?";
-    try {
+    if (nativeMode) {
+      const nativeResult = await registerNativePush();
+      if (nativeResult.success) {
+        localResult = `native-token=...${nativeResult.tokenTail}`;
+        setPermission("native-app");
+      } else {
+        localResult = `native-${nativeResult.reason}`;
+      }
+    } else {
+      try {
       if (Notification.permission !== "granted") {
         const p = await Notification.requestPermission();
         localResult = p !== "granted" ? `perm=${p}` : "local-ok";
@@ -118,8 +162,9 @@ export default function NotificationsSettingsPage() {
         icon: "/icons/icon-192.png",
       });
       if (localResult === "?") localResult = "local-ok";
-    } catch (e) {
+      } catch (e) {
       localResult = "local-blocked:" + (e instanceof Error ? e.name : "err");
+      }
     }
 
     try {
@@ -159,6 +204,10 @@ export default function NotificationsSettingsPage() {
   // Already-granted users (resync) skip the explainer; new users see the
   // pre-permission primer first so the OS popup never appears cold.
   function handleEnableClick() {
+    if (nativeMode) {
+      void enable();
+      return;
+    }
     if (permission === "granted") {
       void enable();
     } else {

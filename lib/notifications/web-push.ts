@@ -32,6 +32,47 @@ function configureWebPush() {
   return true;
 }
 
+// Push services occasionally hiccup (rate limit / transient 5xx). One spaced
+// retry recovers most of those without risking duplicate-spam on hard errors.
+const TRANSIENT_ERROR_CODES = new Set([
+  'web_push_429',
+  'web_push_500',
+  'web_push_502',
+  'web_push_503',
+  'web_push_failed',
+]);
+const RETRY_DELAY_MS = 1_500;
+
+async function sendOnePushMessage(message: PushMessage): Promise<PushResult> {
+  try {
+    await webPush.sendNotification(
+      message.subscription,
+      JSON.stringify({
+        title: message.title,
+        body: message.body,
+        notificationId: message.notificationId,
+        url: message.url ?? '/notifications',
+      }),
+      {
+        // Keep undelivered pushes queued for a day (offline device) and ask
+        // Android/FCM not to defer delivery to a batching window.
+        TTL: 60 * 60 * 24,
+        urgency: 'high',
+      },
+    );
+
+    return { success: true, errorCode: null };
+  } catch (error) {
+    const statusCode = typeof error === 'object' && error !== null && 'statusCode' in error
+      ? String((error as { statusCode?: number }).statusCode)
+      : null;
+    return {
+      success: false,
+      errorCode: statusCode ? `web_push_${statusCode}` : 'web_push_failed',
+    };
+  }
+}
+
 export async function sendPushMessages(messages: PushMessage[]): Promise<PushResult[]> {
   if (messages.length === 0) return [];
   if (!configureWebPush()) {
@@ -39,24 +80,11 @@ export async function sendPushMessages(messages: PushMessage[]): Promise<PushRes
   }
 
   return Promise.all(messages.map(async (message) => {
-    try {
-      await webPush.sendNotification(message.subscription, JSON.stringify({
-        title: message.title,
-        body: message.body,
-        notificationId: message.notificationId,
-        url: message.url ?? '/notifications',
-      }));
+    const first = await sendOnePushMessage(message);
+    if (first.success || !TRANSIENT_ERROR_CODES.has(first.errorCode ?? '')) return first;
 
-      return { success: true, errorCode: null };
-    } catch (error) {
-      const statusCode = typeof error === 'object' && error !== null && 'statusCode' in error
-        ? String((error as { statusCode?: number }).statusCode)
-        : null;
-      return {
-        success: false,
-        errorCode: statusCode ? `web_push_${statusCode}` : 'web_push_failed',
-      };
-    }
+    await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS));
+    return sendOnePushMessage(message);
   }));
 }
 

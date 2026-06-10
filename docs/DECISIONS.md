@@ -760,3 +760,21 @@
 - Changed `method: 'PATCH'` to `method: 'PUT'` in `applyExportToPluralKit`
 - Removed the broken candidate-loop diff in `planExportToPluralKit` — now builds a complete patch object with all non-null fields
 - Both 404 (member deleted) and 405 (write rejected) are caught and skipped with member context in diagnostics
+---
+
+## [2026-06-05] D042 - Android APK Notifications Use Native FCM, Not Browser Web Push
+
+**Decision:** The installed Android APK registers a native Capacitor Push Notifications token (`android-fcm`) and Solara sends those tokens through Firebase Admin/FCM. Browser PWA installs continue using the existing Web Push/VAPID path.
+
+**Justification:**
+- The shipped APK runs in a native Capacitor WebView and should not depend on the user's default browser or Samsung Internet web-push behavior.
+- FCM notification payloads are displayed by Android even when the app is backgrounded or killed, which is the required behavior for the APK.
+- Reusing `notification_push_tokens.platform` avoids a risky schema migration while keeping token types explicit.
+- The in-app notification center remains the durable source of history; push is a delivery channel only.
+
+**Implementation:**
+- Added `/api/notifications/native-tokens` to upsert encrypted native FCM tokens for the authenticated system.
+- Added `firebase-admin` FCM delivery alongside existing `web-push` delivery.
+- Updated the notification self-test to report per-device `android-fcm` results.
+- Updated Capacitor runtime/settings flows to register native push before attempting the self-test.
+- Production requires `FIREBASE_SERVICE_ACCOUNT_JSON` or the supported split Firebase env vars in Vercel.

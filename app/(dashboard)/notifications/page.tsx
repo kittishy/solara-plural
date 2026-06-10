@@ -8,8 +8,9 @@ import { GlassCard } from "@/components/glass/GlassCard";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { apiFetcher, isNativeAppRuntime, swrKeys } from "@/lib/swr";
+import { apiFetcher, swrKeys } from "@/lib/swr";
 import { requestAndSavePushToken, getPushEnabledState } from "@/lib/notifications/browser";
+import { getNativePushState, isCapacitorNative, registerNativePush } from "@/lib/notifications/native-push";
 import { cn } from "@/lib/utils";
 import { useHaptics } from "@/lib/haptics";
 import { useLanguage } from "@/components/providers/LanguageProvider";
@@ -55,13 +56,10 @@ export default function NotificationsPage() {
   const [enabling, setEnabling] = useState(false);
   const [marking, setMarking] = useState(false);
   const [pushError, setPushError] = useState("");
+  const [nativeMode, setNativeMode] = useState(false);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    if (isNativeAppRuntime() && !("Notification" in window)) {
-      setPermission("native-app");
-      return;
-    }
 
     let cancelled = false;
     // An existing push subscription is the source of truth. Samsung Internet in
@@ -69,6 +67,17 @@ export default function NotificationsPage() {
     // user granted it, which falsely showed "Push disabled" + an Enable button
     // that re-prompted forever. Trust the subscription instead.
     const refresh = async () => {
+      if (isCapacitorNative()) {
+        setNativeMode(true);
+        const nativeState = await getNativePushState();
+        if (cancelled) return;
+        if (nativeState === "enabled") setPermission("native-app");
+        else if (nativeState === "denied") setPermission("denied");
+        else setPermission("default");
+        return;
+      }
+
+      setNativeMode(false);
       const state = await getPushEnabledState();
       if (cancelled) return;
       if (state === "enabled") setPermission("granted");
@@ -91,6 +100,21 @@ export default function NotificationsPage() {
   async function enablePush() {
     setEnabling(true);
     setPushError("");
+    if (nativeMode) {
+      const result = await registerNativePush();
+      if (result.success) {
+        setPermission("native-app");
+      } else if (result.reason === "permission_denied") {
+        setPushError(t("notifications.errors.denied"));
+      } else if (result.reason === "token_save_failed") {
+        setPushError(t("notifications.errors.saveFailed"));
+      } else {
+        setPushError(t("notifications.errors.unknown"));
+      }
+      setEnabling(false);
+      return;
+    }
+
     const result = await requestAndSavePushToken();
     if (!result.success) {
       const messages: Record<string, string> = {

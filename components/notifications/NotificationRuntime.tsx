@@ -54,6 +54,17 @@ export function NotificationRuntime() {
     // hash — so it's safe to run on every PWA load.
     void (async () => {
       try {
+        // Inside the installed Android app (Capacitor) use NATIVE FCM push — it
+        // works regardless of the user's default browser. A TWA/web-push path
+        // breaks for Samsung-default users because the TWA runs Samsung
+        // Internet, which doesn't deliver web-push notifications reliably.
+        const { isCapacitorNative, registerNativePush } = await import("@/lib/notifications/native-push");
+        if (isCapacitorNative()) {
+          await registerNativePush();
+          return;
+        }
+
+        // Browser / installed PWA: web push (VAPID).
         await ensureNativeNotificationPermission();
         if (!("Notification" in window)) return;
         if (Notification.permission !== "granted") return;

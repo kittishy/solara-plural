@@ -141,7 +141,7 @@ Stores native browser Push API subscriptions for Web Push delivery.
 | systemId | text | FK -> systems.id | Owner account |
 | tokenHash | text | NOT NULL | SHA-256 hash used for idempotent upsert |
 | encryptedToken | text | NOT NULL | Encrypted JSON PushSubscription payload |
-| platform | text | NOT NULL DEFAULT `web` | Token platform |
+| platform | text | NOT NULL DEFAULT `web` | Token platform (`web`, `standalone`, `twa`, or `android-fcm`) |
 | userAgent | text | nullable | Browser/device hint |
 | lastSeenAt | integer | NOT NULL | Last successful registration refresh |
 | revokedAt | integer | nullable | Token disabled locally or by delivery failure |
@@ -150,6 +150,10 @@ Stores native browser Push API subscriptions for Web Push delivery.
 
 Constraints:
 - `ux_notification_push_tokens_system_hash(systemId, tokenHash)`
+
+**Notes:**
+- `android-fcm` rows store encrypted JSON `{ provider: "fcm", token: "..." }`
+  and are delivered through Firebase Admin instead of Web Push/VAPID.
 
 ### notifications
 

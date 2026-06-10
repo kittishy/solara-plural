@@ -1,5 +1,6 @@
 import { and, eq, isNull } from 'drizzle-orm';
 import { createId } from '@paralleldrive/cuid2';
+import { waitUntil } from '@vercel/functions';
 import { db } from '@/lib/db';
 import {
   notificationDeliveries,
@@ -7,6 +8,7 @@ import {
   notifications,
 } from '@/lib/db/schema';
 import { decryptPushSubscription } from '@/lib/notifications/tokens';
+import { sendFcmMessages, shouldRevokeFcmToken } from '@/lib/notifications/fcm';
 import { sendPushMessages, shouldRevokePushSubscription } from '@/lib/notifications/web-push';
 import { publishNotification } from '@/lib/notifications/realtime-broker';
 
@@ -51,11 +53,13 @@ export async function createNotification(input: CreateNotificationInput) {
       : new Date(notification.createdAt as unknown as number).toISOString(),
   });
 
-  // 2. Fire-and-forget push delivery. We never want the API request to wait
-  //    for an external push service round-trip — that adds 200-2000ms to
-  //    every action that triggers a notification (front change, friend
-  //    accept, etc.).
-  void deliverPushForNotification({
+  // 2. Push delivery must not delay the API response (200-2000ms of external
+  //    round-trips), but a bare floating promise dies when Vercel freezes the
+  //    function right after the response — pushes then silently never leave.
+  //    waitUntil keeps the instance alive until delivery settles while the
+  //    response still returns immediately. Outside Vercel it degrades to the
+  //    old fire-and-forget, which is fine because dev servers don't freeze.
+  waitUntil(deliverPushForNotification({
     notificationId: notification.id,
     recipientSystemId: input.recipientSystemId,
     title: input.push?.title ?? input.title,
@@ -67,9 +71,21 @@ export async function createNotification(input: CreateNotificationInput) {
       notificationId: notification.id,
       error: error instanceof Error ? error.message : 'unknown_error',
     });
-  });
+  }));
 
   return notification;
+}
+
+function readStoredFcmToken(json: string): string | null {
+  try {
+    const parsed = JSON.parse(json) as { provider?: unknown; token?: unknown };
+    if (parsed.provider !== 'fcm') return null;
+    return typeof parsed.token === 'string' && parsed.token.trim()
+      ? parsed.token.trim()
+      : null;
+  } catch {
+    return null;
+  }
 }
 
 async function deliverPushForNotification(input: {
@@ -88,7 +104,8 @@ async function deliverPushForNotification(input: {
 
   if (tokens.length === 0) return;
 
-  const sendable = tokens.flatMap((tokenRow) => {
+  const webSendable = tokens.flatMap((tokenRow) => {
+    if (tokenRow.platform === 'android-fcm') return [];
     try {
       const parsed = JSON.parse(decryptPushSubscription(tokenRow.encryptedToken));
       return [{
@@ -100,32 +117,64 @@ async function deliverPushForNotification(input: {
     }
   });
 
-  const results = await sendPushMessages(sendable.map((item) => ({
-    subscription: item.subscription,
-    title: input.title,
-    body: input.body,
-    notificationId: input.notificationId,
-    url: input.url,
-  })));
+  const fcmSendable = tokens.flatMap((tokenRow) => {
+    if (tokenRow.platform !== 'android-fcm') return [];
+    try {
+      const token = readStoredFcmToken(decryptPushSubscription(tokenRow.encryptedToken));
+      return token ? [{ tokenRow, token }] : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const [webResults, fcmResults] = await Promise.all([
+    sendPushMessages(webSendable.map((item) => ({
+      subscription: item.subscription,
+      title: input.title,
+      body: input.body,
+      notificationId: input.notificationId,
+      url: input.url,
+    }))),
+    sendFcmMessages(fcmSendable.map((item) => ({
+      token: item.token,
+      title: input.title,
+      body: input.body,
+      notificationId: input.notificationId,
+      url: input.url,
+    }))),
+  ]);
 
   const now = new Date();
-  await Promise.all(results.map(async (result, index) => {
-    const tokenRow = sendable[index]?.tokenRow;
+  const deliveries = [
+    ...webResults.map((result, index) => ({
+      tokenRow: webSendable[index]?.tokenRow,
+      result,
+      revoke: shouldRevokePushSubscription(result.errorCode),
+    })),
+    ...fcmResults.map((result, index) => ({
+      tokenRow: fcmSendable[index]?.tokenRow,
+      result,
+      revoke: shouldRevokeFcmToken(result.errorCode),
+    })),
+  ];
+
+  await Promise.all(deliveries.map(async (delivery) => {
+    const tokenRow = delivery.tokenRow;
     if (!tokenRow) return;
 
     await db.insert(notificationDeliveries).values({
       id: createId(),
       notificationId: input.notificationId,
       pushTokenId: tokenRow.id,
-      status: result.success ? 'sent' : 'failed',
-      errorCode: result.errorCode,
+      status: delivery.result.success ? 'sent' : 'failed',
+      errorCode: delivery.result.errorCode,
       attempts: 1,
-      sentAt: result.success ? now : null,
+      sentAt: delivery.result.success ? now : null,
       createdAt: now,
       updatedAt: now,
     });
 
-    if (!result.success && shouldRevokePushSubscription(result.errorCode)) {
+    if (!delivery.result.success && delivery.revoke) {
       await db.update(notificationPushTokens)
         .set({ revokedAt: now, updatedAt: now })
         .where(eq(notificationPushTokens.id, tokenRow.id));

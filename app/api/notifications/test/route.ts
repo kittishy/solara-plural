@@ -5,6 +5,7 @@ import { notificationDeliveries, notificationPushTokens, notifications } from '@
 import { requireAuth } from '@/lib/api/helpers';
 import { NextResponse } from 'next/server';
 import { decryptPushSubscription } from '@/lib/notifications/tokens';
+import { sendFcmMessages, shouldRevokeFcmToken } from '@/lib/notifications/fcm';
 import { sendPushMessages, shouldRevokePushSubscription } from '@/lib/notifications/web-push';
 
 export const dynamic = 'force-dynamic';
@@ -17,6 +18,18 @@ export const runtime = 'nodejs';
 // supported way to send a test (never targets other users).
 //
 // Copy is intentionally neutral and brand-voiced.
+function readStoredFcmToken(json: string): string | null {
+  try {
+    const parsed = JSON.parse(json) as { provider?: unknown; token?: unknown };
+    if (parsed.provider !== 'fcm') return null;
+    return typeof parsed.token === 'string' && parsed.token.trim()
+      ? parsed.token.trim()
+      : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function POST() {
   const auth = await requireAuth();
   if (auth.error) return auth.error;
@@ -35,7 +48,8 @@ export async function POST() {
     );
   }
 
-  const sendable = tokens.flatMap((tokenRow) => {
+  const webSendable = tokens.flatMap((tokenRow) => {
+    if (tokenRow.platform === 'android-fcm') return [];
     try {
       const parsed = JSON.parse(decryptPushSubscription(tokenRow.encryptedToken));
       return [{ tokenRow, subscription: parsed }];
@@ -44,7 +58,17 @@ export async function POST() {
     }
   });
 
-  if (sendable.length === 0) {
+  const fcmSendable = tokens.flatMap((tokenRow) => {
+    if (tokenRow.platform !== 'android-fcm') return [];
+    try {
+      const token = readStoredFcmToken(decryptPushSubscription(tokenRow.encryptedToken));
+      return token ? [{ tokenRow, token }] : [];
+    } catch {
+      return [];
+    }
+  });
+
+  if (webSendable.length === 0 && fcmSendable.length === 0) {
     // Tokens exist but none could be decrypted — a crypto/secret problem, not a
     // delivery one. Surface it distinctly instead of a generic failure.
     return NextResponse.json(
@@ -77,16 +101,43 @@ export async function POST() {
     loggable = false;
   }
 
-  const results = await sendPushMessages(sendable.map((item) => ({
+  const title = 'Solara';
+  const body = 'Tudo certo! Suas notificações estão ativas. 🌟';
+
+  const webResults = await sendPushMessages(webSendable.map((item) => ({
     subscription: item.subscription,
-    title: 'Solara',
-    body: 'Tudo certo! Suas notificações estão ativas. 🌟',
+    title,
+    body,
     notificationId,
     url: '/notifications',
   })));
 
-  const devices = await Promise.all(results.map(async (result, index) => {
-    const item = sendable[index];
+  const fcmResults = await sendFcmMessages(fcmSendable.map((item) => ({
+    token: item.token,
+    title,
+    body,
+    notificationId,
+    url: '/notifications',
+  })));
+
+  const deviceDeliveries = [
+    ...webResults.map((result, index) => ({
+      item: webSendable[index],
+      result,
+      revoke: shouldRevokePushSubscription(result.errorCode),
+      target: 'web' as const,
+    })),
+    ...fcmResults.map((result, index) => ({
+      item: fcmSendable[index],
+      result,
+      revoke: shouldRevokeFcmToken(result.errorCode),
+      target: 'fcm' as const,
+    })),
+  ];
+
+  const devices = await Promise.all(deviceDeliveries.map(async (delivery) => {
+    const item = delivery.item;
+    if (!item) return null;
 
     if (loggable) {
       try {
@@ -94,17 +145,17 @@ export async function POST() {
           id: createId(),
           notificationId,
           pushTokenId: item.tokenRow.id,
-          status: result.success ? 'sent' : 'failed',
-          errorCode: result.errorCode,
+          status: delivery.result.success ? 'sent' : 'failed',
+          errorCode: delivery.result.errorCode,
           attempts: 1,
-          sentAt: result.success ? now : null,
+          sentAt: delivery.result.success ? now : null,
           createdAt: now,
           updatedAt: now,
         });
       } catch { /* logging is best-effort — never mask the real send result */ }
     }
 
-    if (!result.success && shouldRevokePushSubscription(result.errorCode)) {
+    if (!delivery.result.success && delivery.revoke) {
       try {
         await db.update(notificationPushTokens)
           .set({ revokedAt: now, updatedAt: now })
@@ -113,25 +164,30 @@ export async function POST() {
     }
 
     let endpointHost = 'unknown';
-    try { endpointHost = new URL(item.subscription.endpoint).host; } catch { /* ignore */ }
+    if (delivery.target === 'fcm') {
+      endpointHost = 'fcm.googleapis.com';
+    } else if ('subscription' in item) {
+      try { endpointHost = new URL(item.subscription.endpoint).host; } catch { /* ignore */ }
+    }
 
     return {
       endpointHost,
       platform: item.tokenRow.platform,
-      success: result.success,
-      errorCode: result.errorCode,
+      success: delivery.result.success,
+      errorCode: delivery.result.errorCode,
     };
   }));
 
-  const sent = devices.filter((d) => d.success).length;
+  const cleanDevices = devices.filter((device): device is NonNullable<typeof device> => Boolean(device));
+  const sent = cleanDevices.filter((d) => d.success).length;
 
   return NextResponse.json({
     success: sent > 0,
     data: {
       tokens: tokens.length,
       sent,
-      failed: devices.length - sent,
-      devices,
+      failed: cleanDevices.length - sent,
+      devices: cleanDevices,
     },
   });
 }
