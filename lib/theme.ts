@@ -59,6 +59,7 @@ export type SolaraAppearance = {
   wallpaperBlur: number;
   reduceTexture: boolean;
   autoAdaptTheme: boolean;
+  highContrast: boolean;
 };
 
 export const DEFAULT_SOLARA_APPEARANCE: SolaraAppearance = {
@@ -67,6 +68,7 @@ export const DEFAULT_SOLARA_APPEARANCE: SolaraAppearance = {
   wallpaperBlur: 0,
   reduceTexture: false,
   autoAdaptTheme: false,
+  highContrast: false,
 };
 
 // ─── Color math ───────────────────────────────────────────────────────────────
@@ -128,6 +130,73 @@ export function persistCustomTheme(colors: SolaraCustomColors) {
   }
 }
 
+export function isCustomTheme(colors: SolaraCustomColors): boolean {
+  const c = sanitizeCustomColors(colors);
+  return (Object.keys(DEFAULT_SOLARA_COLORS) as (keyof SolaraCustomColors)[])
+    .some((key) => c[key].toLowerCase() !== DEFAULT_SOLARA_COLORS[key].toLowerCase());
+}
+
+function hexToHslTriplet(hex: string): string {
+  const [h, s, l] = hexToHsl(hex);
+  return `${Math.round(h)} ${Math.round(s)}% ${Math.round(l)}%`;
+}
+
+function hexToRgba(hex: string, alpha: number): string {
+  const [r, g, b] = hexToRgb(hex);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+/** Perceived luminance 0..1 — picks readable text on top of a colour. */
+function luminance(hex: string): number {
+  const [r, g, b] = hexToRgb(hex).map((v) => v / 255);
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+// Every inline custom-property the custom theme touches. Tracked so the theme
+// can be FULLY removed again (restore defaults / switch back to light/dark
+// palettes) without a page reload.
+const CUSTOM_THEME_PROPERTIES = [
+  // shadcn semantic tokens (HSL triplets consumed via hsl(var(--token)))
+  '--background', '--foreground',
+  '--card', '--card-foreground',
+  '--popover', '--popover-foreground',
+  '--primary', '--primary-foreground',
+  '--secondary', '--secondary-foreground',
+  '--muted', '--muted-foreground',
+  '--accent', '--accent-foreground',
+  '--border', '--input', '--ring',
+  // iOS-style variables consumed via var(--ios-*)
+  '--ios-bg', '--ios-bg-secondary', '--ios-bg-tertiary', '--ios-grouped-bg',
+  '--ios-blue', '--ios-blue-rgb',
+  // Glass / bars / separators
+  '--glass-bg', '--glass-border',
+  '--tabbar-bg', '--tabbar-border',
+  '--separator', '--separator-opaque',
+  // Legacy theme aliases (kept for anything styled inline against them)
+  '--theme-bg', '--theme-bg-rgb',
+  '--theme-surface', '--theme-surface-rgb',
+  '--theme-surface-alt', '--theme-surface-alt-rgb',
+  '--theme-surface-raised', '--theme-surface-raised-rgb',
+  '--theme-border', '--theme-border-rgb',
+  '--theme-border-soft', '--theme-border-soft-rgb',
+  '--theme-border-strong', '--theme-border-strong-rgb',
+  '--theme-text', '--theme-text-rgb',
+  '--theme-muted', '--theme-muted-rgb',
+  '--theme-subtle', '--theme-subtle-rgb',
+  '--theme-primary', '--theme-primary-rgb',
+  '--theme-primary-soft', '--theme-primary-soft-rgb',
+  '--theme-primary-glow', '--theme-primary-glow-rgb',
+  '--theme-front', '--theme-front-rgb',
+  '--theme-front-soft', '--theme-front-soft-rgb',
+] as const;
+
+/**
+ * Applies the user's 6 custom colours to EVERY token the UI actually consumes
+ * (shadcn semantic tokens, --ios-* variables, glass/tab-bar/separator vars),
+ * deriving readable intermediate shades. Inline styles on <html> override both
+ * the :root (light) and .dark palettes, so an active custom theme replaces the
+ * light/dark mode palettes entirely — which is what "my own colours" means.
+ */
 export function applyCustomTheme(colors: SolaraCustomColors) {
   if (typeof document === 'undefined') return;
   const c = sanitizeCustomColors(colors);
@@ -135,16 +204,59 @@ export function applyCustomTheme(colors: SolaraCustomColors) {
   const B = '#000000';
   const root = document.documentElement;
 
-  const derived: Record<string, string> = {
+  const surfaceAlt = mixColors(c.surface, W, 0.10);
+  const surfaceRaised = mixColors(c.surface, W, 0.20);
+  const mutedText = mixColors(c.text, c.bg, 0.38);
+  const primaryForeground = luminance(c.primary) > 0.55 ? B : W;
+
+  const hexTokens: Record<string, string> = {
+    '--ios-bg': c.bg,
+    '--ios-bg-secondary': c.surface,
+    '--ios-bg-tertiary': surfaceAlt,
+    '--ios-grouped-bg': c.bg,
+    '--ios-blue': c.primary,
+    '--separator-opaque': mixColors(c.border, c.bg, 0.2),
+  };
+
+  const hslTokens: Record<string, string> = {
+    '--background': hexToHslTriplet(c.bg),
+    '--foreground': hexToHslTriplet(c.text),
+    '--card': hexToHslTriplet(c.surface),
+    '--card-foreground': hexToHslTriplet(c.text),
+    '--popover': hexToHslTriplet(surfaceRaised),
+    '--popover-foreground': hexToHslTriplet(c.text),
+    '--primary': hexToHslTriplet(c.primary),
+    '--primary-foreground': hexToHslTriplet(primaryForeground),
+    '--secondary': hexToHslTriplet(surfaceAlt),
+    '--secondary-foreground': hexToHslTriplet(c.text),
+    '--muted': hexToHslTriplet(mixColors(c.surface, c.bg, 0.4)),
+    '--muted-foreground': hexToHslTriplet(mutedText),
+    '--accent': hexToHslTriplet(surfaceAlt),
+    '--accent-foreground': hexToHslTriplet(c.text),
+    '--border': hexToHslTriplet(c.border),
+    '--input': hexToHslTriplet(c.border),
+    '--ring': hexToHslTriplet(c.primary),
+  };
+
+  const compositeTokens: Record<string, string> = {
+    '--ios-blue-rgb': hexToRgbTriplet(c.primary),
+    '--glass-bg': hexToRgba(c.surface, 0.72),
+    '--glass-border': hexToRgba(mixColors(c.border, W, 0.25), 0.45),
+    '--tabbar-bg': hexToRgba(c.surface, 0.9),
+    '--tabbar-border': hexToRgba(c.text, 0.08),
+    '--separator': hexToRgba(c.text, 0.14),
+  };
+
+  const legacyTokens: Record<string, string> = {
     '--theme-bg': c.bg,
     '--theme-surface': c.surface,
-    '--theme-surface-alt': mixColors(c.surface, W, 0.10),
-    '--theme-surface-raised': mixColors(c.surface, W, 0.20),
+    '--theme-surface-alt': surfaceAlt,
+    '--theme-surface-raised': surfaceRaised,
     '--theme-border': c.border,
     '--theme-border-soft': mixColors(c.border, c.bg, 0.42),
     '--theme-border-strong': mixColors(c.border, W, 0.20),
     '--theme-text': c.text,
-    '--theme-muted': mixColors(c.text, c.bg, 0.38),
+    '--theme-muted': mutedText,
     '--theme-subtle': mixColors(c.text, c.bg, 0.60),
     '--theme-primary': c.primary,
     '--theme-primary-soft': mixColors(c.primary, B, 0.28),
@@ -153,9 +265,21 @@ export function applyCustomTheme(colors: SolaraCustomColors) {
     '--theme-front-soft': mixColors(c.front, B, 0.52),
   };
 
-  for (const [name, hex] of Object.entries(derived)) {
+  for (const [name, value] of Object.entries({ ...hexTokens, ...hslTokens, ...compositeTokens })) {
+    root.style.setProperty(name, value);
+  }
+  for (const [name, hex] of Object.entries(legacyTokens)) {
     root.style.setProperty(name, hex);
     root.style.setProperty(`${name}-rgb`, hexToRgbTriplet(hex));
+  }
+}
+
+/** Removes every inline override so light/dark palettes take effect again. */
+export function clearCustomTheme() {
+  if (typeof document === 'undefined') return;
+  const root = document.documentElement;
+  for (const name of CUSTOM_THEME_PROPERTIES) {
+    root.style.removeProperty(name);
   }
 }
 
@@ -198,6 +322,7 @@ export function applySolaraAppearance(appearance: SolaraAppearance) {
   root.style.setProperty('--solara-wallpaper-dim', String(safe.wallpaperDim / 100));
   root.style.setProperty('--solara-wallpaper-blur', `${safe.wallpaperBlur}px`);
   root.toggleAttribute('data-solara-reduce-texture', safe.reduceTexture);
+  root.toggleAttribute('data-solara-high-contrast', safe.highContrast);
 }
 
 export function resetSolaraAppearance() {
@@ -234,6 +359,7 @@ function sanitizeSolaraAppearance(value: unknown): SolaraAppearance {
     wallpaperBlur,
     reduceTexture: record.reduceTexture === true,
     autoAdaptTheme: record.autoAdaptTheme === true,
+    highContrast: record.highContrast === true,
   };
 }
 

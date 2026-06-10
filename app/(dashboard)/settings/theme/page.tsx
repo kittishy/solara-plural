@@ -8,7 +8,7 @@ import {
   Smartphone,
   ChevronRight,
   RefreshCw,
-  Image,
+  Image as ImageIcon,
   Save,
 } from "lucide-react";
 import { useTheme } from "next-themes";
@@ -23,6 +23,8 @@ import {
   readStoredCustomTheme,
   persistCustomTheme,
   applyCustomTheme,
+  clearCustomTheme,
+  isCustomTheme,
   readStoredSolaraAppearance,
   persistSolaraAppearance,
   applySolaraAppearance,
@@ -116,15 +118,15 @@ export default function ThemeSettingsPage() {
 
     persistCustomTheme(colors);
     persistSolaraAppearance(finalAppearance);
-    applyCustomTheme(colors);
-    applySolaraAppearance(finalAppearance);
 
-    const root = document.documentElement;
-    root.style.setProperty("--ios-blue", colors.primary);
-    root.style.setProperty("--ios-bg", colors.bg);
-    root.style.setProperty("--ios-bg-secondary", colors.surface);
-    root.style.setProperty("--ios-bg-tertiary", colors.surface);
-    root.style.setProperty("--ios-grouped-bg", colors.bg);
+    // Custom colours replace the light/dark palettes entirely; restoring the
+    // defaults removes every override so the selected mode takes effect again.
+    if (isCustomTheme(colors)) {
+      applyCustomTheme(colors);
+    } else {
+      clearCustomTheme();
+    }
+    applySolaraAppearance(finalAppearance);
 
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
@@ -212,6 +214,9 @@ export default function ThemeSettingsPage() {
             <RefreshCw size={15} />
             <span>{t("settings.restoreDefaults")}</span>
           </button>
+          <p className="text-caption-2 text-muted-foreground px-1">
+            {t("theme.customOverridesMode")}
+          </p>
         </div>
 
         {/* C) Wallpaper */}
@@ -222,7 +227,7 @@ export default function ThemeSettingsPage() {
           <GlassCard padding="md" className="flex flex-col gap-4">
             <div className="flex flex-col gap-1.5">
               <label className="text-caption-1 text-muted-foreground font-medium flex items-center gap-1.5">
-                <Image size={13} />
+                <ImageIcon size={13} />
                 {t("theme.wallpaperUrl")}
               </label>
               <Input
@@ -240,11 +245,11 @@ export default function ThemeSettingsPage() {
 
             <div className="flex flex-col gap-1.5">
               <label className="text-caption-1 text-muted-foreground font-medium flex items-center gap-1.5">
-                <Image size={13} />
+                <ImageIcon size={13} />
                 {t("theme.orUpload")}
               </label>
               <label className="flex items-center justify-center gap-2 py-3 rounded-ios-md bg-secondary ios-press cursor-pointer">
-                <Image size={16} className="text-ios-blue" />
+                <ImageIcon size={16} className="text-ios-blue" />
                 <span className="text-body text-ios-blue font-medium">{t("theme.chooseFile")}</span>
                 <input
                   type="file"
@@ -355,6 +360,34 @@ export default function ThemeSettingsPage() {
                   className={cn(
                     "pointer-events-none inline-block h-[27px] w-[27px] transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out",
                     appearance.reduceTexture ? "translate-x-5" : "translate-x-0"
+                  )}
+                />
+              </button>
+            </div>
+
+            <div className="flex items-center gap-3 px-4 py-3 min-h-[44px] border-t border-border/60">
+              <div className="flex-1">
+                <p className="text-body text-foreground">{t("theme.highContrast")}</p>
+                <p className="text-caption-1 text-muted-foreground mt-0.5">{t("theme.highContrastHint")}</p>
+              </div>
+              <button
+                role="switch"
+                aria-checked={appearance.highContrast}
+                onClick={() =>
+                  setAppearance((prev) => ({
+                    ...prev,
+                    highContrast: !prev.highContrast,
+                  }))
+                }
+                className={cn(
+                  "relative inline-flex h-[31px] w-[51px] shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none",
+                  appearance.highContrast ? "bg-ios-blue" : "bg-muted"
+                )}
+              >
+                <span
+                  className={cn(
+                    "pointer-events-none inline-block h-[27px] w-[27px] transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out",
+                    appearance.highContrast ? "translate-x-5" : "translate-x-0"
                   )}
                 />
               </button>

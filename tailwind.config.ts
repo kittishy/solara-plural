@@ -11,8 +11,11 @@ const config: Config = {
     extend: {
       colors: {
         // iOS 26 system colors
+        // `blue` is the app accent: it reads the runtime CSS variable so the
+        // user's custom primary colour applies to every text-ios-blue /
+        // bg-ios-blue usage (compiled hex would ignore personalization).
         ios: {
-          blue: "#007AFF",
+          blue: "rgb(var(--ios-blue-rgb, 0 122 255) / <alpha-value>)",
           indigo: "#5856D6",
           purple: "#AF52DE",
           pink: "#FF2D55",

@@ -31,6 +31,7 @@
 
     /* iOS system colors */
     --ios-blue: #007aff;
+    --ios-blue-rgb: 0 122 255;
     --ios-green: #34c759;
     --ios-red: #ff3b30;
     --ios-orange: #ff9500;
@@ -407,6 +408,40 @@ body::after {
 [data-solara-reduce-texture] .glass-subtle {
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
+}
+
+/* ── High contrast option (Settings → Theme → Options) ──────────────────
+   Stronger text and borders, near-opaque surfaces instead of translucent
+   glass, and no ambient wash — readability first. Both palettes covered. */
+:root[data-solara-high-contrast] {
+  --muted-foreground: 30 8% 30%;
+  --border: 36 10% 62%;
+  --input: 36 10% 62%;
+  --separator: rgba(60, 60, 67, 0.4);
+  --glass-bg: rgba(255, 253, 250, 0.96);
+  --tabbar-bg: rgba(250, 248, 245, 0.98);
+  --tabbar-border: rgba(0, 0, 0, 0.22);
+}
+
+:root[data-solara-high-contrast].dark {
+  --muted-foreground: 240 5% 80%;
+  --border: 240 4% 36%;
+  --input: 240 4% 36%;
+  --separator: rgba(160, 160, 168, 0.55);
+  --glass-bg: rgba(20, 20, 22, 0.97);
+  --tabbar-bg: rgba(20, 20, 22, 0.98);
+  --tabbar-border: rgba(255, 255, 255, 0.25);
+}
+
+[data-solara-high-contrast] .glass,
+[data-solara-high-contrast] .glass-subtle,
+[data-solara-high-contrast] .glass-bar {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+[data-solara-high-contrast] body::after {
+  background: none;
 }
 
 /* Installed-app (TWA / PWA) status-bar handling.

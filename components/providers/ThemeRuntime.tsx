@@ -3,24 +3,22 @@ import { useEffect } from "react";
 import {
   readStoredCustomTheme,
   applyCustomTheme,
+  clearCustomTheme,
+  isCustomTheme,
   readStoredSolaraAppearance,
   applySolaraAppearance,
-  DEFAULT_SOLARA_COLORS,
 } from "@/lib/theme";
 
 export function ThemeRuntime() {
   useEffect(() => {
     const colors = readStoredCustomTheme();
-    const isCustomized = JSON.stringify(colors) !== JSON.stringify(DEFAULT_SOLARA_COLORS);
 
-    if (isCustomized) {
+    if (isCustomTheme(colors)) {
       applyCustomTheme(colors);
-      const root = document.documentElement;
-      root.style.setProperty("--ios-bg", colors.bg);
-      root.style.setProperty("--ios-bg-secondary", colors.surface);
-      root.style.setProperty("--ios-blue", colors.primary);
-      root.style.setProperty("--ios-bg-tertiary", colors.surface);
-      root.style.setProperty("--ios-grouped-bg", colors.bg);
+    } else {
+      // No customization: make sure stale inline overrides never linger so
+      // the light/dark palettes from globals.css are the source of truth.
+      clearCustomTheme();
     }
 
     const appearance = readStoredSolaraAppearance();
