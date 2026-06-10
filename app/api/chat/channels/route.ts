@@ -1,6 +1,6 @@
 import { db } from '@/lib/db';
-import { systemChatChannels, systemChatMessages } from '@/lib/db/schema';
-import { eq, asc, isNull, and } from 'drizzle-orm';
+import { systemChatChannels, systemChatMessages, chatChannelReads } from '@/lib/db/schema';
+import { eq, asc, isNull, and, gt, count, sql } from 'drizzle-orm';
 import { requireSystemAuth, ok, err, parseJsonRecord } from '@/lib/api/helpers';
 import { createId } from '@paralleldrive/cuid2';
 import { revalidatePath } from 'next/cache';
@@ -42,7 +42,32 @@ export async function GET() {
     channels = [{ id, name: 'geral', sortOrder: 0, createdAt: now }];
   }
 
-  return ok({ channels }, 200, {
+  // Unread badge per channel: messages newer than this account's last visit.
+  // A channel never opened counts everything (last_read_at falls back to epoch).
+  const unreadRows = await db
+    .select({
+      channelId: systemChatMessages.channelId,
+      unread: count(),
+    })
+    .from(systemChatMessages)
+    .leftJoin(chatChannelReads, and(
+      eq(chatChannelReads.channelId, systemChatMessages.channelId),
+      eq(chatChannelReads.systemId, auth.systemId),
+    ))
+    .where(and(
+      eq(systemChatMessages.systemId, auth.systemId),
+      gt(systemChatMessages.createdAt, sql`coalesce(${chatChannelReads.lastReadAt}, 'epoch'::timestamp)`),
+    ))
+    .groupBy(systemChatMessages.channelId);
+
+  const unreadByChannel = new Map(unreadRows.map((row) => [row.channelId, Number(row.unread)]));
+
+  return ok({
+    channels: channels.map((channel) => ({
+      ...channel,
+      unreadCount: unreadByChannel.get(channel.id) ?? 0,
+    })),
+  }, 200, {
     headers: { 'Cache-Control': 'private, no-cache' },
   });
 }

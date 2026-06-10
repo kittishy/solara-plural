@@ -4,6 +4,7 @@ import { eq, asc, and } from 'drizzle-orm';
 import { requireSystemAuth, ok, err, parseJsonRecord } from '@/lib/api/helpers';
 import { createId } from '@paralleldrive/cuid2';
 import { revalidatePath } from 'next/cache';
+import { publishChatEvent } from '@/lib/chat/realtime-broker';
 
 // GET /api/chat?channelId=... — list last 100 messages for the given channel
 export async function GET(request: Request) {
@@ -90,6 +91,15 @@ export async function POST(request: Request) {
     .insert(systemChatMessages)
     .values({ id, systemId: auth.systemId, channelId, memberId, content, createdAt: now })
     .returning();
+
+  // Wake any open chat streams on this instance so other devices/tabs of the
+  // same system paint the message instantly (cross-instance is covered by the
+  // stream's DB poll).
+  publishChatEvent(auth.systemId, {
+    messageId: id,
+    channelId,
+    createdAt: now.toISOString(),
+  });
 
   revalidatePath('/chat');
 

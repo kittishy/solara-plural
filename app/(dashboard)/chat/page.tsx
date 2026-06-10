@@ -34,7 +34,7 @@ import { useLanguage } from "@/components/providers/LanguageProvider";
 // markdown parser stays out of the chat route's initial JS bundle.
 const ReactMarkdown = dynamic(() => import("react-markdown"), { ssr: false });
 
-type Channel = { id: string; name: string; sortOrder?: number };
+type Channel = { id: string; name: string; sortOrder?: number; unreadCount?: number };
 type Message = {
   id: string;
   content: string;
@@ -109,15 +109,61 @@ export default function ChatPage() {
     }
   }, [channels.length, activeChannelId]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Live delivery comes from the SSE stream below; this slow interval is only
+  // a safety net for clients where EventSource can't stay connected.
   const { data: messagesData, isLoading: loadingMessages } = useSWR<{ messages: Message[] }>(
     activeChannelId ? `/api/chat?channelId=${activeChannelId}` : null,
     apiFetcher,
-    { refreshInterval: 5000 }
+    { refreshInterval: 30_000 }
   );
 
   const messages = messagesData?.messages ?? [];
   const activeChannel = channels.find((c) => c.id === activeChannelId);
   const chatUnavailableMessage = channelsError instanceof Error ? channelsError.message : "";
+
+  // Keep the current channel readable inside the long-lived SSE handler.
+  const activeChannelIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    activeChannelIdRef.current = activeChannelId;
+  }, [activeChannelId]);
+
+  // Opening (or switching to) a channel clears its unread badge.
+  useEffect(() => {
+    if (!activeChannelId) return;
+    void fetch(`/api/chat/channels/${activeChannelId}/read`, {
+      method: "POST",
+      credentials: "same-origin",
+    }).then(() => mutate("/api/chat/channels")).catch(() => undefined);
+  }, [activeChannelId]);
+
+  // Real-time messages via SSE (replaces the old 5s polling). New messages on
+  // the open channel repaint instantly; messages on other channels bump their
+  // unread badge. EventSource reconnects automatically when the server closes
+  // the stream (Vercel function duration limit) or the network drops.
+  useEffect(() => {
+    if (typeof window === "undefined" || !("EventSource" in window)) return;
+    const source = new EventSource("/api/chat/stream");
+
+    source.addEventListener("message", (event) => {
+      try {
+        const payload = JSON.parse((event as MessageEvent).data) as { channelId?: string };
+        if (!payload.channelId) return;
+        if (payload.channelId === activeChannelIdRef.current) {
+          void mutate(`/api/chat?channelId=${payload.channelId}`);
+          void fetch(`/api/chat/channels/${payload.channelId}/read`, {
+            method: "POST",
+            credentials: "same-origin",
+          }).catch(() => undefined);
+        } else {
+          void mutate("/api/chat/channels");
+        }
+      } catch {
+        // Malformed event — the 30s SWR fallback still covers us.
+      }
+    });
+
+    return () => source.close();
+  }, []);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -275,7 +321,15 @@ export default function ChatPage() {
             className="flex items-center gap-1.5 text-ios-blue ios-press"
             aria-label={t("chat.channels")}
           >
-            <Menu size={20} />
+            <span className="relative">
+              <Menu size={20} />
+              {channels.some((ch) => (ch.unreadCount ?? 0) > 0 && ch.id !== activeChannelId) && (
+                <span
+                  className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-ios-red"
+                  aria-hidden="true"
+                />
+              )}
+            </span>
             <span className="text-body font-medium">{t("chat.channels")}</span>
           </button>
           <h1 className="text-headline font-semibold text-foreground flex items-center gap-1.5 absolute left-1/2 -translate-x-1/2">
@@ -644,6 +698,11 @@ export default function ChatPage() {
                 >
                   <Hash size={16} />
                   <span className="text-body font-medium">{ch.name}</span>
+                  {(ch.unreadCount ?? 0) > 0 && activeChannelId !== ch.id && (
+                    <span className="ml-auto min-w-[20px] h-5 px-1.5 rounded-full bg-ios-blue text-white text-caption-2 font-semibold flex items-center justify-center">
+                      {(ch.unreadCount ?? 0) > 99 ? "99+" : ch.unreadCount}
+                    </span>
+                  )}
                 </button>
                 {channels.length > 1 && (
                   <button
