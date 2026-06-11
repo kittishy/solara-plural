@@ -117,6 +117,13 @@ export async function GET() {
       name: system.name,
       description: system.description,
       accountType: system.accountType,
+      publicProfile: {
+        slug: system.publicSlug,
+        isPublic: system.isPublic === 1,
+        showBio: system.publicShowBio === 1,
+        showMembers: system.publicShowMembers === 1,
+        showFront: system.publicShowFront === 1,
+      },
     },
     members: allMembers.map((member) => ({
       ...member,

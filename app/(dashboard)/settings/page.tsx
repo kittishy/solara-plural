@@ -201,6 +201,14 @@ export default function SettingsPage() {
               className="cursor-pointer"
             />
           </Link>
+          <Link href="/settings/public-profile">
+            <GroupedRow
+              label={t("publicProfile.title")}
+              icon={<Globe size={18} />}
+              chevron
+              className="cursor-pointer"
+            />
+          </Link>
           <Link href="/settings/integrations">
             <GroupedRow
               label={t("settings.integrations")}

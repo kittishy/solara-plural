@@ -11,6 +11,15 @@ export const systems = pgTable('systems', {
   email:        text('email').notNull().unique(),
   passwordHash: text('password_hash').notNull(),
   accountType:  text('account_type').notNull().default('system'),
+  // Public profile: opt-in and granular. `isPublic` is the master switch; the
+  // `publicShow*` flags gate each section independently. `publicSlug` is the
+  // shareable handle (/u/<slug>). Everything defaults to private — nothing is
+  // ever exposed until the system explicitly turns it on.
+  publicSlug:         text('public_slug'),
+  isPublic:           integer('is_public').notNull().default(0),
+  publicShowBio:      integer('public_show_bio').notNull().default(1),
+  publicShowMembers:  integer('public_show_members').notNull().default(0),
+  publicShowFront:    integer('public_show_front').notNull().default(0),
   // Admin panel: elevated accounts can reach the /admin area. The env allowlist
   // (ADMIN_EMAILS) is the source of truth for bootstrapping; this flag mirrors
   // grants made from within the panel so access survives env changes.
@@ -23,7 +32,9 @@ export const systems = pgTable('systems', {
   deletionScheduledFor: timestamp('deletion_scheduled_for', { mode: 'date' }),
   createdAt:    timestamp('created_at', { mode: 'date' }).notNull().defaultNow(),
   updatedAt:    timestamp('updated_at', { mode: 'date' }).notNull().defaultNow(),
-});
+}, (t) => ({
+  publicSlugUnique: uniqueIndex('ux_systems_public_slug').on(t.publicSlug),
+}));
 
 // Password reset tokens are stored as hashes only. The raw token is shown once
 // through the delivery channel and can never be recovered from the database.
@@ -196,6 +207,10 @@ export const members = pgTable('members', {
   // Presence status: 'active' (default) | 'dormant' | 'unknown'
   status:      text('status').notNull().default('active'),
   isArchived:  integer('is_archived').notNull().default(0),
+  // Per-member opt-in for the public profile. Only honoured when the system's
+  // publicShowMembers flag is on — a member is shown publicly only if both the
+  // system section toggle and this flag are set.
+  isPublic:    integer('is_public').notNull().default(0),
   createdAt:   timestamp('created_at', { mode: 'date' }).notNull().defaultNow(),
   updatedAt:   timestamp('updated_at', { mode: 'date' }).notNull().defaultNow(),
 }, (t) => ({

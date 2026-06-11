@@ -29,6 +29,13 @@
       "when": 1749657600000,
       "tag": "0003_org_interna",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1749744000000,
+      "tag": "0004_public_profile",
+      "breakpoints": true
     }
   ]
 }
