@@ -138,12 +138,12 @@ export default function SettingsPage() {
       {(session?.user as { isAdmin?: boolean } | undefined)?.isAdmin && (
         <div className="px-4 mb-6">
           <p className="text-footnote font-semibold text-muted-foreground uppercase tracking-wide mb-2 px-1">
-            Administração
+            {t("settings.adminSection")}
           </p>
           <GroupedSection>
-            <Link href={localizePathname("/admin", language)}>
+            <Link href="/admin">
               <GroupedRow
-                label="Painel de administração"
+                label={t("settings.adminPanel")}
                 icon={<ShieldCheck size={18} />}
                 chevron
                 className="cursor-pointer"
