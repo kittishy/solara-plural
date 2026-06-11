@@ -1,4 +1,5 @@
 import type { NextAuthConfig } from 'next-auth';
+import { isAdminEmail } from './admin-allowlist';
 
 export const authConfig = {
   session: { strategy: 'jwt' },
@@ -7,8 +8,10 @@ export const authConfig = {
       if (user) {
         token.systemId = user.id;
         token.accountType = user.accountType === 'singlet' ? 'singlet' : 'system';
-        token.isAdmin = user.isAdmin === true;
       }
+      // Always re-derive isAdmin from the token email so sessions created
+      // before this field was introduced still get the correct value.
+      token.isAdmin = isAdminEmail(token.email);
       return token;
     },
     async session({ session, token }) {

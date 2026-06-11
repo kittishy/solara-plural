@@ -468,6 +468,8 @@ export const translations = {
       integrations: 'Integrations',
       accountTypeUpgradeDesc: 'Upgrade to a full system account with member management, front tracking, and all features.',
       accountTypeSwitchDesc: 'Switch to a simplified singlet profile. Members and front history are preserved.',
+      adminSection: 'Administration',
+      adminPanel: 'Admin panel',
     },
     integrations: {
       title: 'PluralKit Sync',
@@ -1168,6 +1170,8 @@ export const translations = {
       integrations: 'Integrações',
       accountTypeUpgradeDesc: 'Faça upgrade para uma conta de sistema completa com gerenciamento de membros, rastreamento de front e todos os recursos.',
       accountTypeSwitchDesc: 'Mude para um perfil singlet simplificado. Membros e histórico de front são preservados.',
+      adminSection: 'Administração',
+      adminPanel: 'Painel de administração',
     },
     integrations: {
       title: 'Sincronização PluralKit',
@@ -1868,6 +1872,8 @@ export const translations = {
       integrations: 'Integraciones',
       accountTypeUpgradeDesc: 'Actualiza a una cuenta de sistema completa con gestión de miembros, seguimiento de front y todas las funciones.',
       accountTypeSwitchDesc: 'Cambia a un perfil singlet simplificado. Los miembros y el historial de front se conservan.',
+      adminSection: 'Administración',
+      adminPanel: 'Panel de administración',
     },
     integrations: {
       title: 'Sincronización PluralKit',
