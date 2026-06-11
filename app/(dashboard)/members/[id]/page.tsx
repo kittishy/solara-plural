@@ -7,8 +7,11 @@ import {
   members,
   frontEntries,
   customFields,
+  memberGroups as memberGroupsTable,
+  memberGroupMembers,
+  memberRelationships as memberRelationshipsTable,
 } from "@/lib/db/schema";
-import { and, eq, desc, isNull } from "drizzle-orm";
+import { and, eq, desc, isNull, or } from "drizzle-orm";
 import { requireSystemId } from "@/lib/auth/session";
 import { parseMemberIds } from "@/lib/front";
 import { parseStoredTags } from "@/lib/members/fields";
@@ -16,6 +19,7 @@ import { parseStoredCustomFieldOptions } from "@/lib/custom-fields";
 import { readMemberCustomFieldValues } from "@/lib/member-custom-fields";
 import { GlassCard, GroupedSection } from "@/components/glass/GlassCard";
 import DynamicAvatarImage from "@/components/ui/DynamicAvatarImage";
+import { RelationshipsSection } from "@/components/members/RelationshipsSection";
 import {
   LANGUAGE_COOKIE_KEY,
   isLanguage,
@@ -23,6 +27,7 @@ import {
   translations,
   interpolate,
 } from "@/lib/i18n";
+import { cn } from "@/lib/utils";
 
 function getServerT(lang: string) {
   const safeLang = isLanguage(lang) ? lang : DEFAULT_LANGUAGE;
@@ -97,24 +102,59 @@ export default async function MemberDetailPage({
 
   if (!member) notFound();
 
-  const [history, definitions, values, currentFront] = await Promise.all([
-    db.query.frontEntries.findMany({
-      where: eq(frontEntries.systemId, systemId),
-      orderBy: [desc(frontEntries.startedAt)],
-      limit: 50,
-    }),
-    db.query.customFields.findMany({
-      where: eq(customFields.systemId, systemId),
-      orderBy: (f, { asc }) => [asc(f.sortOrder)],
-    }),
-    readMemberCustomFieldValues(systemId, member.id),
-    db.query.frontEntries.findFirst({
-      where: and(
-        eq(frontEntries.systemId, systemId),
-        isNull(frontEntries.endedAt)
-      ),
-    }),
-  ]);
+  const [history, definitions, values, currentFront, memberGroupRows, relRows, systemMembers] =
+    await Promise.all([
+      db.query.frontEntries.findMany({
+        where: eq(frontEntries.systemId, systemId),
+        orderBy: [desc(frontEntries.startedAt)],
+        limit: 50,
+      }),
+      db.query.customFields.findMany({
+        where: eq(customFields.systemId, systemId),
+        orderBy: (f, { asc }) => [asc(f.sortOrder)],
+      }),
+      readMemberCustomFieldValues(systemId, member.id),
+      db.query.frontEntries.findFirst({
+        where: and(
+          eq(frontEntries.systemId, systemId),
+          isNull(frontEntries.endedAt)
+        ),
+      }),
+      db
+        .select({
+          id: memberGroupsTable.id,
+          name: memberGroupsTable.name,
+          color: memberGroupsTable.color,
+        })
+        .from(memberGroupMembers)
+        .innerJoin(
+          memberGroupsTable,
+          eq(memberGroupMembers.groupId, memberGroupsTable.id)
+        )
+        .where(eq(memberGroupMembers.memberId, params.id)),
+      db
+        .select()
+        .from(memberRelationshipsTable)
+        .where(
+          and(
+            eq(memberRelationshipsTable.systemId, systemId),
+            or(
+              eq(memberRelationshipsTable.fromMemberId, params.id),
+              eq(memberRelationshipsTable.toMemberId, params.id)
+            )
+          )
+        )
+        .orderBy(memberRelationshipsTable.createdAt),
+      db
+        .select({
+          id: members.id,
+          name: members.name,
+          color: members.color,
+        })
+        .from(members)
+        .where(eq(members.systemId, systemId))
+        .orderBy(members.name),
+    ]);
 
   const memberHistory = history
     .filter((entry) => parseMemberIds(entry.memberIds).includes(member.id))
@@ -126,6 +166,7 @@ export default async function MemberDetailPage({
 
   const tags = parseStoredTags(member.tags);
   const memberColor = member.color ?? "#8E8E93";
+  const memberStatus = member.status ?? "active";
 
   return (
     <div className="animate-fade-in pb-8">
@@ -161,8 +202,6 @@ export default async function MemberDetailPage({
           style={{
             background: `${memberColor}22`,
             border: `3px solid ${memberColor}66`,
-            // Shared-element target: matches the list avatar tagged by
-            // lib/view-transition.ts (HERO_AVATAR), so it morphs in on nav.
             ["viewTransitionName" as string]: "solara-hero",
           }}
         >
@@ -189,14 +228,32 @@ export default async function MemberDetailPage({
               {member.pronouns}
             </p>
           )}
-          {isFronting && (
-            <div className="inline-flex items-center gap-1.5 mt-2 px-2.5 py-1 rounded-full bg-ios-green/15">
-              <span className="w-2 h-2 rounded-full bg-ios-green" />
-              <span className="text-caption-1 font-semibold text-ios-green">
-                {t("members.frontingNow")}
-              </span>
-            </div>
-          )}
+          <div className="flex flex-wrap justify-center gap-2 mt-2">
+            {isFronting && (
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-ios-green/15">
+                <span className="w-2 h-2 rounded-full bg-ios-green" />
+                <span className="text-caption-1 font-semibold text-ios-green">
+                  {t("members.frontingNow")}
+                </span>
+              </div>
+            )}
+            {memberStatus !== "active" && (
+              <div
+                className={cn(
+                  "inline-flex items-center px-2.5 py-1 rounded-full",
+                  memberStatus === "dormant"
+                    ? "bg-amber-400/15 text-amber-500"
+                    : "bg-muted text-muted-foreground"
+                )}
+              >
+                <span className="text-caption-1 font-semibold">
+                  {memberStatus === "dormant"
+                    ? t("members.statusDormant")
+                    : t("members.statusUnknown")}
+                </span>
+              </div>
+            )}
+          </div>
         </div>
 
         {member.role && (
@@ -219,6 +276,27 @@ export default async function MemberDetailPage({
                 {tag}
               </span>
             ))}
+          </div>
+        )}
+
+        {memberGroupRows.length > 0 && (
+          <div className="flex flex-wrap justify-center gap-1.5">
+            {memberGroupRows.map((group) => {
+              const c = group.color ?? "#8E8E93";
+              return (
+                <span
+                  key={group.id}
+                  className="px-2.5 py-0.5 rounded-full text-caption-1 font-semibold border"
+                  style={{
+                    background: `${c}18`,
+                    color: c,
+                    borderColor: `${c}44`,
+                  }}
+                >
+                  {group.name}
+                </span>
+              );
+            })}
           </div>
         )}
       </div>
@@ -288,6 +366,18 @@ export default async function MemberDetailPage({
           </GlassCard>
         </div>
       )}
+
+      {/* Relationships */}
+      <div className="px-4 mb-5">
+        <p className="text-footnote font-semibold text-muted-foreground uppercase tracking-wide mb-2 px-1">
+          {t("members.relationships")}
+        </p>
+        <RelationshipsSection
+          memberId={member.id}
+          initialRelationships={relRows}
+          allMembers={systemMembers}
+        />
+      </div>
 
       {/* Front history */}
       <div className="px-4 mb-6">

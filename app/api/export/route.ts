@@ -9,6 +9,9 @@ import {
   memberFieldValues,
   memberExternalLinks,
   members,
+  memberGroups,
+  memberGroupMembers,
+  memberRelationships,
   systemBlocks,
   systemFriendMemberShares,
   systemFriendRequests,
@@ -41,6 +44,9 @@ export async function GET() {
     allExternalLinks,
     allCustomFields,
     allMemberFieldValues,
+    allMemberGroups,
+    allMemberGroupMembers,
+    allMemberRelationships,
   ] = await Promise.all([
     db.select().from(members).where(eq(members.systemId, auth.systemId)),
     db.select().from(frontEntries).where(eq(frontEntries.systemId, auth.systemId)),
@@ -85,10 +91,26 @@ export async function GET() {
       .select()
       .from(memberFieldValues)
       .where(eq(memberFieldValues.systemId, auth.systemId)),
+    db
+      .select()
+      .from(memberGroups)
+      .where(eq(memberGroups.systemId, auth.systemId)),
+    db
+      .select({
+        groupId: memberGroupMembers.groupId,
+        memberId: memberGroupMembers.memberId,
+      })
+      .from(memberGroupMembers)
+      .innerJoin(memberGroups, eq(memberGroupMembers.groupId, memberGroups.id))
+      .where(eq(memberGroups.systemId, auth.systemId)),
+    db
+      .select()
+      .from(memberRelationships)
+      .where(eq(memberRelationships.systemId, auth.systemId)),
   ]);
 
   const exportData = {
-    version: 5,
+    version: 6,
     exportedAt: new Date().toISOString(),
     system: {
       id: system.id,
@@ -112,6 +134,11 @@ export async function GET() {
       })),
       memberValues: allMemberFieldValues,
     },
+    groups: {
+      definitions: allMemberGroups,
+      memberships: allMemberGroupMembers,
+    },
+    relationships: allMemberRelationships,
     integrations: {
       memberExternalLinks: allExternalLinks,
     },

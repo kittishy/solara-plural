@@ -16,6 +16,7 @@ import {
 import { BottomSheet } from "@/components/glass/BottomSheet";
 import { revalidateMembersAndFront } from "@/lib/swr";
 import { useLanguage } from "@/components/providers/LanguageProvider";
+import { cn } from "@/lib/utils";
 
 interface MemberEditorProps {
   memberId?: string;
@@ -31,9 +32,19 @@ type Member = {
   role: string | null;
   tags: string[];
   notes: string | null;
+  status?: string;
+  groupIds?: string[];
 };
 
+type Group = { id: string; name: string; color: string | null };
+
 const DEFAULT_COLOR = "#8B5CF6";
+
+const STATUS_COLORS: Record<string, string> = {
+  active: "bg-ios-green/15 text-ios-green",
+  dormant: "bg-amber-400/15 text-amber-500",
+  unknown: "bg-muted text-muted-foreground",
+};
 
 export function MemberEditor({ memberId }: MemberEditorProps) {
   const router = useRouter();
@@ -54,6 +65,9 @@ export function MemberEditor({ memberId }: MemberEditorProps) {
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState("");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [status, setStatus] = useState<"active" | "dormant" | "unknown">("active");
+  const [groupIds, setGroupIds] = useState<string[]>([]);
+  const [availableGroups, setAvailableGroups] = useState<Group[]>([]);
 
   const [customFields, setCustomFields] = useState<MemberCustomField[]>([]);
   const [customValues, setCustomValues] = useState<Record<string, string>>({});
@@ -62,10 +76,15 @@ export function MemberEditor({ memberId }: MemberEditorProps) {
     let cancelled = false;
     async function load() {
       try {
-        if (memberId) {
-          const memberRes = await fetch(`/api/members/${memberId}`, {
-            credentials: "same-origin",
-          });
+        const [memberRes, fieldsRes, groupsRes] = await Promise.all([
+          memberId
+            ? fetch(`/api/members/${memberId}`, { credentials: "same-origin" })
+            : Promise.resolve(null),
+          fetch("/api/custom-fields", { credentials: "same-origin" }),
+          fetch("/api/groups", { credentials: "same-origin" }),
+        ]);
+
+        if (memberRes) {
           const memberJson = await memberRes.json();
           if (memberJson.success && !cancelled) {
             const m = memberJson.data as Member & {
@@ -79,15 +98,19 @@ export function MemberEditor({ memberId }: MemberEditorProps) {
             setTags(m.tags ?? []);
             setAvatarUrl(m.avatarUrl ?? null);
             setCustomValues(m.customFieldValues ?? {});
+            setStatus((m.status as "active" | "dormant" | "unknown") ?? "active");
+            setGroupIds(m.groupIds ?? []);
           }
         }
 
-        const fieldsRes = await fetch("/api/custom-fields", {
-          credentials: "same-origin",
-        });
         const fieldsJson = await fieldsRes.json();
         if (fieldsJson.success && !cancelled) {
           setCustomFields(fieldsJson.data?.fields ?? []);
+        }
+
+        const groupsJson = await groupsRes.json();
+        if (groupsJson.success && !cancelled) {
+          setAvailableGroups(groupsJson.data ?? []);
         }
       } catch {
         // ignore
@@ -112,6 +135,12 @@ export function MemberEditor({ memberId }: MemberEditorProps) {
     setTags(tags.filter((t) => t !== tag));
   }
 
+  function toggleGroup(id: string) {
+    setGroupIds((prev) =>
+      prev.includes(id) ? prev.filter((g) => g !== id) : [...prev, id]
+    );
+  }
+
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
     setError("");
@@ -130,6 +159,7 @@ export function MemberEditor({ memberId }: MemberEditorProps) {
         tags,
         avatarUrl: avatarUrl || null,
         customFieldValues: customValues,
+        status,
       };
       const res = await fetch(
         isNew ? "/api/members" : `/api/members/${memberId}`,
@@ -145,6 +175,15 @@ export function MemberEditor({ memberId }: MemberEditorProps) {
         setError(json.error ?? t("common.saveError"));
         return;
       }
+
+      const savedId = isNew ? (json.data as { id: string }).id : memberId!;
+      await fetch(`/api/members/${savedId}/groups`, {
+        method: "PUT",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ groupIds }),
+      });
+
       revalidateMembersAndFront();
       router.push(isNew ? "/members" : `/members/${memberId}`);
       router.refresh();
@@ -183,6 +222,12 @@ export function MemberEditor({ memberId }: MemberEditorProps) {
       </div>
     );
   }
+
+  const statusLabel: Record<string, string> = {
+    active: t("members.statusActive"),
+    dormant: t("members.statusDormant"),
+    unknown: t("members.statusUnknown"),
+  };
 
   return (
     <div className="animate-fade-in pb-8">
@@ -262,6 +307,28 @@ export function MemberEditor({ memberId }: MemberEditorProps) {
           </div>
 
           <div className="flex flex-col gap-1.5">
+            <Label>{t("members.status")}</Label>
+            <div className="grid grid-cols-3 rounded-ios-sm overflow-hidden border border-border/60">
+              {(["active", "dormant", "unknown"] as const).map((s, i) => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => setStatus(s)}
+                  className={cn(
+                    "py-2 text-subheadline font-medium transition-colors",
+                    i > 0 && "border-l border-border/60",
+                    status === s
+                      ? STATUS_COLORS[s]
+                      : "bg-[var(--ios-bg-secondary)] text-muted-foreground"
+                  )}
+                >
+                  {statusLabel[s]}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-1.5">
             <Label htmlFor="description">{t("members.description")}</Label>
             <textarea
               id="description"
@@ -316,6 +383,45 @@ export function MemberEditor({ memberId }: MemberEditorProps) {
           </div>
         </GlassCard>
 
+        {availableGroups.length > 0 && (
+          <GlassCard padding="lg" className="flex flex-col gap-3">
+            <p className="text-footnote font-semibold text-muted-foreground uppercase tracking-wide">
+              {t("members.groups")}
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {availableGroups.map((group) => {
+                const selected = groupIds.includes(group.id);
+                const c = group.color ?? "#8B5CF6";
+                return (
+                  <button
+                    key={group.id}
+                    type="button"
+                    onClick={() => toggleGroup(group.id)}
+                    className={cn(
+                      "px-3 py-1.5 rounded-full text-subheadline font-medium border transition-all",
+                      selected ? "opacity-100" : "opacity-50 hover:opacity-75"
+                    )}
+                    style={
+                      selected
+                        ? {
+                            background: `${c}22`,
+                            color: c,
+                            borderColor: `${c}66`,
+                          }
+                        : {
+                            borderColor: "transparent",
+                            background: "var(--secondary)",
+                          }
+                    }
+                  >
+                    {group.name}
+                  </button>
+                );
+              })}
+            </div>
+          </GlassCard>
+        )}
+
         {customFields.length > 0 && (
           <GlassCard padding="lg">
             <p className="text-footnote font-semibold text-muted-foreground uppercase tracking-wide mb-3">
@@ -353,7 +459,11 @@ export function MemberEditor({ memberId }: MemberEditorProps) {
           disabled={saving || !name.trim()}
         >
           <Save size={16} />
-          {saving ? t("common.saving") : isNew ? t("members.createMember") : t("members.saveChanges")}
+          {saving
+            ? t("common.saving")
+            : isNew
+            ? t("members.createMember")
+            : t("members.saveChanges")}
         </Button>
       </form>
 

@@ -1,5 +1,5 @@
 import { db } from '@/lib/db';
-import { members } from '@/lib/db/schema';
+import { members, memberGroupMembers } from '@/lib/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { requireAuth, ok, err, parseJsonRecord } from '@/lib/api/helpers';
 import { revalidatePath } from 'next/cache';
@@ -21,8 +21,12 @@ export async function GET(_req: Request, { params }: Params) {
   });
 
   if (!member) return err('Member not found', 404);
-  const customFieldValues = await readMemberCustomFieldValues(auth.systemId, id);
-  return ok({ ...member, tags: parseStoredTags(member.tags), customFieldValues });
+  const [customFieldValues, groupRows] = await Promise.all([
+    readMemberCustomFieldValues(auth.systemId, id),
+    db.query.memberGroupMembers.findMany({ where: eq(memberGroupMembers.memberId, id) }),
+  ]);
+  const groupIds = groupRows.map((r) => r.groupId);
+  return ok({ ...member, tags: parseStoredTags(member.tags), customFieldValues, groupIds });
 }
 
 // PUT /api/members/[id]
@@ -41,6 +45,8 @@ export async function PUT(request: Request, { params }: Params) {
   if (!name) return err('Name is required');
   if (!tags) return err('tags must be an array of strings');
 
+  const status = body.status === 'dormant' || body.status === 'unknown' ? body.status : 'active';
+
   const updated = await db.update(members)
     .set({
       name,
@@ -51,6 +57,7 @@ export async function PUT(request: Request, { params }: Params) {
       role:        readOptionalString(body.role),
       tags:        tags.length > 0 ? JSON.stringify(tags) : null,
       notes:       readOptionalString(body.notes),
+      status,
       updatedAt:   new Date(),
     })
     .where(and(eq(members.id, id), eq(members.systemId, auth.systemId)))

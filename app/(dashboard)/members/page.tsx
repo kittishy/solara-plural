@@ -14,7 +14,7 @@ import { BottomSheet } from "@/components/glass/BottomSheet";
 import { apiFetcher, swrKeys } from "@/lib/swr";
 import DynamicAvatarImage from "@/components/ui/DynamicAvatarImage";
 import { useLanguage } from "@/components/providers/LanguageProvider";
-import { useViewTransitionRouter, HERO_AVATAR } from "@/lib/view-transition";
+import { useViewTransitionRouter } from "@/lib/view-transition";
 import { useHaptics } from "@/lib/haptics";
 import { cn } from "@/lib/utils";
 
@@ -26,17 +26,23 @@ type Member = {
   tags: string[];
   color?: string | null;
   avatarUrl?: string | null;
+  status?: string | null;
 };
 
 type FrontEntry = { memberIds: string[] };
+
+type StatusFilter = "all" | "active" | "dormant" | "unknown";
+
+const STATUS_BADGE: Record<string, string> = {
+  dormant: "bg-amber-400/15 text-amber-500",
+  unknown: "bg-muted text-muted-foreground",
+};
 
 export default function MembersPage() {
   const { t } = useLanguage();
   const { push } = useViewTransitionRouter();
   const { selection } = useHaptics();
 
-  // Navigate to a member with a shared-avatar morph: the tapped avatar grows
-  // into the profile header. Falls back to instant nav on unsupported browsers.
   const openMember = useCallback(
     (e: React.MouseEvent<HTMLAnchorElement>, id: string) => {
       e.preventDefault();
@@ -54,6 +60,7 @@ export default function MembersPage() {
   const { data: currentFront } = useSWR<FrontEntry | null>(swrKeys.front, apiFetcher);
 
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
   const [updating, setUpdating] = useState(false);
 
@@ -142,15 +149,25 @@ export default function MembersPage() {
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
-    if (!q) return allMembers;
-    return allMembers.filter(
-      (m) =>
+    return allMembers.filter((m) => {
+      const effectiveStatus = m.status ?? "active";
+      if (statusFilter !== "all" && effectiveStatus !== statusFilter) return false;
+      if (!q) return true;
+      return (
         m.name?.toLowerCase().includes(q) ||
         m.pronouns?.toLowerCase().includes(q) ||
         m.role?.toLowerCase().includes(q) ||
         m.tags.some((tag) => tag.toLowerCase().includes(q))
-    );
-  }, [allMembers, search]);
+      );
+    });
+  }, [allMembers, search, statusFilter]);
+
+  const statusFilters: { key: StatusFilter; label: string }[] = [
+    { key: "all", label: t("common.all") },
+    { key: "active", label: t("members.statusActive") },
+    { key: "dormant", label: t("members.statusDormant") },
+    { key: "unknown", label: t("members.statusUnknown") },
+  ];
 
   return (
     <div className="animate-fade-in">
@@ -164,7 +181,7 @@ export default function MembersPage() {
       </div>
 
       {/* Search */}
-      <div className="px-4 mb-4 relative">
+      <div className="px-4 mb-3 relative">
         <Search
           size={16}
           className="absolute left-7 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none"
@@ -175,6 +192,25 @@ export default function MembersPage() {
           onChange={(e) => setSearch(e.target.value)}
           className="pl-9"
         />
+      </div>
+
+      {/* Status filter chips */}
+      <div className="px-4 mb-4 flex gap-2 overflow-x-auto pb-1 no-scrollbar">
+        {statusFilters.map(({ key, label }) => (
+          <button
+            key={key}
+            type="button"
+            onClick={() => setStatusFilter(key)}
+            className={cn(
+              "flex-shrink-0 px-3 py-1 rounded-full text-caption-1 font-semibold transition-colors",
+              statusFilter === key
+                ? "bg-ios-blue/15 text-ios-blue"
+                : "bg-secondary text-muted-foreground"
+            )}
+          >
+            {label}
+          </button>
+        ))}
       </div>
 
       {/* List */}
@@ -198,10 +234,10 @@ export default function MembersPage() {
           ) : filtered.length === 0 ? (
             <EmptyState
               icon={Users}
-              title={search ? t("members.noMembersFound") : t("members.noMembers")}
-              description={search ? undefined : t("members.emptyDescription")}
+              title={search || statusFilter !== "all" ? t("members.noMembersFound") : t("members.noMembers")}
+              description={!search && statusFilter === "all" ? t("members.emptyDescription") : undefined}
               action={
-                !search ? (
+                !search && statusFilter === "all" ? (
                   <Button asChild variant="outline" size="sm">
                     <Link href="/members/new">
                       <Plus size={16} />
@@ -214,6 +250,8 @@ export default function MembersPage() {
           ) : (
             filtered.map((member) => {
               const isFronting = frontingSet.has(member.id);
+              const memberStatus = member.status ?? "active";
+              const statusBadgeClass = STATUS_BADGE[memberStatus];
               return (
                 <div
                   key={member.id}
@@ -246,9 +284,23 @@ export default function MembersPage() {
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-body font-semibold text-foreground truncate">
-                        {member.name}
-                      </p>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="text-body font-semibold text-foreground truncate">
+                          {member.name}
+                        </p>
+                        {statusBadgeClass && (
+                          <span
+                            className={cn(
+                              "px-1.5 py-0.5 rounded text-caption-2 font-semibold flex-shrink-0",
+                              statusBadgeClass
+                            )}
+                          >
+                            {memberStatus === "dormant"
+                              ? t("members.statusDormant")
+                              : t("members.statusUnknown")}
+                          </span>
+                        )}
+                      </div>
                       {member.pronouns && (
                         <p className="text-caption-1 text-muted-foreground truncate">
                           {member.pronouns}
@@ -292,7 +344,6 @@ export default function MembersPage() {
         title={selectedMember?.name ?? ""}
       >
         <div className="flex flex-col divide-y divide-border/50 rounded-ios-lg overflow-hidden border border-border/50">
-          {/* Add / Remove from front */}
           {selectedIsFronting ? (
             <button
               onClick={removeFromFront}
@@ -321,7 +372,6 @@ export default function MembersPage() {
             </button>
           )}
 
-          {/* Set as only front */}
           <button
             onClick={setAsOnly}
             disabled={updating}
@@ -335,7 +385,6 @@ export default function MembersPage() {
             </span>
           </button>
 
-          {/* No action */}
           <button
             onClick={closeSheet}
             className="flex items-center gap-4 px-4 py-4 text-left active:bg-muted/40 ios-transition"

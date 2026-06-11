@@ -193,12 +193,51 @@ export const members = pgTable('members', {
   role:        text('role'),
   tags:        text('tags'), // JSON array string
   notes:       text('notes'),
+  // Presence status: 'active' (default) | 'dormant' | 'unknown'
+  status:      text('status').notNull().default('active'),
   isArchived:  integer('is_archived').notNull().default(0),
   createdAt:   timestamp('created_at', { mode: 'date' }).notNull().defaultNow(),
   updatedAt:   timestamp('updated_at', { mode: 'date' }).notNull().defaultNow(),
 }, (t) => ({
   systemIdx: index('idx_members_system_id').on(t.systemId),
   systemArchivedIdx: index('idx_members_system_archived').on(t.systemId, t.isArchived),
+}));
+
+// Member groups (subsystems, functional categories like "Littles", "Protectors").
+// Groups are system-scoped and flat — no nesting in this version.
+export const memberGroups = pgTable('member_groups', {
+  id:          text('id').primaryKey(),
+  systemId:    text('system_id').notNull().references(() => systems.id, { onDelete: 'cascade' }),
+  name:        text('name').notNull(),
+  color:       text('color'),
+  description: text('description'),
+  createdAt:   timestamp('created_at', { mode: 'date' }).notNull().defaultNow(),
+}, (t) => ({
+  systemIdx: index('idx_member_groups_system_id').on(t.systemId),
+}));
+
+export const memberGroupMembers = pgTable('member_group_members', {
+  groupId:  text('group_id').notNull().references(() => memberGroups.id, { onDelete: 'cascade' }),
+  memberId: text('member_id').notNull().references(() => members.id, { onDelete: 'cascade' }),
+}, (t) => ({
+  pk:        uniqueIndex('ux_member_group_members').on(t.groupId, t.memberId),
+  memberIdx: index('idx_member_group_members_member_id').on(t.memberId),
+}));
+
+// Directed relationships between headmates within the same system.
+// fromMemberId "relationshipType" toMemberId — e.g. "protects", "introject of".
+export const memberRelationships = pgTable('member_relationships', {
+  id:               text('id').primaryKey(),
+  systemId:         text('system_id').notNull().references(() => systems.id, { onDelete: 'cascade' }),
+  fromMemberId:     text('from_member_id').notNull().references(() => members.id, { onDelete: 'cascade' }),
+  toMemberId:       text('to_member_id').notNull().references(() => members.id, { onDelete: 'cascade' }),
+  relationshipType: text('relationship_type').notNull(),
+  notes:            text('notes'),
+  createdAt:        timestamp('created_at', { mode: 'date' }).notNull().defaultNow(),
+}, (t) => ({
+  systemIdx:  index('idx_member_relationships_system_id').on(t.systemId),
+  fromIdx:    index('idx_member_relationships_from_member_id').on(t.fromMemberId),
+  toIdx:      index('idx_member_relationships_to_member_id').on(t.toMemberId),
 }));
 
 export const customFields = pgTable('custom_fields', {
@@ -518,3 +557,9 @@ export type PartnershipMilestone = typeof partnershipMilestones.$inferSelect;
 export type NewPartnershipMilestone = typeof partnershipMilestones.$inferInsert;
 export type PartnershipBucketItem = typeof partnershipBucketItems.$inferSelect;
 export type NewPartnershipBucketItem = typeof partnershipBucketItems.$inferInsert;
+export type MemberGroup = typeof memberGroups.$inferSelect;
+export type NewMemberGroup = typeof memberGroups.$inferInsert;
+export type MemberGroupMember = typeof memberGroupMembers.$inferSelect;
+export type NewMemberGroupMember = typeof memberGroupMembers.$inferInsert;
+export type MemberRelationship = typeof memberRelationships.$inferSelect;
+export type NewMemberRelationship = typeof memberRelationships.$inferInsert;

@@ -32,6 +32,7 @@ export async function GET(request: Request) {
         tags: true,
         color: true,
         avatarUrl: true,
+        status: true,
       },
       where,
       orderBy: (m, { asc }) => [asc(m.name)],
@@ -66,6 +67,8 @@ export async function POST(request: Request) {
   if (!name) return err('Name is required');
   if (!tags) return err('tags must be an array of strings');
 
+  const status = body.status === 'dormant' || body.status === 'unknown' ? body.status : 'active';
+
   const now = new Date();
   const newMemberId = createId();
   const newMember = await db.insert(members).values({
@@ -79,6 +82,7 @@ export async function POST(request: Request) {
     role:        readOptionalString(body.role),
     tags:        tags.length > 0 ? JSON.stringify(tags) : null,
     notes:       readOptionalString(body.notes),
+    status,
     isArchived:  0,
     createdAt:   now,
     updatedAt:   now,

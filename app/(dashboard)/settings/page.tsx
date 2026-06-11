@@ -20,6 +20,7 @@ import {
   AlertTriangle,
   GitFork,
   ShieldCheck,
+  Layers,
 } from "lucide-react";
 import { LargeTitle } from "@/components/layout/NavBar";
 import { GroupedSection, GroupedRow } from "@/components/glass/GlassCard";
@@ -188,6 +189,14 @@ export default function SettingsPage() {
             <GroupedRow
               label={t("settings.customFields")}
               icon={<ListPlus size={18} />}
+              chevron
+              className="cursor-pointer"
+            />
+          </Link>
+          <Link href="/settings/groups">
+            <GroupedRow
+              label={t("groups.title")}
+              icon={<Layers size={18} />}
               chevron
               className="cursor-pointer"
             />
