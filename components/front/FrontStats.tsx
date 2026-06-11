@@ -17,6 +17,7 @@ type Member = {
 type FrontEntry = {
   id: string;
   memberIds: string[];
+  members?: Array<{ memberId: string; tier: string }>;
   startedAt: string | number | Date;
   endedAt?: string | number | Date | null;
 };
@@ -60,7 +61,8 @@ export function FrontStats({ entries, members }: { entries: FrontEntry[]; member
       const duration = clampedEnd - clampedStart;
       if (duration <= 0) continue;
 
-      for (const memberId of entry.memberIds) {
+      const ids = entry.members ? entry.members.map((m) => m.memberId) : entry.memberIds;
+      for (const memberId of ids) {
         totals.set(memberId, (totals.get(memberId) ?? 0) + duration);
       }
     }

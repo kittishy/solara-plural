@@ -2,6 +2,7 @@ import { eq, or } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api/helpers';
 import { db } from '@/lib/db';
+import { parseFrontMembers, getMemberIds } from '@/lib/front';
 import {
   frontEntries,
   customFields,
@@ -99,10 +100,10 @@ export async function GET() {
       ...member,
       tags: safeJsonArray(member.tags),
     })),
-    frontHistory: allFront.map((entry) => ({
-      ...entry,
-      memberIds: safeJsonArray(entry.memberIds),
-    })),
+    frontHistory: allFront.map((entry) => {
+      const members = parseFrontMembers(entry.memberIds);
+      return { ...entry, members, memberIds: getMemberIds(members) };
+    }),
     notes: allNotes,
     customFields: {
       definitions: allCustomFields.map((field) => ({

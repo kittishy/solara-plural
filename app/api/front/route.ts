@@ -4,7 +4,7 @@ import { eq, and, isNull, inArray } from 'drizzle-orm';
 import { requireAuth, ok, err, parseJsonRecord } from '@/lib/api/helpers';
 import { CACHE_FRESH_SHORT } from '@/lib/api/cache-headers';
 import { createId } from '@paralleldrive/cuid2';
-import { parseMemberIds, serializeMemberIds } from '@/lib/front';
+import { parseFrontMembers, serializeFrontMembers, getMemberIds, type FrontMember, type FrontTier } from '@/lib/front';
 import { revalidatePath } from 'next/cache';
 import { decryptIntegrationToken } from '@/lib/integrations/token-crypto';
 import { createPluralKitFrontSync } from '@/lib/integrations/pluralkit-front-sync.js';
@@ -190,8 +190,9 @@ export async function GET() {
   });
 
   if (!current) return ok(null, 200, { headers: { ...CACHE_FRESH_SHORT } });
+  const members = parseFrontMembers(current.memberIds);
   return ok(
-    { ...current, memberIds: parseMemberIds(current.memberIds) },
+    { ...current, members, memberIds: getMemberIds(members) },
     200,
     { headers: { ...CACHE_FRESH_SHORT } }
   );
@@ -207,16 +208,37 @@ export async function POST(request: Request) {
   if (parsed.error) return parsed.error;
 
   const body = parsed.data;
-  const memberIds = body.memberIds;
-  if (!Array.isArray(memberIds) || memberIds.length === 0) {
-    return err('memberIds must be a non-empty array');
+
+  // Accept both new format (members[]) and legacy format (memberIds[]).
+  let incomingMembers: FrontMember[];
+  if (Array.isArray(body.members) && body.members.length > 0) {
+    const valid = body.members.every(
+      (m: unknown) =>
+        m !== null &&
+        typeof m === 'object' &&
+        typeof (m as Record<string, unknown>).memberId === 'string' &&
+        (m as Record<string, unknown>).memberId
+    );
+    if (!valid) return err('members must be an array of {memberId, tier} objects');
+    incomingMembers = (body.members as Array<Record<string, unknown>>).map((m) => {
+      const t = m.tier;
+      const tier: FrontTier = t === 'co-front' || t === 'co-conscious' ? t : 'primary';
+      return { memberId: (m.memberId as string).trim(), tier };
+    });
+  } else if (Array.isArray(body.memberIds) && body.memberIds.length > 0) {
+    if (!body.memberIds.every((id: unknown) => typeof id === 'string' && id)) {
+      return err('memberIds must only include member IDs');
+    }
+    incomingMembers = (body.memberIds as string[]).map((id) => ({ memberId: id.trim(), tier: 'primary' as FrontTier }));
+  } else {
+    return err('members must be a non-empty array');
   }
 
-  if (!memberIds.every((memberId) => typeof memberId === 'string' && memberId.trim())) {
-    return err('memberIds must only include member IDs');
-  }
-
-  const uniqueMemberIds = Array.from(new Set(memberIds.map((memberId) => memberId.trim())));
+  // Deduplicate by memberId (keep last tier if duplicate).
+  const seenIds = new Map<string, FrontMember>();
+  for (const m of incomingMembers) seenIds.set(m.memberId, m);
+  const uniqueMembers = Array.from(seenIds.values());
+  const uniqueMemberIds = getMemberIds(uniqueMembers);
   const availableMembers = await db.query.members.findMany({
     columns: {
       id: true,
@@ -237,26 +259,24 @@ export async function POST(request: Request) {
   });
 
   if (activeFront) {
-    try {
-      const activeMemberIds = parseMemberIds(activeFront.memberIds);
-      if (sameMemberList(activeMemberIds, uniqueMemberIds)) {
-        return ok({
-          ...activeFront,
-          memberIds: activeMemberIds,
-          pluralKitSync: {
-            requestId,
-            status: 'skipped',
-            providerStatus: 'skipped',
-            reasonCode: 'already_in_sync',
-            httpStatus: null,
-            mappedCount: 0,
-            unmappedIds: [],
-            details: null,
-          },
-        });
-      }
-    } catch {
-      // Continue with replacement when existing front data is malformed.
+    const activeMembers = parseFrontMembers(activeFront.memberIds);
+    const activeIds = getMemberIds(activeMembers);
+    if (sameMemberList(activeIds, uniqueMemberIds)) {
+      return ok({
+        ...activeFront,
+        members: activeMembers,
+        memberIds: activeIds,
+        pluralKitSync: {
+          requestId,
+          status: 'skipped',
+          providerStatus: 'skipped',
+          reasonCode: 'already_in_sync',
+          httpStatus: null,
+          mappedCount: 0,
+          unmappedIds: [],
+          details: null,
+        },
+      });
     }
   }
 
@@ -272,7 +292,7 @@ export async function POST(request: Request) {
   const newEntry = await db.insert(frontEntries).values({
     id:        createId(),
     systemId:  auth.systemId,
-    memberIds: serializeMemberIds(uniqueMemberIds),
+    memberIds: serializeFrontMembers(uniqueMembers),
     startedAt: now,
     endedAt:   null,
     note:      typeof body.note === 'string' ? body.note : null,
@@ -304,7 +324,7 @@ export async function POST(request: Request) {
     });
   });
 
-  return ok({ ...newEntry[0], memberIds: uniqueMemberIds, pluralKitSync }, 201);
+  return ok({ ...newEntry[0], members: uniqueMembers, memberIds: uniqueMemberIds, pluralKitSync }, 201);
 }
 
 // DELETE /api/front — end the current front entry

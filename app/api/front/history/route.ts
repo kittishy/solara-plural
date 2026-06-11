@@ -3,7 +3,7 @@ import { frontEntries, members } from '@/lib/db/schema';
 import { eq, and, isNotNull, desc, inArray } from 'drizzle-orm';
 import { requireAuth, ok, err, parseJsonRecord } from '@/lib/api/helpers';
 import { createId } from '@paralleldrive/cuid2';
-import { parseDatetimeLocalValue, parseMemberIds, serializeMemberIds } from '@/lib/front';
+import { parseDatetimeLocalValue, parseFrontMembers, serializeFrontMembers, getMemberIds, type FrontMember, type FrontTier } from '@/lib/front';
 import { revalidatePath } from 'next/cache';
 
 // GET /api/front/history — front history
@@ -25,10 +25,10 @@ export async function GET(request: Request) {
     offset,
   });
 
-  const parsed = history.map((e) => ({
-    ...e,
-    memberIds: parseMemberIds(e.memberIds),
-  }));
+  const parsed = history.map((e) => {
+    const members = parseFrontMembers(e.memberIds);
+    return { ...e, members, memberIds: getMemberIds(members) };
+  });
 
   return ok(parsed, 200, {
     headers: {
@@ -46,14 +46,28 @@ export async function POST(request: Request) {
   if (parsed.error) return parsed.error;
   const body = parsed.data;
 
-  const memberIds = Array.isArray(body.memberIds) ? body.memberIds : null;
   const startedAt = typeof body.startedAt === 'string' ? parseDatetimeLocalValue(body.startedAt) : null;
   const endedAt = typeof body.endedAt === 'string' ? parseDatetimeLocalValue(body.endedAt) : null;
   const note = typeof body.note === 'string' ? body.note.trim() : '';
 
-  if (!memberIds || memberIds.length === 0) return err('memberIds must be a non-empty array');
   if (!startedAt || !endedAt) return err('startedAt and endedAt are required');
   if (endedAt < startedAt) return err('endedAt must be after startedAt');
+
+  // Accept both new format (members[]) and legacy format (memberIds[]).
+  let incomingMembers: FrontMember[];
+  if (Array.isArray(body.members) && body.members.length > 0) {
+    incomingMembers = (body.members as Array<Record<string, unknown>>).map((m) => {
+      const t = m.tier;
+      const tier: FrontTier = t === 'co-front' || t === 'co-conscious' ? t : 'primary';
+      return { memberId: String(m.memberId), tier };
+    });
+  } else if (Array.isArray(body.memberIds) && body.memberIds.length > 0) {
+    incomingMembers = (body.memberIds as string[]).map((id) => ({ memberId: id, tier: 'primary' as FrontTier }));
+  } else {
+    return err('members must be a non-empty array');
+  }
+
+  const memberIds = getMemberIds(incomingMembers);
 
   const availableMembers = await db.query.members.findMany({
     where: and(eq(members.systemId, auth.systemId), inArray(members.id, memberIds)),
@@ -66,7 +80,7 @@ export async function POST(request: Request) {
   const created = await db.insert(frontEntries).values({
     id: createId(),
     systemId: auth.systemId,
-    memberIds: serializeMemberIds(memberIds),
+    memberIds: serializeFrontMembers(incomingMembers),
     startedAt,
     endedAt,
     note: note || null,
@@ -78,5 +92,5 @@ export async function POST(request: Request) {
   revalidatePath('/members');
   revalidatePath('/front/history');
 
-  return ok({ ...created[0], memberIds }, 201);
+  return ok({ ...created[0], members: incomingMembers, memberIds }, 201);
 }

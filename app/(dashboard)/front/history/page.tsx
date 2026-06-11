@@ -2,7 +2,7 @@
 
 import useSWR, { mutate } from "swr";
 import { useState } from "react";
-import { ArrowLeft, Clock, Plus, Pencil, Trash2 } from "lucide-react";
+import { ArrowLeft, Clock, Plus, Pencil } from "lucide-react";
 import Link from "next/link";
 import { GlassCard } from "@/components/glass/GlassCard";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,8 @@ import { BottomSheet } from "@/components/glass/BottomSheet";
 import { FrontStats } from "@/components/front/FrontStats";
 import { apiFetcher, swrKeys } from "@/lib/swr";
 import { useLanguage } from "@/components/providers/LanguageProvider";
+import type { FrontTier, FrontMember } from "@/lib/front";
+import { cn } from "@/lib/utils";
 
 type Member = {
   id: string;
@@ -23,10 +25,40 @@ type Member = {
 type FrontEntry = {
   id: string;
   memberIds: string[];
+  members?: FrontMember[];
   startedAt: string | number | Date;
   endedAt?: string | number | Date | null;
   note?: string | null;
 };
+
+const TIERS: FrontTier[] = ["primary", "co-front", "co-conscious"];
+
+function tierColor(tier: FrontTier): string {
+  if (tier === "primary") return "var(--color-hot, #f472b6)";
+  if (tier === "co-front") return "var(--color-violet, #b48efa)";
+  return "var(--color-muted-foreground, #9d90c0)";
+}
+
+function TierBadge({ tier }: { tier: FrontTier }) {
+  const { t } = useLanguage();
+  const label =
+    tier === "primary"
+      ? t("front.tierPrimary")
+      : tier === "co-front"
+      ? t("front.tierCoFront")
+      : t("front.tierCoConscious");
+  return (
+    <span
+      className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full uppercase tracking-wide leading-none"
+      style={{
+        color: tierColor(tier),
+        background: `color-mix(in srgb, ${tierColor(tier)} 12%, transparent)`,
+      }}
+    >
+      {label}
+    </span>
+  );
+}
 
 const nowLocal = () => {
   const d = new Date();
@@ -68,16 +100,19 @@ export default function FrontHistoryPage() {
 
   const [showEntryForm, setShowEntryForm] = useState(false);
   const [editEntry, setEditEntry] = useState<FrontEntry | null>(null);
-  const [formMemberIds, setFormMemberIds] = useState<string[]>([]);
+  const [formMembers, setFormMembers] = useState<FrontMember[]>([]);
   const [formStartedAt, setFormStartedAt] = useState(nowLocal());
   const [formEndedAt, setFormEndedAt] = useState(nowLocal());
   const [formNote, setFormNote] = useState("");
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState("");
 
+  const formMemberSet = new Set(formMembers.map((m) => m.memberId));
+  const formTierMap = new Map<string, FrontTier>(formMembers.map((m) => [m.memberId, m.tier]));
+
   function openNewForm() {
     setEditEntry(null);
-    setFormMemberIds([]);
+    setFormMembers([]);
     setFormStartedAt(nowLocal());
     setFormEndedAt(nowLocal());
     setFormNote("");
@@ -87,7 +122,8 @@ export default function FrontHistoryPage() {
 
   function openEditForm(entry: FrontEntry) {
     setEditEntry(entry);
-    setFormMemberIds(entry.memberIds);
+    const existing: FrontMember[] = entry.members ?? entry.memberIds.map((id) => ({ memberId: id, tier: "primary" as FrontTier }));
+    setFormMembers(existing);
     const started = new Date(entry.startedAt);
     started.setMinutes(started.getMinutes() - started.getTimezoneOffset());
     setFormStartedAt(started.toISOString().slice(0, 16));
@@ -106,7 +142,7 @@ export default function FrontHistoryPage() {
   async function saveEntry(e: React.FormEvent) {
     e.preventDefault();
     setFormError("");
-    if (formMemberIds.length === 0) {
+    if (formMembers.length === 0) {
       setFormError(t("front.noMemberSelected"));
       return;
     }
@@ -117,7 +153,7 @@ export default function FrontHistoryPage() {
     setSaving(true);
     try {
       const body = {
-        memberIds: formMemberIds,
+        members: formMembers,
         startedAt: formStartedAt,
         endedAt: formEndedAt,
         note: formNote.trim() || undefined,
@@ -145,9 +181,15 @@ export default function FrontHistoryPage() {
   }
 
   function toggleMemberInForm(id: string) {
-    setFormMemberIds((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    setFormMembers((prev) =>
+      formMemberSet.has(id)
+        ? prev.filter((m) => m.memberId !== id)
+        : [...prev, { memberId: id, tier: "primary" as FrontTier }]
     );
+  }
+
+  function setTierInForm(id: string, tier: FrontTier) {
+    setFormMembers((prev) => prev.map((m) => (m.memberId === id ? { ...m, tier } : m)));
   }
 
   return (
@@ -201,9 +243,8 @@ export default function FrontHistoryPage() {
             </div>
           ) : (
             entries.map((entry) => {
-              const entryMembers = entry.memberIds
-                .map((id) => memberById.get(id))
-                .filter(Boolean) as Member[];
+              const entryFrontMembers: FrontMember[] =
+                entry.members ?? entry.memberIds.map((id) => ({ memberId: id, tier: "primary" as FrontTier }));
               const duration =
                 entry.endedAt &&
                 formatDuration(new Date(entry.startedAt), new Date(entry.endedAt));
@@ -215,18 +256,24 @@ export default function FrontHistoryPage() {
                   <Clock size={16} className="text-muted-foreground flex-shrink-0 mt-1" />
                   <div className="flex-1 min-w-0">
                     <div className="flex flex-wrap items-center gap-1.5 mb-1">
-                      {entryMembers.map((m) => (
-                        <span
-                          key={m.id}
-                          className="px-2 py-0.5 rounded-full text-caption-1 font-semibold"
-                          style={{
-                            background: m.color ? `${m.color}22` : "#8E8E9322",
-                            color: m.color ?? "#8E8E93",
-                          }}
-                        >
-                          {m.name}
-                        </span>
-                      ))}
+                      {entryFrontMembers.map(({ memberId: id, tier }) => {
+                        const m = memberById.get(id);
+                        if (!m) return null;
+                        return (
+                          <span key={id} className="flex items-center gap-1">
+                            <span
+                              className="px-2 py-0.5 rounded-full text-caption-1 font-semibold"
+                              style={{
+                                background: m.color ? `${m.color}22` : "#8E8E9322",
+                                color: m.color ?? "#8E8E93",
+                              }}
+                            >
+                              {m.name}
+                            </span>
+                            {tier !== "primary" && <TierBadge tier={tier} />}
+                          </span>
+                        );
+                      })}
                     </div>
                     <p className="text-caption-1 text-muted-foreground">
                       {formatDateTime(entry.startedAt)}
@@ -264,22 +311,49 @@ export default function FrontHistoryPage() {
         <form onSubmit={saveEntry} className="flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
             <Label>{t("front.members")}</Label>
-            <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto p-2 rounded-ios-md bg-secondary">
+            <div className="flex flex-col gap-1 max-h-52 overflow-y-auto rounded-ios-md bg-secondary p-1">
               {(members ?? []).map((m) => {
-                const selected = formMemberIds.includes(m.id);
+                const selected = formMemberSet.has(m.id);
+                const currentTier = formTierMap.get(m.id) ?? "primary";
                 return (
-                  <button
-                    key={m.id}
-                    type="button"
-                    onClick={() => toggleMemberInForm(m.id)}
-                    className={`px-3 py-1.5 rounded-full text-caption-1 font-semibold ios-transition ${
-                      selected
-                        ? "bg-ios-blue/20 text-ios-blue"
-                        : "bg-muted text-muted-foreground"
-                    }`}
-                  >
-                    {m.name}
-                  </button>
+                  <div key={m.id} className="flex flex-col gap-1">
+                    <button
+                      type="button"
+                      onClick={() => toggleMemberInForm(m.id)}
+                      className={cn(
+                        "w-full text-left px-3 py-1.5 rounded-ios-md text-caption-1 font-semibold ios-transition",
+                        selected
+                          ? "bg-ios-blue/20 text-ios-blue"
+                          : "text-muted-foreground hover:bg-muted/50"
+                      )}
+                    >
+                      {m.name}
+                    </button>
+                    {selected && (
+                      <div className="flex gap-0.5 px-2 pb-1">
+                        {TIERS.map((tier) => (
+                          <button
+                            key={tier}
+                            type="button"
+                            onClick={() => setTierInForm(m.id, tier)}
+                            className={cn(
+                              "flex-1 py-0.5 rounded-full text-[10px] font-semibold ios-transition",
+                              currentTier === tier
+                                ? "text-white"
+                                : "text-muted-foreground hover:text-foreground bg-muted/40"
+                            )}
+                            style={currentTier === tier ? { background: tierColor(tier) } : {}}
+                          >
+                            {tier === "primary"
+                              ? t("front.tierPrimary")
+                              : tier === "co-front"
+                              ? t("front.tierCoFront")
+                              : t("front.tierCoConscious")}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 );
               })}
             </div>

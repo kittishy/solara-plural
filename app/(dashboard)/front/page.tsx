@@ -15,6 +15,7 @@ import DynamicAvatarImage from "@/components/ui/DynamicAvatarImage";
 import { cn } from "@/lib/utils";
 import { useHaptics } from "@/lib/haptics";
 import { useLanguage } from "@/components/providers/LanguageProvider";
+import type { FrontTier, FrontMember } from "@/lib/front";
 
 type Member = {
   id: string;
@@ -27,10 +28,79 @@ type Member = {
 type FrontEntry = {
   id: string;
   memberIds: string[];
+  members?: FrontMember[];
   startedAt: string | number | Date;
   endedAt?: string | number | Date | null;
   note?: string | null;
 };
+
+const TIERS: FrontTier[] = ["primary", "co-front", "co-conscious"];
+
+function tierColor(tier: FrontTier): string {
+  if (tier === "primary") return "var(--color-hot, #f472b6)";
+  if (tier === "co-front") return "var(--color-violet, #b48efa)";
+  return "var(--color-muted-foreground, #9d90c0)";
+}
+
+function TierBadge({ tier }: { tier: FrontTier }) {
+  const { t } = useLanguage();
+  const label =
+    tier === "primary"
+      ? t("front.tierPrimary")
+      : tier === "co-front"
+      ? t("front.tierCoFront")
+      : t("front.tierCoConscious");
+  return (
+    <span
+      className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full uppercase tracking-wide leading-none"
+      style={{
+        color: tierColor(tier),
+        background: `color-mix(in srgb, ${tierColor(tier)} 12%, transparent)`,
+      }}
+    >
+      {label}
+    </span>
+  );
+}
+
+function TierSelector({
+  tier,
+  onChange,
+}: {
+  tier: FrontTier;
+  onChange: (t: FrontTier) => void;
+}) {
+  const { t } = useLanguage();
+  const labels: Record<FrontTier, string> = {
+    primary: t("front.tierPrimary"),
+    "co-front": t("front.tierCoFront"),
+    "co-conscious": t("front.tierCoConscious"),
+  };
+  return (
+    <div className="flex gap-0.5 rounded-full bg-secondary p-0.5">
+      {TIERS.map((v) => (
+        <button
+          key={v}
+          type="button"
+          onClick={() => onChange(v)}
+          className={cn(
+            "px-2 py-0.5 rounded-full text-[10px] font-semibold ios-transition whitespace-nowrap leading-tight",
+            tier === v
+              ? "text-white"
+              : "text-muted-foreground hover:text-foreground"
+          )}
+          style={
+            tier === v
+              ? { background: tierColor(v) }
+              : {}
+          }
+        >
+          {labels[v]}
+        </button>
+      ))}
+    </div>
+  );
+}
 
 function formatTime(value: string | number | Date, lang: string) {
   const d = new Date(value);
@@ -93,35 +163,56 @@ export default function FrontPage() {
 
   const memberList = members ?? [];
   const memberById = new Map(memberList.map((m) => [m.id, m]));
-  const frontingIds = currentFront ? currentFront.memberIds : [];
+
+  // Build a map of memberId → FrontMember so we can read/set tiers.
+  const frontingMembers: FrontMember[] = currentFront?.members ?? currentFront?.memberIds.map((id) => ({ memberId: id, tier: "primary" as FrontTier })) ?? [];
+  const tierMap = new Map<string, FrontTier>(frontingMembers.map((m) => [m.memberId, m.tier]));
+  const frontingIds = frontingMembers.map((m) => m.memberId);
   const frontingSet = new Set(frontingIds);
   const history = historyData ?? [];
+
+  async function sendFrontUpdate(newMembers: FrontMember[]) {
+    if (newMembers.length === 0) {
+      await fetch("/api/front", { method: "DELETE", credentials: "same-origin" });
+    } else {
+      await fetch("/api/front", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ members: newMembers }),
+      });
+    }
+    revalidateMembersAndFront();
+    void mutate(swrKeys.frontHistory);
+  }
 
   async function toggleMember(memberId: string) {
     if (updating) return;
     setUpdating(true);
     try {
       const isFronting = frontingSet.has(memberId);
-      // Stepping forward to front = a confirming "success"; stepping back =
-      // a lighter "selection" tick.
       if (isFronting) selection();
       else success();
-      const newIds = isFronting
-        ? frontingIds.filter((id) => id !== memberId)
-        : [...frontingIds, memberId];
 
-      if (newIds.length === 0) {
-        await fetch("/api/front", { method: "DELETE", credentials: "same-origin" });
-      } else {
-        await fetch("/api/front", {
-          method: "POST",
-          credentials: "same-origin",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ memberIds: newIds }),
-        });
-      }
-      revalidateMembersAndFront();
-      void mutate(swrKeys.frontHistory);
+      const newMembers = isFronting
+        ? frontingMembers.filter((m) => m.memberId !== memberId)
+        : [...frontingMembers, { memberId, tier: "primary" as FrontTier }];
+
+      await sendFrontUpdate(newMembers);
+    } finally {
+      setUpdating(false);
+    }
+  }
+
+  async function changeTier(memberId: string, tier: FrontTier) {
+    if (updating) return;
+    setUpdating(true);
+    try {
+      selection();
+      const newMembers = frontingMembers.map((m) =>
+        m.memberId === memberId ? { ...m, tier } : m
+      );
+      await sendFrontUpdate(newMembers);
     } finally {
       setUpdating(false);
     }
@@ -193,35 +284,43 @@ export default function FrontPage() {
               </p>
             </button>
           ) : (
-            frontingIds.map((id) => {
+            frontingMembers.map(({ memberId: id, tier }) => {
               const m = memberById.get(id);
               if (!m) return null;
               return (
                 <div
                   key={id}
-                  className="flex items-center gap-3 px-4 py-3.5 border-b border-border/50 last:border-0"
+                  className="flex flex-col px-4 py-3 border-b border-border/50 last:border-0 gap-2"
                 >
-                  <MemberAvatar member={m} size={12} />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-body font-semibold text-foreground">{m.name}</p>
-                    {m.pronouns && (
-                      <p className="text-caption-1 text-muted-foreground">{m.pronouns}</p>
-                    )}
-                    <p className="text-caption-1 text-muted-foreground flex items-center gap-1 mt-0.5">
-                      <Clock size={11} />
-                      {t("members.sinceTime", { time: formatTime(currentFront!.startedAt, language) })}
-                    </p>
+                  <div className="flex items-center gap-3">
+                    <MemberAvatar member={m} size={12} />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <p className="text-body font-semibold text-foreground">{m.name}</p>
+                        <TierBadge tier={tier} />
+                      </div>
+                      {m.pronouns && (
+                        <p className="text-caption-1 text-muted-foreground">{m.pronouns}</p>
+                      )}
+                      <p className="text-caption-1 text-muted-foreground flex items-center gap-1 mt-0.5">
+                        <Clock size={11} />
+                        {t("members.sinceTime", { time: formatTime(currentFront!.startedAt, language) })}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => toggleMember(id)}
+                      disabled={updating}
+                      className="w-7 h-7 rounded-full flex items-center justify-center text-muted-foreground hover:text-ios-red hover:bg-ios-red/10 ios-transition disabled:opacity-50"
+                      title={t("front.removeMemberFront")}
+                      aria-label={t("front.removeMemberFront")}
+                    >
+                      <X size={15} strokeWidth={2.5} />
+                    </button>
                   </div>
-                  <Badge variant="success">{t("members.fronting")}</Badge>
-                  <button
-                    onClick={() => toggleMember(id)}
-                    disabled={updating}
-                    className="w-7 h-7 rounded-full flex items-center justify-center text-muted-foreground hover:text-ios-red hover:bg-ios-red/10 ios-transition disabled:opacity-50"
-                    title={t("front.removeMemberFront")}
-                    aria-label={t("front.removeMemberFront")}
-                  >
-                    <X size={15} strokeWidth={2.5} />
-                  </button>
+                  <TierSelector
+                    tier={tier}
+                    onChange={(newTier) => changeTier(id, newTier)}
+                  />
                 </div>
               );
             })
