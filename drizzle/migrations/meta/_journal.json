@@ -36,6 +36,13 @@
       "when": 1749744000000,
       "tag": "0004_public_profile",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1781189707000,
+      "tag": "0005_rls_member_org_tables",
+      "breakpoints": true
     }
   ]
 }
