@@ -19,8 +19,8 @@ interface Announcement {
 
 const LEVELS = [
   { key: "info", label: "Info" },
-  { key: "warning", label: "Aviso" },
-  { key: "critical", label: "Crítico" },
+  { key: "warning", label: "Warning" },
+  { key: "critical", label: "Critical" },
 ];
 
 export default function AdminMaintenancePage() {
@@ -69,7 +69,7 @@ export default function AdminMaintenancePage() {
         setMaintEnabled(json.data.maintenance.enabled);
         setMaintMessage(json.data.maintenance.message ?? "");
       } else {
-        setError(json.error ?? "Falha ao salvar");
+        setError(json.error ?? "Failed to save");
       }
     } finally {
       setSavingMaint(false);
@@ -78,10 +78,10 @@ export default function AdminMaintenancePage() {
 
   async function postAnnouncement() {
     if (!title.trim() || !body.trim()) {
-      setError("Título e mensagem são obrigatórios");
+      setError("Title and message are required");
       return;
     }
-    if (push && !window.confirm("Enviar push para TODOS os usuários ativos?")) return;
+    if (push && !window.confirm("Send push to ALL active users?")) return;
     setPosting(true);
     setError("");
     try {
@@ -99,7 +99,7 @@ export default function AdminMaintenancePage() {
         setPush(false);
         await load();
       } else {
-        setError(json.error ?? "Falha ao publicar");
+        setError(json.error ?? "Failed to publish");
       }
     } finally {
       setPosting(false);
@@ -117,7 +117,7 @@ export default function AdminMaintenancePage() {
   }
 
   async function deleteAnnouncement(a: Announcement) {
-    if (!window.confirm("Deletar este aviso?")) return;
+    if (!window.confirm("Delete this announcement?")) return;
     await fetch(`/api/admin/announcements/${a.id}`, { method: "DELETE", credentials: "same-origin" });
     await load();
   }
@@ -125,8 +125,8 @@ export default function AdminMaintenancePage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Manutenção & Avisos</h1>
-        <p className="text-sm text-muted-foreground">Controle o app principal e comunique seus usuários</p>
+        <h1 className="text-2xl font-bold">Maintenance & Announcements</h1>
+        <p className="text-sm text-muted-foreground">Control the main app and reach your users</p>
       </div>
 
       {error && (
@@ -138,17 +138,17 @@ export default function AdminMaintenancePage() {
       {/* Maintenance mode */}
       <section className="space-y-3">
         <h2 className="flex items-center gap-2 text-lg font-semibold">
-          <Wrench size={18} /> Modo manutenção
+          <Wrench size={18} /> Maintenance mode
         </h2>
         <GlassCard className="space-y-3">
           <div className="flex items-center justify-between gap-3">
             <div>
               <p className="font-medium">
-                {maintEnabled ? "Ativo" : "Desativado"}{" "}
-                {maintEnabled && <Badge variant="destructive">app bloqueado</Badge>}
+                {maintEnabled ? "Active" : "Disabled"}{" "}
+                {maintEnabled && <Badge variant="destructive">app blocked</Badge>}
               </p>
               <p className="text-xs text-muted-foreground">
-                Quando ativo, apenas administradores acessam o app principal.
+                When active, only administrators can access the main app.
               </p>
             </div>
             <Button
@@ -156,15 +156,15 @@ export default function AdminMaintenancePage() {
               disabled={savingMaint}
               onClick={() => saveMaintenance(!maintEnabled)}
             >
-              {maintEnabled ? "Desativar" : "Ativar"}
+              {maintEnabled ? "Disable" : "Enable"}
             </Button>
           </div>
           <div className="space-y-1">
-            <label className="text-xs text-muted-foreground">Mensagem exibida aos usuários</label>
+            <label className="text-xs text-muted-foreground">Message shown to users</label>
             <Input
               value={maintMessage}
               onChange={(e) => setMaintMessage(e.target.value)}
-              placeholder="Ex: Voltamos em alguns minutos 💛"
+              placeholder="e.g. We'll be back in a few minutes 💛"
               onBlur={() => saveMaintenance(maintEnabled)}
             />
           </div>
@@ -174,14 +174,14 @@ export default function AdminMaintenancePage() {
       {/* New announcement */}
       <section className="space-y-3">
         <h2 className="flex items-center gap-2 text-lg font-semibold">
-          <Megaphone size={18} /> Novo aviso
+          <Megaphone size={18} /> New announcement
         </h2>
         <GlassCard className="space-y-3">
-          <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Título" />
+          <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Title" />
           <textarea
             value={body}
             onChange={(e) => setBody(e.target.value)}
-            placeholder="Mensagem"
+            placeholder="Message"
             rows={3}
             className="w-full rounded-ios border border-border bg-transparent px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ios-blue"
           />
@@ -199,20 +199,20 @@ export default function AdminMaintenancePage() {
             ))}
             <label className="ml-auto flex items-center gap-2 text-sm">
               <input type="checkbox" checked={push} onChange={(e) => setPush(e.target.checked)} />
-              Enviar push para todos
+              Send push notification to everyone
             </label>
           </div>
           <Button disabled={posting} onClick={postAnnouncement}>
-            <Send size={16} /> {posting ? "Publicando…" : "Publicar aviso"}
+            <Send size={16} /> {posting ? "Publishing..." : "Publish announcement"}
           </Button>
         </GlassCard>
       </section>
 
       {/* Announcement list */}
       <section className="space-y-3">
-        <h2 className="text-lg font-semibold">Avisos publicados</h2>
+        <h2 className="text-lg font-semibold">Published announcements</h2>
         {announcements.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Nenhum aviso ainda.</p>
+          <p className="text-sm text-muted-foreground">No announcements published yet.</p>
         ) : (
           <div className="space-y-2">
             {announcements.map((a) => (
@@ -223,14 +223,14 @@ export default function AdminMaintenancePage() {
                     {a.level}
                   </Badge>
                   {a.active === 1 ? (
-                    <Badge variant="success">ativo</Badge>
+                    <Badge variant="success">active</Badge>
                   ) : (
-                    <Badge variant="outline">inativo</Badge>
+                    <Badge variant="outline">inactive</Badge>
                   )}
-                  {a.pushedAt && <Badge variant="default">push enviado</Badge>}
+                  {a.pushedAt && <Badge variant="default">push sent</Badge>}
                   <div className="ml-auto flex gap-1">
                     <Button size="sm" variant="ghost" onClick={() => toggleAnnouncement(a)}>
-                      {a.active === 1 ? "Desativar" : "Ativar"}
+                      {a.active === 1 ? "Deactivate" : "Activate"}
                     </Button>
                     <Button size="sm" variant="ghost" onClick={() => deleteAnnouncement(a)}>
                       <Trash2 size={14} />
@@ -239,7 +239,7 @@ export default function AdminMaintenancePage() {
                 </div>
                 <p className="text-sm text-muted-foreground">{a.body}</p>
                 <p className="text-xs text-muted-foreground/70">
-                  {new Date(a.createdAt).toLocaleString("pt-BR")}
+                  {new Date(a.createdAt).toLocaleString("en-US")}
                 </p>
               </GlassCard>
             ))}

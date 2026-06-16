@@ -7,13 +7,13 @@ import { Badge } from "@/components/ui/badge";
 export const dynamic = "force-dynamic";
 
 const ACTION_LABELS: Record<string, string> = {
-  "user.update": "Conta atualizada",
-  "user.delete": "Conta deletada",
-  "user.reset_password": "Senha redefinida",
-  "settings.update": "Configurações alteradas",
-  "announcement.create": "Aviso criado",
-  "announcement.update": "Aviso atualizado",
-  "announcement.delete": "Aviso deletado",
+  "user.update": "Account updated",
+  "user.delete": "Account deleted",
+  "user.reset_password": "Password reset",
+  "settings.update": "Settings updated",
+  "announcement.create": "Announcement created",
+  "announcement.update": "Announcement updated",
+  "announcement.delete": "Announcement deleted",
 };
 
 export default async function AdminAuditPage() {
@@ -26,12 +26,12 @@ export default async function AdminAuditPage() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-2xl font-bold">Auditoria</h1>
-        <p className="text-sm text-muted-foreground">Registro das ações administrativas (últimas 200)</p>
+        <h1 className="text-2xl font-bold">Audit log</h1>
+        <p className="text-sm text-muted-foreground">Administrative action log (latest 200)</p>
       </div>
 
       {entries.length === 0 ? (
-        <p className="text-sm text-muted-foreground">Nenhuma ação registrada ainda.</p>
+        <p className="text-sm text-muted-foreground">No actions recorded yet.</p>
       ) : (
         <div className="space-y-2">
           {entries.map((e) => (
@@ -45,10 +45,10 @@ export default async function AdminAuditPage() {
                   </span>
                 )}
                 <span className="ml-auto text-xs text-muted-foreground">
-                  {new Date(e.createdAt).toLocaleString("pt-BR")}
+                  {new Date(e.createdAt).toLocaleString("en-US")}
                 </span>
               </div>
-              <p className="text-xs text-muted-foreground">por {e.actorEmail ?? e.actorSystemId ?? "?"}</p>
+              <p className="text-xs text-muted-foreground">by {e.actorEmail ?? e.actorSystemId ?? "?"}</p>
               {e.metadata && (
                 <pre className="overflow-x-auto rounded bg-muted/60 p-2 text-[11px] text-muted-foreground">
                   {e.metadata}

@@ -22,8 +22,8 @@ interface AccountRow {
 }
 
 const FILTERS = [
-  { key: "", label: "Todas" },
-  { key: "suspended", label: "Suspensas" },
+  { key: "", label: "All" },
+  { key: "suspended", label: "Suspended" },
   { key: "admin", label: "Admins" },
   { key: "singlet", label: "Singlets" },
 ];
@@ -59,8 +59,8 @@ export default function AdminUsersPage() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-2xl font-bold">Contas</h1>
-        <p className="text-sm text-muted-foreground">{total} contas no total</p>
+        <h1 className="text-2xl font-bold">Accounts</h1>
+        <p className="text-sm text-muted-foreground">{total} accounts in total</p>
       </div>
 
       <div className="space-y-3">
@@ -69,7 +69,7 @@ export default function AdminUsersPage() {
           <Input
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Buscar por nome ou e-mail…"
+            placeholder="Search by name or email…"
             className="pl-9"
           />
         </div>
@@ -89,9 +89,9 @@ export default function AdminUsersPage() {
       </div>
 
       {loading ? (
-        <p className="py-8 text-center text-sm text-muted-foreground">Carregando…</p>
+        <p className="py-8 text-center text-sm text-muted-foreground">Loading…</p>
       ) : rows.length === 0 ? (
-        <p className="py-8 text-center text-sm text-muted-foreground">Nenhuma conta encontrada.</p>
+        <p className="py-8 text-center text-sm text-muted-foreground">No accounts found.</p>
       ) : (
         <div className="space-y-2">
           {rows.map((r) => (
@@ -107,15 +107,15 @@ export default function AdminUsersPage() {
                     )}
                     {r.suspendedAt && (
                       <Badge variant="destructive" className="gap-1">
-                        <Ban size={12} /> suspensa
+                        <Ban size={12} /> suspended
                       </Badge>
                     )}
                   </div>
                   <p className="truncate text-xs text-muted-foreground">{r.email}</p>
                 </div>
                 <div className="hidden text-right text-xs text-muted-foreground sm:block">
-                  <div>{r.accountType === "singlet" ? "Singlet" : "Sistema"}</div>
-                  <div>{r.memberCount} membros</div>
+                  <div>{r.accountType === "singlet" ? "Singlet" : "System"}</div>
+                  <div>{r.memberCount} members</div>
                 </div>
                 <ChevronRight size={16} className="text-muted-foreground" />
               </GlassCard>

@@ -65,33 +65,33 @@ export default async function AdminModerationPage() {
   const version =
     dbVersion && Array.isArray(dbVersion) && dbVersion[0]
       ? String((dbVersion[0] as { version?: string }).version ?? "")
-      : "indisponível";
+      : "unavailable";
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Moderação & Saúde</h1>
-        <p className="text-sm text-muted-foreground">Pedidos, bloqueios, suspensões e estado do sistema</p>
+        <h1 className="text-2xl font-bold">Moderation & Health</h1>
+        <p className="text-sm text-muted-foreground">Requests, blocks, suspensions, and system status</p>
       </div>
 
       <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <StatCard label="Pedidos pendentes" value={pendingRequests.length} accent={pendingRequests.length ? "amber" : undefined} />
-        <StatCard label="Bloqueios recentes" value={recentBlocks.length} />
-        <StatCard label="Contas suspensas" value={suspended.length} accent={suspended.length ? "red" : undefined} />
-        <StatCard label="Banco de dados" value="OK" accent="green" />
+        <StatCard label="Pending requests" value={pendingRequests.length} accent={pendingRequests.length ? "amber" : undefined} />
+        <StatCard label="Recent blocks" value={recentBlocks.length} />
+        <StatCard label="Suspended accounts" value={suspended.length} accent={suspended.length ? "red" : undefined} />
+        <StatCard label="Database" value="OK" accent="green" />
       </section>
 
       <section className="space-y-3">
-        <h2 className="text-lg font-semibold">Contas suspensas</h2>
+        <h2 className="text-lg font-semibold">Suspended accounts</h2>
         {suspended.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Nenhuma conta suspensa.</p>
+          <p className="text-sm text-muted-foreground">No suspended accounts.</p>
         ) : (
           <div className="space-y-2">
             {suspended.map((s) => (
               <GlassCard key={s.id} className="space-y-1">
                 <div className="flex items-center gap-2">
                   <span className="font-medium">{s.name}</span>
-                  <Badge variant="destructive">suspensa</Badge>
+                  <Badge variant="destructive">suspended</Badge>
                   <span className="text-xs text-muted-foreground">{s.email}</span>
                 </div>
                 {s.suspendedReason && <p className="text-sm text-muted-foreground">{s.suspendedReason}</p>}
@@ -102,9 +102,9 @@ export default async function AdminModerationPage() {
       </section>
 
       <section className="space-y-3">
-        <h2 className="text-lg font-semibold">Pedidos de amizade pendentes</h2>
+        <h2 className="text-lg font-semibold">Pending friend requests</h2>
         {pendingRequests.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Nenhum pedido pendente.</p>
+          <p className="text-sm text-muted-foreground">No pending requests.</p>
         ) : (
           <div className="space-y-2">
             {pendingRequests.map((r) => (
@@ -113,7 +113,7 @@ export default async function AdminModerationPage() {
                   <strong>{r.senderName ?? "?"}</strong> → <strong>{r.receiverName ?? "?"}</strong>
                 </span>
                 <span className="text-xs text-muted-foreground">
-                  {new Date(r.createdAt).toLocaleDateString("pt-BR")}
+                  {new Date(r.createdAt).toLocaleDateString("en-US")}
                 </span>
               </GlassCard>
             ))}
@@ -122,18 +122,18 @@ export default async function AdminModerationPage() {
       </section>
 
       <section className="space-y-3">
-        <h2 className="text-lg font-semibold">Bloqueios recentes</h2>
+        <h2 className="text-lg font-semibold">Recent blocks</h2>
         {recentBlocks.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Nenhum bloqueio registrado.</p>
+          <p className="text-sm text-muted-foreground">No blocks recorded.</p>
         ) : (
           <div className="space-y-2">
             {recentBlocks.map((b) => (
               <GlassCard key={b.id} className="flex items-center justify-between gap-2 text-sm">
                 <span>
-                  <strong>{b.blockerName ?? "?"}</strong> bloqueou <strong>{b.blockedName ?? "?"}</strong>
+                  <strong>{b.blockerName ?? "?"}</strong> blocked <strong>{b.blockedName ?? "?"}</strong>
                 </span>
                 <span className="text-xs text-muted-foreground">
-                  {new Date(b.createdAt).toLocaleDateString("pt-BR")}
+                  {new Date(b.createdAt).toLocaleDateString("en-US")}
                 </span>
               </GlassCard>
             ))}
@@ -142,14 +142,14 @@ export default async function AdminModerationPage() {
       </section>
 
       <section className="space-y-3">
-        <h2 className="text-lg font-semibold">Saúde do sistema</h2>
+        <h2 className="text-lg font-semibold">System health</h2>
         <GlassCard className="space-y-1 text-sm">
           <div className="flex justify-between gap-4">
-            <span className="text-muted-foreground">Banco de dados</span>
+            <span className="text-muted-foreground">Database</span>
             <span className="text-right font-mono text-xs">{version}</span>
           </div>
           <div className="flex justify-between gap-4">
-            <span className="text-muted-foreground">Ambiente</span>
+            <span className="text-muted-foreground">Environment</span>
             <span>{process.env.NODE_ENV}</span>
           </div>
         </GlassCard>

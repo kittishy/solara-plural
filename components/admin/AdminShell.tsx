@@ -20,11 +20,11 @@ import { localizePathname } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 const NAV = [
-  { href: "/admin", label: "Painel", icon: LayoutDashboard, exact: true },
-  { href: "/admin/users", label: "Contas", icon: Users },
-  { href: "/admin/maintenance", label: "Manutenção & Avisos", icon: Megaphone },
-  { href: "/admin/moderation", label: "Moderação & Saúde", icon: ShieldAlert },
-  { href: "/admin/audit", label: "Auditoria", icon: ScrollText },
+  { href: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
+  { href: "/admin/users", label: "Accounts", icon: Users },
+  { href: "/admin/maintenance", label: "Maintenance & Announcements", icon: Megaphone },
+  { href: "/admin/moderation", label: "Moderation & Health", icon: ShieldAlert },
+  { href: "/admin/audit", label: "Audit log", icon: ScrollText },
 ];
 
 export function AdminShell({
@@ -104,7 +104,7 @@ export function AdminShell({
               href={loc("/")}
               className="flex items-center gap-2 px-1 text-xs text-muted-foreground hover:text-foreground"
             >
-              <ExternalLink size={14} /> Voltar ao app
+              <ExternalLink size={14} /> Back to app
             </Link>
             {adminEmail && (
               <p className="truncate px-1 text-xs text-muted-foreground" title={adminEmail}>
@@ -115,7 +115,7 @@ export function AdminShell({
               onClick={() => signOut({ callbackUrl: loc("/login") })}
               className="flex items-center gap-2 px-1 text-xs text-ios-red hover:opacity-80"
             >
-              <LogOut size={14} /> Sair
+              <LogOut size={14} /> Sign out
             </button>
           </div>
         </aside>

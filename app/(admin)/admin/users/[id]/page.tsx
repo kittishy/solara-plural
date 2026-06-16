@@ -27,7 +27,7 @@ interface AccountDetail {
 
 function fmt(d: string | null) {
   if (!d) return "—";
-  return new Date(d).toLocaleString("pt-BR");
+  return new Date(d).toLocaleString("en-US");
 }
 
 export default function AdminUserDetailPage() {
@@ -48,7 +48,7 @@ export default function AdminUserDetailPage() {
     const res = await fetch(`/api/admin/users/${id}`, { credentials: "same-origin" });
     const json = await res.json();
     if (json.success) setAccount(json.data);
-    else setError(json.error ?? "Erro ao carregar");
+    else setError(json.error ?? "Failed to load");
     setLoading(false);
   }, [id]);
 
@@ -67,7 +67,7 @@ export default function AdminUserDetailPage() {
         body: JSON.stringify(body),
       });
       const json = await res.json();
-      if (!json.success) setError(json.error ?? "Falha na ação");
+      if (!json.success) setError(json.error ?? "Action failed");
       else await load();
     } finally {
       setBusy(false);
@@ -79,7 +79,7 @@ export default function AdminUserDetailPage() {
     if (account.suspendedAt) {
       await patch({ suspended: false });
     } else {
-      const reason = window.prompt("Motivo da suspensão (opcional):", "");
+      const reason = window.prompt("Suspension reason (optional):", "");
       if (reason === null) return;
       await patch({ suspended: true, reason });
     }
@@ -95,7 +95,7 @@ export default function AdminUserDetailPage() {
         credentials: "same-origin",
       });
       const json = await res.json();
-      if (!json.success) setError(json.error ?? "Falha ao gerar link");
+      if (!json.success) setError(json.error ?? "Failed to generate link");
       else setResetLink(json.data.resetPath);
     } finally {
       setBusy(false);
@@ -104,14 +104,14 @@ export default function AdminUserDetailPage() {
 
   async function handleDelete() {
     if (!account) return;
-    if (!window.confirm(`Deletar permanentemente a conta de ${account.name}? Esta ação não pode ser desfeita.`)) return;
+    if (!window.confirm(`Permanently delete ${account.name}'s account? This action cannot be undone.`)) return;
     setBusy(true);
     setError("");
     try {
       const res = await fetch(`/api/admin/users/${id}`, { method: "DELETE", credentials: "same-origin" });
       const json = await res.json();
       if (!json.success) {
-        setError(json.error ?? "Falha ao deletar");
+        setError(json.error ?? "Failed to delete");
         setBusy(false);
       } else {
         router.push(localizePathname("/admin/users", language));
@@ -135,13 +135,13 @@ export default function AdminUserDetailPage() {
         href={localizePathname("/admin/users", language)}
         className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
       >
-        <ArrowLeft size={16} /> Voltar para contas
+        <ArrowLeft size={16} /> Back to accounts
       </Link>
 
       {loading ? (
-        <p className="py-8 text-center text-sm text-muted-foreground">Carregando…</p>
+        <p className="py-8 text-center text-sm text-muted-foreground">Loading…</p>
       ) : !account ? (
-        <p className="py-8 text-center text-sm text-muted-foreground">{error || "Conta não encontrada."}</p>
+        <p className="py-8 text-center text-sm text-muted-foreground">{error || "Account not found."}</p>
       ) : (
         <>
           <div className="flex flex-wrap items-center gap-2">
@@ -153,10 +153,10 @@ export default function AdminUserDetailPage() {
             )}
             {account.suspendedAt && (
               <Badge variant="destructive" className="gap-1">
-                <Ban size={12} /> suspensa
+                <Ban size={12} /> suspended
               </Badge>
             )}
-            <Badge variant="outline">{account.accountType === "singlet" ? "Singlet" : "Sistema"}</Badge>
+            <Badge variant="outline">{account.accountType === "singlet" ? "Singlet" : "System"}</Badge>
           </div>
 
           {error && (
@@ -166,27 +166,27 @@ export default function AdminUserDetailPage() {
           )}
 
           <GlassCard className="space-y-2 text-sm">
-            <Row label="E-mail" value={account.email} />
+            <Row label="Email" value={account.email} />
             <Row label="ID" value={account.id} mono />
-            <Row label="Criada em" value={fmt(account.createdAt)} />
-            <Row label="Atualizada em" value={fmt(account.updatedAt)} />
-            {account.suspendedAt && <Row label="Suspensa em" value={fmt(account.suspendedAt)} />}
-            {account.suspendedReason && <Row label="Motivo" value={account.suspendedReason} />}
+            <Row label="Created" value={fmt(account.createdAt)} />
+            <Row label="Updated" value={fmt(account.updatedAt)} />
+            {account.suspendedAt && <Row label="Suspended at" value={fmt(account.suspendedAt)} />}
+            {account.suspendedReason && <Row label="Reason" value={account.suspendedReason} />}
             {account.deletionScheduledFor && (
-              <Row label="Exclusão agendada" value={fmt(account.deletionScheduledFor)} />
+              <Row label="Deletion scheduled" value={fmt(account.deletionScheduledFor)} />
             )}
           </GlassCard>
 
           <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <Count label="Membros" value={account.counts.members} />
-            <Count label="Anotações" value={account.counts.notes} />
-            <Count label="Diário" value={account.counts.journal} />
+            <Count label="Members" value={account.counts.members} />
+            <Count label="Notes" value={account.counts.notes} />
+            <Count label="Journal" value={account.counts.journal} />
             <Count label="Fronts" value={account.counts.fronts} />
           </section>
 
           {resetLink && (
             <GlassCard className="space-y-2 border border-ios-blue/40 bg-ios-blue/5">
-              <p className="text-sm font-medium">Link de redefinição de senha (válido por 30 min):</p>
+              <p className="text-sm font-medium">Password reset link (valid for 30 min):</p>
               <div className="flex items-center gap-2">
                 <code className="min-w-0 flex-1 truncate rounded bg-muted px-2 py-1 text-xs">{resetLink}</code>
                 <Button size="sm" variant="secondary" onClick={copyResetLink}>
@@ -194,22 +194,22 @@ export default function AdminUserDetailPage() {
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground">
-                Entregue este link ao usuário com segurança. Ele aparece apenas uma vez.
+                Share this link with the user securely. It is shown only once.
               </p>
             </GlassCard>
           )}
 
           <section className="space-y-2">
-            <h2 className="text-lg font-semibold">Ações</h2>
+            <h2 className="text-lg font-semibold">Actions</h2>
             <div className="flex flex-wrap gap-2">
               <Button variant="outline" disabled={busy} onClick={handleSuspend}>
-                <Ban size={16} /> {account.suspendedAt ? "Remover suspensão" : "Suspender"}
+                <Ban size={16} /> {account.suspendedAt ? "Remove suspension" : "Suspend"}
               </Button>
               <Button variant="outline" disabled={busy} onClick={handleResetPassword}>
-                <KeyRound size={16} /> Redefinir senha
+                <KeyRound size={16} /> Reset password
               </Button>
               <Button variant="destructive" disabled={busy} onClick={handleDelete}>
-                <Trash2 size={16} /> Deletar conta
+                <Trash2 size={16} /> Delete account
               </Button>
             </div>
           </section>
