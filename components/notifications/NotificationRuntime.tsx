@@ -106,9 +106,6 @@ export function NotificationRuntime() {
         source.addEventListener("ready", () => { /* connected */ });
 
         source.onerror = () => {
-          // EventSource auto-retries when readyState=CONNECTING. If it's
-          // CLOSED (auth lost, network gone), kick off a manual retry with
-          // a small backoff.
           if (source && source.readyState === EventSource.CLOSED) {
             source.close();
             source = null;

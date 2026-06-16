@@ -9,9 +9,9 @@ import { subscribeToNotifications } from '@/lib/notifications/realtime-broker';
 // Two-layer delivery, designed for serverless:
 //   1. The in-process broker fires `notify` events when the SAME instance
 //      creates a notification. Instant in the common single-user case.
-//   2. A 3-second DB poll catches notifications created on a DIFFERENT
-//      Vercel instance from the one holding this SSE connection. 3s is a
-//      good balance between "feels instant" and DB load.
+//   2. A 15-second DB poll catches notifications created on a DIFFERENT
+//      Vercel instance from the one holding this SSE connection. 15s keeps
+//      Vercel Fluid CPU usage low; push notifications remain instant.
 //
 // Connection is held open and yields heartbeats every 25s so proxies don't
 // kill it. Client uses EventSource, which auto-reconnects on close.
@@ -22,7 +22,7 @@ export const runtime = 'nodejs';
 // the client EventSource reconnects automatically.
 export const maxDuration = 60;
 
-const POLL_INTERVAL_MS = 3_000;
+const POLL_INTERVAL_MS = 15_000;
 const HEARTBEAT_INTERVAL_MS = 25_000;
 
 export async function GET() {

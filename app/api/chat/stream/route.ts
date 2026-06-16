@@ -6,7 +6,7 @@ import { subscribeToChatEvents } from '@/lib/chat/realtime-broker';
 
 // Server-Sent Events stream of new chat messages for the current system.
 // Mirrors /api/notifications/stream: in-process broker for the instant path,
-// 3-second DB poll to catch messages written by a different Vercel instance.
+// 15-second DB poll to catch messages written by a different Vercel instance.
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -14,7 +14,7 @@ export const runtime = 'nodejs';
 // the client EventSource reconnects automatically.
 export const maxDuration = 60;
 
-const POLL_INTERVAL_MS = 3_000;
+const POLL_INTERVAL_MS = 15_000;
 const HEARTBEAT_INTERVAL_MS = 25_000;
 
 export async function GET() {
