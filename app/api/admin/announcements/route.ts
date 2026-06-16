@@ -6,6 +6,7 @@ import { ok, err, parseJsonRecord } from '@/lib/api/helpers';
 import { requireAdminApi } from '@/lib/auth/admin';
 import { recordAudit } from '@/lib/admin/audit';
 import { createNotification } from '@/lib/notifications/create-notification';
+import { waitUntil } from '@vercel/functions';
 
 const LEVELS = new Set(['info', 'warning', 'critical']);
 
@@ -69,7 +70,7 @@ export async function POST(request: Request) {
       .where(isNull(systems.suspendedAt));
     recipientCount = recipients.length;
 
-    void (async () => {
+    waitUntil((async () => {
       for (const r of recipients) {
         try {
           await createNotification({
@@ -84,7 +85,7 @@ export async function POST(request: Request) {
           console.error('[admin-announcement] delivery failed for', r.id, e);
         }
       }
-    })();
+    })());
   }
 
   await recordAudit({
