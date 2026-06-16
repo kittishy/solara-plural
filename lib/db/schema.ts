@@ -333,13 +333,14 @@ export const systemFriendMemberShares = pgTable('system_friend_member_shares', {
 
 // Front Entries
 export const frontEntries = pgTable('front_entries', {
-  id:        text('id').primaryKey(),
-  systemId:  text('system_id').notNull().references(() => systems.id, { onDelete: 'cascade' }),
-  memberIds: text('member_ids').notNull(), // JSON array of member IDs
-  startedAt: timestamp('started_at', { mode: 'date' }).notNull(),
-  endedAt:   timestamp('ended_at', { mode: 'date' }),
-  note:      text('note'),
-  createdAt: timestamp('created_at', { mode: 'date' }).notNull().defaultNow(),
+  id:          text('id').primaryKey(),
+  systemId:    text('system_id').notNull().references(() => systems.id, { onDelete: 'cascade' }),
+  memberIds:   text('member_ids').notNull(), // JSON array of member IDs
+  memberTiers: text('member_tiers'),         // JSON map: { memberId: "primary"|"cofront"|"coconscious" }
+  startedAt:   timestamp('started_at', { mode: 'date' }).notNull(),
+  endedAt:     timestamp('ended_at', { mode: 'date' }),
+  note:        text('note'),
+  createdAt:   timestamp('created_at', { mode: 'date' }).notNull().defaultNow(),
 }, (t) => ({
   systemIdx: index('idx_front_entries_system_id').on(t.systemId),
   endedAtIdx: index('idx_front_entries_ended_at').on(t.endedAt),

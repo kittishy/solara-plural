@@ -2,7 +2,7 @@ import { db } from '@/lib/db';
 import { frontEntries, members } from '@/lib/db/schema';
 import { eq, and, inArray } from 'drizzle-orm';
 import { requireAuth, ok, err, parseJsonRecord } from '@/lib/api/helpers';
-import { parseDatetimeLocalValue, serializeMemberIds } from '@/lib/front';
+import { parseDatetimeLocalValue, safeParseMemberTiers, serializeMemberIds, serializeMemberTiers, autoAssignTiers, isFrontTier } from '@/lib/front';
 import { revalidatePath } from 'next/cache';
 
 type RouteContext = {
@@ -41,9 +41,30 @@ export async function PUT(request: Request, { params }: RouteContext) {
     return err('One or more memberIds are invalid');
   }
 
+  // Validate optional memberTiers
+  let memberTiers: Record<string, 'primary' | 'cofront' | 'coconscious'> | null = null;
+  if (body.memberTiers !== undefined && body.memberTiers !== null) {
+    if (typeof body.memberTiers !== 'object' || Array.isArray(body.memberTiers)) {
+      return err('memberTiers must be an object mapping member IDs to tier values');
+    }
+    const tiers = body.memberTiers as Record<string, string>;
+    for (const [memberId, tier] of Object.entries(tiers)) {
+      if (!memberIds.includes(memberId)) {
+        return err(`memberTiers references member "${memberId}" not in memberIds`);
+      }
+      if (!isFrontTier(tier)) {
+        return err(`Invalid tier "${tier}" for member "${memberId}". Must be primary, cofront, or coconscious`);
+      }
+    }
+    memberTiers = tiers as Record<string, 'primary' | 'cofront' | 'coconscious'>;
+  }
+
+  const resolvedTiers = memberTiers ?? autoAssignTiers(memberIds);
+
   const updated = await db.update(frontEntries)
     .set({
       memberIds: serializeMemberIds(memberIds),
+      memberTiers: serializeMemberTiers(resolvedTiers),
       startedAt,
       endedAt,
       note: note || null,
@@ -56,5 +77,5 @@ export async function PUT(request: Request, { params }: RouteContext) {
   revalidatePath('/members');
   revalidatePath('/front/history');
 
-  return ok({ ...updated[0], memberIds });
+  return ok({ ...updated[0], memberIds, memberTiers: resolvedTiers });
 }

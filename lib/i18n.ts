@@ -347,6 +347,7 @@ export const translations = {
       startTime: 'Start time',
       endTime: 'End time',
       note: 'Note',
+      changeTier: 'Change tier',
     },
     chat: {
       title: 'Chat',
@@ -1049,6 +1050,7 @@ export const translations = {
       startTime: 'Início',
       endTime: 'Fim',
       note: 'Anotação',
+      changeTier: 'Alterar camada',
     },
     chat: {
       title: 'Chat',
@@ -1751,6 +1753,7 @@ export const translations = {
       startTime: 'Inicio',
       endTime: 'Fin',
       note: 'Nota',
+      changeTier: 'Cambiar nivel',
     },
     chat: {
       title: 'Chat',

@@ -20,9 +20,18 @@ type Member = {
   color?: string | null;
 };
 
+type FrontTier = 'primary' | 'cofront' | 'coconscious';
+
+const TIER_CONFIG: Record<FrontTier, { label: string; color: string }> = {
+  primary:     { label: 'Primary',    color: '#007AFF' },
+  cofront:     { label: 'Co-front',   color: '#34C759' },
+  coconscious: { label: 'Co-conscient', color: '#8E8E93' },
+};
+
 type FrontEntry = {
   id: string;
   memberIds: string[];
+  memberTiers?: Record<string, FrontTier>;
   startedAt: string | number | Date;
   endedAt?: string | number | Date | null;
   note?: string | null;
@@ -69,6 +78,7 @@ export default function FrontHistoryPage() {
   const [showEntryForm, setShowEntryForm] = useState(false);
   const [editEntry, setEditEntry] = useState<FrontEntry | null>(null);
   const [formMemberIds, setFormMemberIds] = useState<string[]>([]);
+  const [formMemberTiers, setFormMemberTiers] = useState<Record<string, FrontTier>>({});
   const [formStartedAt, setFormStartedAt] = useState(nowLocal());
   const [formEndedAt, setFormEndedAt] = useState(nowLocal());
   const [formNote, setFormNote] = useState("");
@@ -78,6 +88,7 @@ export default function FrontHistoryPage() {
   function openNewForm() {
     setEditEntry(null);
     setFormMemberIds([]);
+    setFormMemberTiers({});
     setFormStartedAt(nowLocal());
     setFormEndedAt(nowLocal());
     setFormNote("");
@@ -88,6 +99,13 @@ export default function FrontHistoryPage() {
   function openEditForm(entry: FrontEntry) {
     setEditEntry(entry);
     setFormMemberIds(entry.memberIds);
+    // Preserve existing tiers or auto-assign
+    const tiers = entry.memberTiers ?? {};
+    const resolved: Record<string, FrontTier> = {};
+    entry.memberIds.forEach((id, i) => {
+      resolved[id] = (tiers[id] as FrontTier) ?? (i === 0 ? 'primary' : 'cofront');
+    });
+    setFormMemberTiers(resolved);
     const started = new Date(entry.startedAt);
     started.setMinutes(started.getMinutes() - started.getTimezoneOffset());
     setFormStartedAt(started.toISOString().slice(0, 16));
@@ -118,6 +136,7 @@ export default function FrontHistoryPage() {
     try {
       const body = {
         memberIds: formMemberIds,
+        memberTiers: formMemberTiers,
         startedAt: formStartedAt,
         endedAt: formEndedAt,
         note: formNote.trim() || undefined,
@@ -145,9 +164,33 @@ export default function FrontHistoryPage() {
   }
 
   function toggleMemberInForm(id: string) {
-    setFormMemberIds((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
-    );
+    setFormMemberIds((prev) => {
+      if (prev.includes(id)) {
+        // Remove — also clean up tier
+        setFormMemberTiers((t) => {
+          const { [id]: _, ...rest } = t;
+          return rest;
+        });
+        return prev.filter((x) => x !== id);
+      }
+      // Add — auto-assign tier
+      const next = [...prev, id];
+      setFormMemberTiers((t) => ({
+        ...t,
+        [id]: prev.length === 0 ? 'primary' : 'cofront',
+      }));
+      return next;
+    });
+  }
+
+  function cycleFormTier(memberId: string) {
+    setFormMemberTiers((prev) => {
+      const current = prev[memberId] ?? 'cofront';
+      const order: FrontTier[] = ['primary', 'cofront', 'coconscious'];
+      const idx = order.indexOf(current);
+      const next = order[(idx + 1) % order.length];
+      return { ...prev, [memberId]: next };
+    });
   }
 
   return (
@@ -215,18 +258,26 @@ export default function FrontHistoryPage() {
                   <Clock size={16} className="text-muted-foreground flex-shrink-0 mt-1" />
                   <div className="flex-1 min-w-0">
                     <div className="flex flex-wrap items-center gap-1.5 mb-1">
-                      {entryMembers.map((m) => (
-                        <span
-                          key={m.id}
-                          className="px-2 py-0.5 rounded-full text-caption-1 font-semibold"
-                          style={{
-                            background: m.color ? `${m.color}22` : "#8E8E9322",
-                            color: m.color ?? "#8E8E93",
-                          }}
-                        >
-                          {m.name}
-                        </span>
-                      ))}
+                      {entryMembers.map((m) => {
+                        const tier = entry.memberTiers?.[m.id] ?? 'cofront';
+                        const tierCfg = TIER_CONFIG[tier];
+                        return (
+                          <span
+                            key={m.id}
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-caption-1 font-semibold"
+                            style={{
+                              background: m.color ? `${m.color}22` : "#8E8E9322",
+                              color: m.color ?? "#8E8E93",
+                            }}
+                          >
+                            <span
+                              className="inline-block w-1.5 h-1.5 rounded-full"
+                              style={{ background: tierCfg.color }}
+                            />
+                            {m.name}
+                          </span>
+                        );
+                      })}
                     </div>
                     <p className="text-caption-1 text-muted-foreground">
                       {formatDateTime(entry.startedAt)}
@@ -267,19 +318,36 @@ export default function FrontHistoryPage() {
             <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto p-2 rounded-ios-md bg-secondary">
               {(members ?? []).map((m) => {
                 const selected = formMemberIds.includes(m.id);
+                const tier = formMemberTiers[m.id] ?? 'cofront';
+                const tierCfg = TIER_CONFIG[tier];
                 return (
-                  <button
-                    key={m.id}
-                    type="button"
-                    onClick={() => toggleMemberInForm(m.id)}
-                    className={`px-3 py-1.5 rounded-full text-caption-1 font-semibold ios-transition ${
-                      selected
-                        ? "bg-ios-blue/20 text-ios-blue"
-                        : "bg-muted text-muted-foreground"
-                    }`}
-                  >
-                    {m.name}
-                  </button>
+                  <div key={m.id} className="inline-flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => toggleMemberInForm(m.id)}
+                      className={`px-3 py-1.5 rounded-full text-caption-1 font-semibold ios-transition ${
+                        selected
+                          ? "bg-ios-blue/20 text-ios-blue"
+                          : "bg-muted text-muted-foreground"
+                      }`}
+                    >
+                      {m.name}
+                    </button>
+                    {selected && (
+                      <button
+                        type="button"
+                        onClick={() => cycleFormTier(m.id)}
+                        className="text-caption-2 font-semibold px-1.5 py-0.5 rounded-full ios-press"
+                        style={{
+                          background: `${tierCfg.color}22`,
+                          color: tierCfg.color,
+                        }}
+                        title="Change tier"
+                      >
+                        {tierCfg.label}
+                      </button>
+                    )}
+                  </div>
                 );
               })}
             </div>

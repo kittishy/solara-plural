@@ -1,7 +1,63 @@
 import type { FrontEntry } from '@/lib/db/schema';
 
-export type FrontEntryWithMemberIds = Omit<FrontEntry, 'memberIds'> & {
+// ---------------------------------------------------------------------------
+// Front tiers (primary / co-front / co-conscious)
+// ---------------------------------------------------------------------------
+export const FRONT_TIERS = ['primary', 'cofront', 'coconscious'] as const;
+export type FrontTier = (typeof FRONT_TIERS)[number];
+
+export const TIER_CONFIG: Record<FrontTier, { label: string; labelPt: string; color: string; shortLabel: string }> = {
+  primary:      { label: 'Primary',    labelPt: 'Primário',      color: '#007AFF', shortLabel: 'P' },
+  cofront:      { label: 'Co-front',   labelPt: 'Co-front',      color: '#34C759', shortLabel: 'CF' },
+  coconscious:  { label: 'Co-conscious', labelPt: 'Co-consciente', color: '#8E8E93', shortLabel: 'CC' },
+};
+
+export function isFrontTier(value: string): value is FrontTier {
+  return FRONT_TIERS.includes(value as FrontTier);
+}
+
+/** Auto-assign tiers: first member → primary, rest → cofront. */
+export function autoAssignTiers(memberIds: string[]): Record<string, FrontTier> {
+  if (memberIds.length === 0) return {};
+  const tiers: Record<string, FrontTier> = {};
+  memberIds.forEach((id, i) => {
+    tiers[id] = i === 0 ? 'primary' : 'cofront';
+  });
+  return tiers;
+}
+
+export function parseMemberTiers(value: string | null | undefined): Record<string, FrontTier> {
+  if (!value) return {};
+  const parsed = JSON.parse(value);
+  if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+    throw new Error('Invalid member tiers');
+  }
+  for (const [key, val] of Object.entries(parsed)) {
+    if (typeof key !== 'string' || typeof val !== 'string' || !isFrontTier(val)) {
+      throw new Error(`Invalid member tier entry: ${key}=${String(val)}`);
+    }
+  }
+  return parsed as Record<string, FrontTier>;
+}
+
+export function safeParseMemberTiers(value: string | null | undefined): Record<string, FrontTier> {
+  try {
+    return parseMemberTiers(value);
+  } catch {
+    return {};
+  }
+}
+
+export function serializeMemberTiers(tiers: Record<string, FrontTier>): string {
+  return JSON.stringify(tiers);
+}
+
+// ---------------------------------------------------------------------------
+// Member IDs helpers (existing)
+// ---------------------------------------------------------------------------
+export type FrontEntryWithMemberIds = Omit<FrontEntry, 'memberIds' | 'memberTiers'> & {
   memberIds: string[];
+  memberTiers: Record<string, FrontTier>;
 };
 
 export function parseMemberIds(value: string): string[] {
@@ -22,6 +78,16 @@ export function safeParseMemberIds(value: string): string[] {
 
 export function serializeMemberIds(memberIds: string[]): string {
   return JSON.stringify(memberIds);
+}
+
+/** Combine memberIds and memberTiers into a validated entry shape for API responses. */
+export function formatFrontEntry(entry: FrontEntry): FrontEntryWithMemberIds {
+  const memberIds = parseMemberIds(entry.memberIds);
+  return {
+    ...entry,
+    memberIds,
+    memberTiers: safeParseMemberTiers(entry.memberTiers),
+  };
 }
 
 export function toDatetimeLocalValue(date: Date): string {

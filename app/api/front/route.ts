@@ -4,7 +4,7 @@ import { eq, and, isNull, inArray } from 'drizzle-orm';
 import { requireAuth, ok, err, parseJsonRecord } from '@/lib/api/helpers';
 import { CACHE_FRESH_SHORT } from '@/lib/api/cache-headers';
 import { createId } from '@paralleldrive/cuid2';
-import { parseMemberIds, serializeMemberIds } from '@/lib/front';
+import { parseMemberIds, safeParseMemberTiers, serializeMemberIds, serializeMemberTiers, autoAssignTiers, isFrontTier } from '@/lib/front';
 import { revalidatePath } from 'next/cache';
 import { decryptIntegrationToken } from '@/lib/integrations/token-crypto';
 import { createPluralKitFrontSync } from '@/lib/integrations/pluralkit-front-sync.js';
@@ -192,7 +192,11 @@ export async function GET() {
 
   if (!current) return ok(null, 200, { headers: { ...CACHE_FRESH_SHORT } });
   return ok(
-    { ...current, memberIds: parseMemberIds(current.memberIds) },
+    {
+      ...current,
+      memberIds: parseMemberIds(current.memberIds),
+      memberTiers: safeParseMemberTiers(current.memberTiers),
+    },
     200,
     { headers: { ...CACHE_FRESH_SHORT } }
   );
@@ -218,6 +222,24 @@ export async function POST(request: Request) {
   }
 
   const uniqueMemberIds = Array.from(new Set(memberIds.map((memberId) => memberId.trim())));
+
+  // Validate optional memberTiers
+  let memberTiers: Record<string, 'primary' | 'cofront' | 'coconscious'> | null = null;
+  if (body.memberTiers !== undefined && body.memberTiers !== null) {
+    if (typeof body.memberTiers !== 'object' || Array.isArray(body.memberTiers)) {
+      return err('memberTiers must be an object mapping member IDs to tier values');
+    }
+    const tiers = body.memberTiers as Record<string, string>;
+    for (const [memberId, tier] of Object.entries(tiers)) {
+      if (!uniqueMemberIds.includes(memberId)) {
+        return err(`memberTiers references member "${memberId}" not in memberIds`);
+      }
+      if (!isFrontTier(tier)) {
+        return err(`Invalid tier "${tier}" for member "${memberId}". Must be primary, cofront, or coconscious`);
+      }
+    }
+    memberTiers = tiers as Record<string, 'primary' | 'cofront' | 'coconscious'>;
+  }
   const availableMembers = await db.query.members.findMany({
     columns: {
       id: true,
@@ -244,6 +266,7 @@ export async function POST(request: Request) {
         return ok({
           ...activeFront,
           memberIds: activeMemberIds,
+          memberTiers: safeParseMemberTiers(activeFront.memberTiers),
           pluralKitSync: {
             requestId,
             status: 'skipped',
@@ -269,15 +292,19 @@ export async function POST(request: Request) {
       isNull(frontEntries.endedAt)
     ));
 
+  // Resolve tiers: use provided tiers or auto-assign
+  const resolvedTiers = memberTiers ?? autoAssignTiers(uniqueMemberIds);
+
   // Create new front entry
   const newEntry = await db.insert(frontEntries).values({
-    id:        createId(),
-    systemId:  auth.systemId,
-    memberIds: serializeMemberIds(uniqueMemberIds),
-    startedAt: now,
-    endedAt:   null,
-    note:      typeof body.note === 'string' ? body.note : null,
-    createdAt: now,
+    id:          createId(),
+    systemId:    auth.systemId,
+    memberIds:   serializeMemberIds(uniqueMemberIds),
+    memberTiers: serializeMemberTiers(resolvedTiers),
+    startedAt:   now,
+    endedAt:     null,
+    note:        typeof body.note === 'string' ? body.note : null,
+    createdAt:   now,
   }).returning();
 
   revalidatePath('/');
@@ -305,7 +332,7 @@ export async function POST(request: Request) {
     });
   }));
 
-  return ok({ ...newEntry[0], memberIds: uniqueMemberIds, pluralKitSync }, 201);
+  return ok({ ...newEntry[0], memberIds: uniqueMemberIds, memberTiers: resolvedTiers, pluralKitSync }, 201);
 }
 
 // DELETE /api/front — end the current front entry

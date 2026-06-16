@@ -1,0 +1,1 @@
+ALTER TABLE "front_entries" ADD COLUMN "member_tiers" text;

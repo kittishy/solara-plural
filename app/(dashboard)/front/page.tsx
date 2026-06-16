@@ -24,9 +24,20 @@ type Member = {
   avatarUrl?: string | null;
 };
 
+type FrontTier = 'primary' | 'cofront' | 'coconscious';
+
+const TIER_CONFIG: Record<FrontTier, { label: string; color: string; shortLabel: string }> = {
+  primary:     { label: 'Primary',    color: '#007AFF', shortLabel: 'P' },
+  cofront:     { label: 'Co-front',   color: '#34C759', shortLabel: 'CF' },
+  coconscious: { label: 'Co-conscient', color: '#8E8E93', shortLabel: 'CC' },
+};
+
+const TIER_ORDER: FrontTier[] = ['primary', 'cofront', 'coconscious'];
+
 type FrontEntry = {
   id: string;
   memberIds: string[];
+  memberTiers: Record<string, FrontTier>;
   startedAt: string | number | Date;
   endedAt?: string | number | Date | null;
   note?: string | null;
@@ -95,7 +106,22 @@ export default function FrontPage() {
   const memberById = new Map(memberList.map((m) => [m.id, m]));
   const frontingIds = currentFront ? currentFront.memberIds : [];
   const frontingSet = new Set(frontingIds);
+  const currentTiers: Record<string, FrontTier> = currentFront?.memberTiers ?? {};
   const history = historyData ?? [];
+
+  /** Auto-assign tiers for a given set of member IDs. */
+  function resolveTiers(ids: string[], existingTiers: Record<string, FrontTier>): Record<string, FrontTier> {
+    const tiers: Record<string, FrontTier> = {};
+    ids.forEach((id, i) => {
+      // Preserve existing tier if available, else auto-assign
+      if (existingTiers[id] && ids.includes(id)) {
+        tiers[id] = existingTiers[id];
+      } else {
+        tiers[id] = i === 0 ? 'primary' : 'cofront';
+      }
+    });
+    return tiers;
+  }
 
   async function toggleMember(memberId: string) {
     if (updating) return;
@@ -113,15 +139,41 @@ export default function FrontPage() {
       if (newIds.length === 0) {
         await fetch("/api/front", { method: "DELETE", credentials: "same-origin" });
       } else {
+        const newTiers = resolveTiers(newIds, currentTiers);
         await fetch("/api/front", {
           method: "POST",
           credentials: "same-origin",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ memberIds: newIds }),
+          body: JSON.stringify({ memberIds: newIds, memberTiers: newTiers }),
         });
       }
       revalidateMembersAndFront();
       void mutate(swrKeys.frontHistory);
+    } finally {
+      setUpdating(false);
+    }
+  }
+
+  /** Cycle a member's tier: primary → cofront → coconscious → primary */
+  function cycleTier(memberId: string) {
+    if (updating || !frontingSet.has(memberId)) return;
+    const current = currentTiers[memberId] ?? 'cofront';
+    const idx = TIER_ORDER.indexOf(current);
+    const next = TIER_ORDER[(idx + 1) % TIER_ORDER.length];
+    const newTiers = { ...currentTiers, [memberId]: next };
+    applyTiers(newTiers);
+  }
+
+  async function applyTiers(newTiers: Record<string, FrontTier>) {
+    setUpdating(true);
+    try {
+      await fetch("/api/front", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ memberIds: frontingIds, memberTiers: newTiers }),
+      });
+      revalidateMembersAndFront();
     } finally {
       setUpdating(false);
     }
@@ -197,32 +249,46 @@ export default function FrontPage() {
               const m = memberById.get(id);
               if (!m) return null;
               return (
-                <div
-                  key={id}
-                  className="flex items-center gap-3 px-4 py-3.5 border-b border-border/50 last:border-0"
-                >
-                  <MemberAvatar member={m} size={12} />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-body font-semibold text-foreground">{m.name}</p>
-                    {m.pronouns && (
-                      <p className="text-caption-1 text-muted-foreground">{m.pronouns}</p>
-                    )}
-                    <p className="text-caption-1 text-muted-foreground flex items-center gap-1 mt-0.5">
-                      <Clock size={11} />
-                      {t("members.sinceTime", { time: formatTime(currentFront!.startedAt, language) })}
-                    </p>
-                  </div>
-                  <Badge variant="success">{t("members.fronting")}</Badge>
-                  <button
-                    onClick={() => toggleMember(id)}
-                    disabled={updating}
-                    className="w-7 h-7 rounded-full flex items-center justify-center text-muted-foreground hover:text-ios-red hover:bg-ios-red/10 ios-transition disabled:opacity-50"
-                    title={t("front.removeMemberFront")}
-                    aria-label={t("front.removeMemberFront")}
+                  <div
+                    key={id}
+                    className="flex items-center gap-3 px-4 py-3.5 border-b border-border/50 last:border-0"
                   >
-                    <X size={15} strokeWidth={2.5} />
-                  </button>
-                </div>
+                    <MemberAvatar member={m} size={12} />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-body font-semibold text-foreground">{m.name}</p>
+                      {m.pronouns && (
+                        <p className="text-caption-1 text-muted-foreground">{m.pronouns}</p>
+                      )}
+                      <p className="text-caption-1 text-muted-foreground flex items-center gap-1 mt-0.5">
+                        <Clock size={11} />
+                        {t("members.sinceTime", { time: formatTime(currentFront!.startedAt, language) })}
+                      </p>
+                      {/* Tier badge — tap to cycle */}
+                      <button
+                        onClick={() => cycleTier(id)}
+                        disabled={updating}
+                        className="text-caption-1 font-semibold mt-1 inline-flex items-center gap-1 ios-press disabled:opacity-50"
+                        style={{ color: TIER_CONFIG[currentTiers[id] ?? 'cofront'].color }}
+                        title={t("front.changeTier")}
+                      >
+                        <span
+                          className="inline-block w-1.5 h-1.5 rounded-full"
+                          style={{ background: TIER_CONFIG[currentTiers[id] ?? 'cofront'].color }}
+                        />
+                        {TIER_CONFIG[currentTiers[id] ?? 'cofront'].label}
+                      </button>
+                    </div>
+                    <Badge variant="success">{t("members.fronting")}</Badge>
+                    <button
+                      onClick={() => toggleMember(id)}
+                      disabled={updating}
+                      className="w-7 h-7 rounded-full flex items-center justify-center text-muted-foreground hover:text-ios-red hover:bg-ios-red/10 ios-transition disabled:opacity-50"
+                      title={t("front.removeMemberFront")}
+                      aria-label={t("front.removeMemberFront")}
+                    >
+                      <X size={15} strokeWidth={2.5} />
+                    </button>
+                  </div>
               );
             })
           )}
@@ -246,10 +312,6 @@ export default function FrontPage() {
             </div>
           ) : (
             history.slice(0, 8).map((entry) => {
-              const memberNames = entry.memberIds
-                .map((id) => memberById.get(id)?.name)
-                .filter(Boolean)
-                .join(", ");
               return (
                 <div
                   key={entry.id}
@@ -257,9 +319,25 @@ export default function FrontPage() {
                 >
                   <Clock size={14} className="text-muted-foreground flex-shrink-0" />
                   <div className="flex-1 min-w-0">
-                    <p className="text-subheadline font-semibold text-foreground truncate">
-                      {memberNames || "—"}
-                    </p>
+                    <div className="flex flex-wrap items-center gap-1 mb-0.5">
+                      {entry.memberIds.map((id) => {
+                        const m = memberById.get(id);
+                        const tierCfg = TIER_CONFIG[((entry as Record<string, unknown>).memberTiers as Record<string, FrontTier>)?.[id] ?? 'cofront'];
+                        return (
+                          <span
+                            key={id}
+                            className="inline-flex items-center gap-1 text-caption-1 font-semibold"
+                            style={{ color: m?.color ?? "#8E8E93" }}
+                          >
+                            <span
+                              className="inline-block w-1.5 h-1.5 rounded-full"
+                              style={{ background: tierCfg.color }}
+                            />
+                            {m?.name ?? "—"}
+                          </span>
+                        );
+                      })}
+                    </div>
                     <p className="text-caption-1 text-muted-foreground">
                       {formatDate(entry.startedAt, language)} · {formatTime(entry.startedAt, language)}
                       {entry.endedAt && ` → ${formatTime(entry.endedAt, language)}`}
@@ -358,16 +436,35 @@ export default function FrontPage() {
                       )}
                     </div>
 
-                    {/* Check indicator */}
-                    <div
-                      className={cn(
-                        "w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ios-transition",
-                        isActive
-                          ? "bg-ios-blue"
-                          : "border-2 border-border"
+                    {/* Tier indicator + check */}
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      {isActive && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            cycleTier(m.id);
+                          }}
+                          disabled={updating}
+                          className="text-caption-2 font-semibold px-1.5 py-0.5 rounded-full ios-press disabled:opacity-50"
+                          style={{
+                            background: `${TIER_CONFIG[currentTiers[m.id] ?? 'cofront'].color}22`,
+                            color: TIER_CONFIG[currentTiers[m.id] ?? 'cofront'].color,
+                          }}
+                          title={t("front.changeTier")}
+                        >
+                          {TIER_CONFIG[currentTiers[m.id] ?? 'cofront'].shortLabel}
+                        </button>
                       )}
-                    >
-                      {isActive && <Check size={14} className="text-white" strokeWidth={3} />}
+                      <div
+                        className={cn(
+                          "w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ios-transition",
+                          isActive
+                            ? "bg-ios-blue"
+                            : "border-2 border-border"
+                        )}
+                      >
+                        {isActive && <Check size={14} className="text-white" strokeWidth={3} />}
+                      </div>
                     </div>
                   </button>
                 );

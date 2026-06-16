@@ -3,7 +3,7 @@ import { frontEntries, members } from '@/lib/db/schema';
 import { eq, and, isNotNull, desc, inArray } from 'drizzle-orm';
 import { requireAuth, ok, err, parseJsonRecord } from '@/lib/api/helpers';
 import { createId } from '@paralleldrive/cuid2';
-import { parseDatetimeLocalValue, parseMemberIds, serializeMemberIds } from '@/lib/front';
+import { parseDatetimeLocalValue, parseMemberIds, safeParseMemberTiers, serializeMemberIds, serializeMemberTiers, autoAssignTiers, isFrontTier } from '@/lib/front';
 import { revalidatePath } from 'next/cache';
 
 // GET /api/front/history — front history
@@ -28,6 +28,7 @@ export async function GET(request: Request) {
   const parsed = history.map((e) => ({
     ...e,
     memberIds: parseMemberIds(e.memberIds),
+    memberTiers: safeParseMemberTiers(e.memberTiers),
   }));
 
   return ok(parsed, 200, {
@@ -63,10 +64,31 @@ export async function POST(request: Request) {
     return err('One or more memberIds are invalid');
   }
 
+  // Validate optional memberTiers
+  let memberTiers: Record<string, 'primary' | 'cofront' | 'coconscious'> | null = null;
+  if (body.memberTiers !== undefined && body.memberTiers !== null) {
+    if (typeof body.memberTiers !== 'object' || Array.isArray(body.memberTiers)) {
+      return err('memberTiers must be an object mapping member IDs to tier values');
+    }
+    const tiers = body.memberTiers as Record<string, string>;
+    for (const [memberId, tier] of Object.entries(tiers)) {
+      if (!memberIds.includes(memberId)) {
+        return err(`memberTiers references member "${memberId}" not in memberIds`);
+      }
+      if (!isFrontTier(tier)) {
+        return err(`Invalid tier "${tier}" for member "${memberId}". Must be primary, cofront, or coconscious`);
+      }
+    }
+    memberTiers = tiers as Record<string, 'primary' | 'cofront' | 'coconscious'>;
+  }
+
+  const resolvedTiers = memberTiers ?? autoAssignTiers(memberIds);
+
   const created = await db.insert(frontEntries).values({
     id: createId(),
     systemId: auth.systemId,
     memberIds: serializeMemberIds(memberIds),
+    memberTiers: serializeMemberTiers(resolvedTiers),
     startedAt,
     endedAt,
     note: note || null,
@@ -78,5 +100,5 @@ export async function POST(request: Request) {
   revalidatePath('/members');
   revalidatePath('/front/history');
 
-  return ok({ ...created[0], memberIds }, 201);
+  return ok({ ...created[0], memberIds, memberTiers: resolvedTiers }, 201);
 }
