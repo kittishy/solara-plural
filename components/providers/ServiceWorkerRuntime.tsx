@@ -2,7 +2,6 @@
 
 import { useEffect } from "react";
 import { mutate } from "swr";
-import { isAppRuntime } from "@/lib/swr";
 
 // Registers the Solara service worker and wires up seamless updates:
 // - On a new SW being available, we immediately tell it to `skipWaiting`
@@ -18,7 +17,6 @@ export function ServiceWorkerRuntime() {
     if (process.env.NODE_ENV !== "production" && !window.location.hostname) return;
 
     let refreshing = false;
-    const isApp = isAppRuntime();
     const refreshAll = () => {
       void mutate(() => true, undefined, { revalidate: true });
     };
@@ -67,15 +65,10 @@ export function ServiceWorkerRuntime() {
         };
         window.addEventListener("solara:native-resume", onNativeResume);
 
-        const appRefreshInterval = isApp
-          ? window.setInterval(refreshAll, 10_000)
-          : null;
-
         return () => {
           window.clearInterval(interval);
           document.removeEventListener("visibilitychange", onVisible);
           window.removeEventListener("solara:native-resume", onNativeResume);
-          if (appRefreshInterval) window.clearInterval(appRefreshInterval);
         };
       })
       .catch(() => undefined);

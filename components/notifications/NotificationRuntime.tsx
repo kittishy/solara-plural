@@ -90,8 +90,16 @@ export function NotificationRuntime() {
     let retryTimer: number | null = null;
     let stopped = false;
 
+    const closeSource = () => {
+      if (source) {
+        source.close();
+        source = null;
+      }
+    };
+
     const connect = () => {
-      if (stopped) return;
+      if (stopped || document.visibilityState === "hidden") return;
+      if (source && source.readyState !== EventSource.CLOSED) return;
       try {
         source = new EventSource("/api/notifications/stream", { withCredentials: true });
 
@@ -107,8 +115,7 @@ export function NotificationRuntime() {
 
         source.onerror = () => {
           if (source && source.readyState === EventSource.CLOSED) {
-            source.close();
-            source = null;
+            closeSource();
             if (!stopped) {
               if (retryTimer) window.clearTimeout(retryTimer);
               retryTimer = window.setTimeout(connect, 5_000);
@@ -133,6 +140,9 @@ export function NotificationRuntime() {
           if (retryTimer) window.clearTimeout(retryTimer);
           connect();
         }
+      } else {
+        if (retryTimer) window.clearTimeout(retryTimer);
+        closeSource();
       }
     };
     document.addEventListener("visibilitychange", onVisibilityChange);
@@ -153,10 +163,7 @@ export function NotificationRuntime() {
     return () => {
       stopped = true;
       if (retryTimer) window.clearTimeout(retryTimer);
-      if (source) {
-        source.close();
-        source = null;
-      }
+      closeSource();
       document.removeEventListener("visibilitychange", onVisibilityChange);
       window.removeEventListener("focus", refreshNotifications);
       if (removeSwListener) removeSwListener();

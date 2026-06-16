@@ -17,8 +17,8 @@ import { createPersistentProvider } from "@/lib/swr-cache-provider";
 // - `revalidateOnFocus` / `revalidateIfStale` / `revalidateOnReconnect`: keep
 //   data live — the seeded cache only changes what paints first, never whether
 //   we refresh
-// - inside the installed app we also poll on an interval and `apiFetcher` uses
-//   `no-store`, so fronting, notifications, and shared friend data stay live.
+// - page-level realtime or focused revalidation keeps hot data fresh without a
+//   global interval waking every SWR key in the app.
 export function SWRProvider({ children }: { children: React.ReactNode }) {
   const [isApp, setIsApp] = useState(false);
   const { data: session } = useSession();
@@ -46,7 +46,7 @@ export function SWRProvider({ children }: { children: React.ReactNode }) {
         keepPreviousData: true,
         dedupingInterval: isApp ? 1_000 : 4_000,
         focusThrottleInterval: isApp ? 2_000 : 10_000,
-        refreshInterval: isApp ? 5_000 : 0,
+        refreshInterval: 0,
         revalidateOnFocus: true,
         revalidateIfStale: true,
         revalidateOnReconnect: true,

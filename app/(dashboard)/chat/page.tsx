@@ -136,33 +136,62 @@ export default function ChatPage() {
     }).then(() => mutate("/api/chat/channels")).catch(() => undefined);
   }, [activeChannelId]);
 
-  // Real-time messages via SSE (replaces the old 5s polling). New messages on
-  // the open channel repaint instantly; messages on other channels bump their
-  // unread badge. EventSource reconnects automatically when the server closes
-  // the stream (Vercel function duration limit) or the network drops.
+  // Real-time messages via SSE. Keep the stream open only while this tab is
+  // visible so background tabs do not keep Vercel functions alive.
   useEffect(() => {
     if (typeof window === "undefined" || !("EventSource" in window)) return;
-    const source = new EventSource("/api/chat/stream");
+    let source: EventSource | null = null;
 
-    source.addEventListener("message", (event) => {
-      try {
-        const payload = JSON.parse((event as MessageEvent).data) as { channelId?: string };
-        if (!payload.channelId) return;
-        if (payload.channelId === activeChannelIdRef.current) {
-          void mutate(`/api/chat?channelId=${payload.channelId}`);
-          void fetch(`/api/chat/channels/${payload.channelId}/read`, {
-            method: "POST",
-            credentials: "same-origin",
-          }).catch(() => undefined);
-        } else {
-          void mutate("/api/chat/channels");
-        }
-      } catch {
-        // Malformed event — the 30s SWR fallback still covers us.
+    const closeSource = () => {
+      if (source) {
+        source.close();
+        source = null;
       }
-    });
+    };
 
-    return () => source.close();
+    const connect = () => {
+      if (document.visibilityState === "hidden") return;
+      if (source && source.readyState !== EventSource.CLOSED) return;
+      source = new EventSource("/api/chat/stream");
+
+      source.addEventListener("message", (event) => {
+        try {
+          const payload = JSON.parse((event as MessageEvent).data) as { channelId?: string };
+          if (!payload.channelId) return;
+          if (payload.channelId === activeChannelIdRef.current) {
+            void mutate(`/api/chat?channelId=${payload.channelId}`);
+            void fetch(`/api/chat/channels/${payload.channelId}/read`, {
+              method: "POST",
+              credentials: "same-origin",
+            }).catch(() => undefined);
+          } else {
+            void mutate("/api/chat/channels");
+          }
+        } catch {
+          // Malformed event - the 30s SWR fallback still covers us.
+        }
+      });
+    };
+
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        connect();
+        if (activeChannelIdRef.current) {
+          void mutate(`/api/chat?channelId=${activeChannelIdRef.current}`);
+        }
+        void mutate("/api/chat/channels");
+      } else {
+        closeSource();
+      }
+    };
+
+    connect();
+    document.addEventListener("visibilitychange", onVisibilityChange);
+
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      closeSource();
+    };
   }, []);
 
   useEffect(() => {
