@@ -15,6 +15,7 @@ import {
   X,
   ImageUp,
   Loader2,
+  CheckCheck,
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import { LargeTitle } from "@/components/layout/NavBar";
@@ -163,7 +164,7 @@ export default function ChatPage() {
             void fetch(`/api/chat/channels/${payload.channelId}/read`, {
               method: "POST",
               credentials: "same-origin",
-            }).catch(() => undefined);
+            }).then(() => mutate("/api/chat/channels")).catch(() => undefined);
           } else {
             void mutate("/api/chat/channels");
           }
@@ -240,6 +241,14 @@ export default function ChatPage() {
       setDeletingChannelId(null);
       setConfirmDeleteChannel(null);
     }
+  }
+
+  async function markChannelAsRead(channelId: string) {
+    await fetch(`/api/chat/channels/${channelId}/read`, {
+      method: "POST",
+      credentials: "same-origin",
+    }).catch(() => undefined);
+    void mutate("/api/chat/channels");
   }
 
   async function deleteMessage(msgId: string) {
@@ -733,6 +742,16 @@ export default function ChatPage() {
                     </span>
                   )}
                 </button>
+                {(ch.unreadCount ?? 0) > 0 && activeChannelId !== ch.id && (
+                  <button
+                    onClick={() => { selection(); void markChannelAsRead(ch.id); }}
+                    className="w-8 h-8 rounded-full bg-ios-blue/10 text-ios-blue flex items-center justify-center ios-press"
+                    aria-label={t("chat.markAsRead")}
+                    title={t("chat.markAsRead")}
+                  >
+                    <CheckCheck size={14} />
+                  </button>
+                )}
                 {channels.length > 1 && (
                   <button
                     onClick={() => setConfirmDeleteChannel(ch)}

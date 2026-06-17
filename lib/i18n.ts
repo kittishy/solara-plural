@@ -398,6 +398,7 @@ export const translations = {
       unavailable: 'Chat unavailable',
       fileTooBig: 'File must be under 20 MB',
       uploadFailed: 'Upload failed. Try again.',
+      markAsRead: 'Mark as read',
     },
     pages: {
       friendsTitle: 'Friends',
@@ -1101,6 +1102,7 @@ export const translations = {
       unavailable: 'Chat indisponível',
       fileTooBig: 'O arquivo deve ter menos de 20 MB',
       uploadFailed: 'Falha no envio. Tente novamente.',
+      markAsRead: 'Marcar como lido',
     },
     pages: {
       friendsTitle: 'Amizades',
@@ -1804,6 +1806,7 @@ export const translations = {
       unavailable: 'Chat no disponible',
       fileTooBig: 'El archivo debe tener menos de 20 MB',
       uploadFailed: 'Error al subir el archivo. Intenta de nuevo.',
+      markAsRead: 'Marcar como leído',
     },
     pages: {
       friendsTitle: 'Amistades',
