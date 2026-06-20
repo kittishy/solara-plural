@@ -165,7 +165,16 @@ export default function FrontPage() {
   }
 
   async function applyTiers(newTiers: Record<string, FrontTier>) {
+    if (!currentFront) return;
     setUpdating(true);
+    selection();
+    // Optimistically reflect the new tier so the switch feels instant.
+    void mutate(
+      swrKeys.front,
+      (current?: FrontEntry | null) =>
+        current ? { ...current, memberTiers: newTiers } : current,
+      { revalidate: false }
+    );
     try {
       await fetch("/api/front", {
         method: "POST",

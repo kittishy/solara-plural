@@ -132,6 +132,13 @@ function sameMemberList(a: string[], b: string[]) {
   return a.every((value, index) => value === b[index]);
 }
 
+function sameMemberTiers(a: Record<string, string>, b: Record<string, string>) {
+  const aKeys = Object.keys(a);
+  const bKeys = Object.keys(b);
+  if (aKeys.length !== bKeys.length) return false;
+  return aKeys.every((key) => a[key] === b[key]);
+}
+
 function deferPluralKitFrontSync(systemId: string, memberIds: string[], requestId: string, reasonCode: string): PluralKitSyncMeta {
   void syncFrontToPluralKit(systemId, memberIds, { requestId })
     .then((providerSync) => {
@@ -263,15 +270,51 @@ export async function POST(request: Request) {
     try {
       const activeMemberIds = parseMemberIds(activeFront.memberIds);
       if (sameMemberList(activeMemberIds, uniqueMemberIds)) {
+        // Same members fronting. If the caller is only changing tiers
+        // (primary / co-front / co-conscious), update them in place on the
+        // existing entry instead of skipping — this is the real-time tier
+        // switch path. PluralKit only tracks who is fronting, not tiers, so
+        // no provider sync is needed here.
+        const existingTiers = safeParseMemberTiers(activeFront.memberTiers);
+        const requestedTiers = memberTiers ?? autoAssignTiers(uniqueMemberIds);
+
+        if (sameMemberTiers(existingTiers, requestedTiers)) {
+          return ok({
+            ...activeFront,
+            memberIds: activeMemberIds,
+            memberTiers: existingTiers,
+            pluralKitSync: {
+              requestId,
+              status: 'skipped',
+              providerStatus: 'skipped',
+              reasonCode: 'already_in_sync',
+              httpStatus: null,
+              mappedCount: 0,
+              unmappedIds: [],
+              details: null,
+            },
+          });
+        }
+
+        const [updatedEntry] = await db.update(frontEntries)
+          .set({ memberTiers: serializeMemberTiers(requestedTiers) })
+          .where(eq(frontEntries.id, activeFront.id))
+          .returning();
+
+        revalidatePath('/');
+        revalidatePath('/front');
+        revalidatePath('/members');
+        revalidatePath('/front/history');
+
         return ok({
-          ...activeFront,
+          ...updatedEntry,
           memberIds: activeMemberIds,
-          memberTiers: safeParseMemberTiers(activeFront.memberTiers),
+          memberTiers: requestedTiers,
           pluralKitSync: {
             requestId,
             status: 'skipped',
             providerStatus: 'skipped',
-            reasonCode: 'already_in_sync',
+            reasonCode: 'tiers_updated_no_member_change',
             httpStatus: null,
             mappedCount: 0,
             unmappedIds: [],
