@@ -71,7 +71,7 @@ export function AdminShell({
   return (
     <div className="min-h-[100dvh] bg-[var(--ios-bg)] text-foreground">
       {/* Mobile top bar */}
-      <header className="md:hidden sticky top-0 z-30 flex items-center justify-between border-b border-border/60 bg-[var(--ios-bg-secondary)]/90 px-4 py-3 backdrop-blur">
+      <header className="md:hidden sticky top-0 z-30 flex items-center justify-between border-b border-border/60 bg-[var(--ios-bg-secondary)]/90 px-4 pb-3 pt-[calc(env(safe-area-inset-top,0px)+0.75rem)] backdrop-blur">
         <div className="flex items-center gap-2 font-semibold">
           <ShieldAlert size={18} className="text-ios-blue" />
           Solara Admin
@@ -88,6 +88,26 @@ export function AdminShell({
       {mobileOpen && (
         <div className="md:hidden border-b border-border/60 bg-[var(--ios-bg-secondary)] px-4 py-3">
           {navLinks}
+          <div className="mt-3 space-y-3 border-t border-border/60 pt-3">
+            <Link
+              href={loc("/")}
+              onClick={() => setMobileOpen(false)}
+              className="flex items-center gap-2 px-1 text-sm text-muted-foreground hover:text-foreground"
+            >
+              <ExternalLink size={16} /> Back to app
+            </Link>
+            {adminEmail && (
+              <p className="truncate px-1 text-xs text-muted-foreground" title={adminEmail}>
+                {adminEmail}
+              </p>
+            )}
+            <button
+              onClick={() => signOut({ callbackUrl: loc("/login") })}
+              className="flex items-center gap-2 px-1 text-sm text-ios-red hover:opacity-80"
+            >
+              <LogOut size={16} /> Sign out
+            </button>
+          </div>
         </div>
       )}
 
