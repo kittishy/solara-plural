@@ -84,6 +84,9 @@ export default function FrontHistoryPage() {
   const [formNote, setFormNote] = useState("");
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState("");
+  const [deleteTarget, setDeleteTarget] = useState<FrontEntry | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
 
   function openNewForm() {
     setEditEntry(null);
@@ -152,14 +155,39 @@ export default function FrontHistoryPage() {
         body: JSON.stringify(body),
       });
       if (!res.ok) {
-        const json = await res.json();
+        const json = await res.json().catch(() => ({}));
         setFormError(json.error ?? t("front.saveError"));
         return;
       }
       setShowEntryForm(false);
       void mutate(swrKeys.frontHistory);
+    } catch {
+      setFormError(t("front.saveError"));
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function confirmDelete() {
+    if (!deleteTarget) return;
+    setDeleteError("");
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/front/history/${deleteTarget.id}`, {
+        method: "DELETE",
+        credentials: "same-origin",
+      });
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        setDeleteError(json.error ?? t("front.deleteError"));
+        return;
+      }
+      setDeleteTarget(null);
+      void mutate(swrKeys.frontHistory);
+    } catch {
+      setDeleteError(t("front.deleteError"));
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -299,6 +327,17 @@ export default function FrontHistoryPage() {
                     >
                       <Pencil size={13} />
                     </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDeleteError("");
+                        setDeleteTarget(entry);
+                      }}
+                      className="w-7 h-7 rounded-full bg-secondary flex items-center justify-center ios-press opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity text-ios-red"
+                      aria-label={t("front.deleteEntry")}
+                    >
+                      <Trash2 size={13} />
+                    </button>
                   </div>
                 </div>
               );
@@ -402,6 +441,38 @@ export default function FrontHistoryPage() {
             {t("common.cancel")}
           </Button>
         </form>
+      </BottomSheet>
+
+      <BottomSheet
+        open={deleteTarget !== null}
+        onClose={() => setDeleteTarget(null)}
+        title={t("front.deleteEntry")}
+      >
+        <div className="flex flex-col gap-4">
+          <p className="text-body text-foreground">
+            {t("front.confirmDeleteEntry")}
+          </p>
+          {deleteError && (
+            <p className="text-subheadline text-ios-red text-center">{deleteError}</p>
+          )}
+          <div className="flex flex-col gap-2">
+            <Button
+              variant="destructive"
+              onClick={confirmDelete}
+              disabled={deleting}
+              className="w-full"
+            >
+              {deleting ? t("common.deleting") : t("common.yes")}
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={() => setDeleteTarget(null)}
+              className="w-full"
+            >
+              {t("common.cancel")}
+            </Button>
+          </div>
+        </div>
       </BottomSheet>
     </div>
   );

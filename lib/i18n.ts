@@ -213,6 +213,7 @@ export const translations = {
       edit: 'Edit',
       close: 'Close',
       saveError: 'Error saving. Try again?',
+      deleteError: 'Could not delete. Try again.',
       selectLanguage: 'Select language',
     },
     avatar: {
@@ -348,6 +349,9 @@ export const translations = {
       endTime: 'End time',
       note: 'Note',
       changeTier: 'Change tier',
+      deleteEntry: 'Delete entry',
+      confirmDeleteEntry: 'Delete this front entry? This cannot be undone.',
+      deleteError: 'Could not delete entry. Try again.',
     },
     chat: {
       title: 'Chat',
@@ -916,6 +920,7 @@ export const translations = {
       edit: 'Editar',
       close: 'Fechar',
       saveError: 'Erro ao salvar. Tente de novo?',
+      deleteError: 'Não foi possível excluir. Tente de novo.',
       selectLanguage: 'Selecionar idioma',
     },
     avatar: {
@@ -1051,6 +1056,9 @@ export const translations = {
       endTime: 'Fim',
       note: 'Anotação',
       changeTier: 'Alterar camada',
+      deleteEntry: 'Excluir entrada',
+      confirmDeleteEntry: 'Excluir esta entrada de front? Isso não pode ser desfeito.',
+      deleteError: 'Não foi possível excluir a entrada. Tente de novo.',
     },
     chat: {
       title: 'Chat',
@@ -1619,6 +1627,7 @@ export const translations = {
       edit: 'Editar',
       close: 'Cerrar',
       saveError: 'Error al guardar. ¿Lo intentas de nuevo?',
+      deleteError: 'No se pudo eliminar. Intenta otra vez.',
       selectLanguage: 'Seleccionar idioma',
     },
     avatar: {
@@ -1754,6 +1763,9 @@ export const translations = {
       endTime: 'Fin',
       note: 'Nota',
       changeTier: 'Cambiar nivel',
+      deleteEntry: 'Eliminar entrada',
+      confirmDeleteEntry: '¿Eliminar esta entrada de front? Esto no se puede deshacer.',
+      deleteError: 'No se pudo eliminar la entrada. Intenta otra vez.',
     },
     chat: {
       title: 'Chat',

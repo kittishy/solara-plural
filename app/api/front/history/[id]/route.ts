@@ -79,3 +79,23 @@ export async function PUT(request: Request, { params }: RouteContext) {
 
   return ok({ ...updated[0], memberIds, memberTiers: resolvedTiers });
 }
+
+export async function DELETE(_request: Request, { params }: RouteContext) {
+  const auth = await requireAuth();
+  if (auth.error) return auth.error;
+
+  const { id } = await params;
+
+  const deleted = await db.delete(frontEntries)
+    .where(and(eq(frontEntries.id, id), eq(frontEntries.systemId, auth.systemId)))
+    .returning({ id: frontEntries.id });
+
+  if (deleted.length === 0) return err('Front entry not found', 404);
+
+  revalidatePath('/');
+  revalidatePath('/front');
+  revalidatePath('/members');
+  revalidatePath('/front/history');
+
+  return ok({ id });
+}

@@ -47,6 +47,7 @@ export default function CustomFieldsSettingsPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState("");
 
   function reset() {
     setName("");
@@ -96,12 +97,20 @@ export default function CustomFieldsSettingsPage() {
 
   async function deleteField(id: string) {
     setDeletingId(id);
+    setDeleteError("");
     try {
-      await fetch(`/api/custom-fields/${id}`, {
+      const res = await fetch(`/api/custom-fields/${id}`, {
         method: "DELETE",
         credentials: "same-origin",
       });
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        setDeleteError(json.error ?? t("common.deleteError"));
+        return;
+      }
       void mutate(swrKeys.customFields);
+    } catch {
+      setDeleteError(t("common.deleteError"));
     } finally {
       setDeletingId(null);
     }
@@ -176,6 +185,12 @@ export default function CustomFieldsSettingsPage() {
             ))
           )}
         </GlassCard>
+
+        {deleteError && (
+          <p className="text-subheadline text-ios-red text-center mt-3">
+            {deleteError}
+          </p>
+        )}
       </div>
 
       <BottomSheet
