@@ -28,6 +28,7 @@ import DynamicAvatarImage from "@/components/ui/DynamicAvatarImage";
 import { cn } from "@/lib/utils";
 import { useHaptics } from "@/lib/haptics";
 import { useLanguage } from "@/components/providers/LanguageProvider";
+import { useToast } from "@/components/providers/ToastProvider";
 
 type SystemSummary = {
   id: string;
@@ -99,6 +100,7 @@ function SystemAvatar({
 
 export default function FriendsPage() {
   const { t } = useLanguage();
+  const { showToast } = useToast();
   const { success, selection } = useHaptics();
   const { data, isLoading } = useSWR<FriendsPayload>(
     swrKeys.friends,
@@ -151,21 +153,31 @@ export default function FriendsPage() {
     // Accepting a friend is a happy commit; declining is a lighter tick.
     if (action === "accept") success();
     else selection();
-    await fetch(`/api/friends/requests/${id}`, {
-      method: "POST",
-      credentials: "same-origin",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action }),
-    });
+    try {
+      const res = await fetch(`/api/friends/requests/${id}`, {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action }),
+      });
+      if (!res.ok) showToast(t("common.error"));
+    } catch {
+      showToast(t("common.error"));
+    }
     void mutate(swrKeys.friends);
   }
 
   async function unblock(systemId: string) {
     selection();
-    await fetch(`/api/friends/blocks/${systemId}`, {
-      method: "DELETE",
-      credentials: "same-origin",
-    });
+    try {
+      const res = await fetch(`/api/friends/blocks/${systemId}`, {
+        method: "DELETE",
+        credentials: "same-origin",
+      });
+      if (!res.ok) showToast(t("common.error"));
+    } catch {
+      showToast(t("common.error"));
+    }
     void mutate(swrKeys.friends);
   }
 
@@ -551,6 +563,7 @@ function SharingSheet({
   onClose: () => void;
 }) {
   const { t } = useLanguage();
+  const { showToast } = useToast();
   const { data, isLoading } = useSWR<SharingPayload>(
     `/api/friends/sharing/${friend.id}`,
     apiFetcher
@@ -568,15 +581,21 @@ function SharingSheet({
   async function setGlobalVisibility(visibility: "hidden" | "profile" | "full") {
     setSaving(true);
     try {
-      await fetch(`/api/friends/sharing/${friend.id}`, {
+      const res = await fetch(`/api/friends/sharing/${friend.id}`, {
         method: "PATCH",
         credentials: "same-origin",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ visibility }),
       });
+      if (!res.ok) {
+        showToast(t("common.saveError"));
+        return;
+      }
       void mutate(`/api/friends/sharing/${friend.id}`);
       void mutate(swrKeys.friends);
       onClose();
+    } catch {
+      showToast(t("common.saveError"));
     } finally {
       setSaving(false);
     }

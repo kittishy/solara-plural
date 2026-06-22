@@ -12,6 +12,7 @@ import { BottomSheet } from "@/components/glass/BottomSheet";
 import DynamicAvatarImage from "@/components/ui/DynamicAvatarImage";
 import { apiFetcher } from "@/lib/swr";
 import { useLanguage } from "@/components/providers/LanguageProvider";
+import { useToast } from "@/components/providers/ToastProvider";
 import { type TranslationKey } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
@@ -60,6 +61,7 @@ const MOODS = ["😊", "🥰", "😌", "😐", "😔", "😤", "❤️", "🌟",
 
 function DiarySheet({ partnershipId, onClose, t, language }: { partnershipId: string; onClose: () => void; t: (k: TranslationKey, v?: Record<string, string | number>) => string; language: string }) {
   const notesKey = `/api/partners/${partnershipId}/notes`;
+  const { showToast } = useToast();
   const { data: notes, isLoading } = useSWR<Note[]>(notesKey, apiFetcher);
   const [content, setContent] = useState("");
   const [mood, setMood] = useState("");
@@ -70,15 +72,21 @@ function DiarySheet({ partnershipId, onClose, t, language }: { partnershipId: st
     if (!content.trim()) return;
     setSaving(true);
     try {
-      await fetch(notesKey, {
+      const res = await fetch(notesKey, {
         method: "POST",
         credentials: "same-origin",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ content: content.trim(), mood: mood || undefined }),
       });
+      if (!res.ok) {
+        showToast(t("common.saveError"));
+        return;
+      }
       setContent("");
       setMood("");
       void mutate(notesKey);
+    } catch {
+      showToast(t("common.saveError"));
     } finally {
       setSaving(false);
     }
@@ -145,6 +153,7 @@ function DiarySheet({ partnershipId, onClose, t, language }: { partnershipId: st
 
 function MilestonesSheet({ partnershipId, onClose, t, language }: { partnershipId: string; onClose: () => void; t: (k: TranslationKey, v?: Record<string, string | number>) => string; language: string }) {
   const milestonesKey = `/api/partners/${partnershipId}/milestones`;
+  const { showToast } = useToast();
   const { data: milestones, isLoading } = useSWR<Milestone[]>(milestonesKey, apiFetcher);
   const [title, setTitle] = useState("");
   const [date, setDate] = useState("");
@@ -160,16 +169,22 @@ function MilestonesSheet({ partnershipId, onClose, t, language }: { partnershipI
     if (!title.trim() || !date) return;
     setSaving(true);
     try {
-      await fetch(milestonesKey, {
+      const res = await fetch(milestonesKey, {
         method: "POST",
         credentials: "same-origin",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ title: title.trim(), occurredOn: date, description: description.trim() || undefined }),
       });
+      if (!res.ok) {
+        showToast(t("common.saveError"));
+        return;
+      }
       setTitle("");
       setDate("");
       setDescription("");
       void mutate(milestonesKey);
+    } catch {
+      showToast(t("common.saveError"));
     } finally {
       setSaving(false);
     }
@@ -235,6 +250,7 @@ function MilestonesSheet({ partnershipId, onClose, t, language }: { partnershipI
 
 function BucketSheet({ partnershipId, onClose, t }: { partnershipId: string; onClose: () => void; t: (k: TranslationKey, v?: Record<string, string | number>) => string }) {
   const bucketKey = `/api/partners/${partnershipId}/bucket`;
+  const { showToast } = useToast();
   const { data: items, isLoading } = useSWR<BucketItem[]>(bucketKey, apiFetcher);
   const [newTitle, setNewTitle] = useState("");
   const [saving, setSaving] = useState(false);
@@ -246,14 +262,20 @@ function BucketSheet({ partnershipId, onClose, t }: { partnershipId: string; onC
     if (!newTitle.trim()) return;
     setSaving(true);
     try {
-      await fetch(bucketKey, {
+      const res = await fetch(bucketKey, {
         method: "POST",
         credentials: "same-origin",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ title: newTitle.trim() }),
       });
+      if (!res.ok) {
+        showToast(t("common.saveError"));
+        return;
+      }
       setNewTitle("");
       void mutate(bucketKey);
+    } catch {
+      showToast(t("common.saveError"));
     } finally {
       setSaving(false);
     }
@@ -262,13 +284,16 @@ function BucketSheet({ partnershipId, onClose, t }: { partnershipId: string; onC
   async function toggleItem(item: BucketItem) {
     setTogglingId(item.id);
     try {
-      await fetch(`${bucketKey}/${item.id}`, {
+      const res = await fetch(`${bucketKey}/${item.id}`, {
         method: "PATCH",
         credentials: "same-origin",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ completed: !item.completedAt }),
       });
+      if (!res.ok) showToast(t("common.saveError"));
       void mutate(bucketKey);
+    } catch {
+      showToast(t("common.saveError"));
     } finally {
       setTogglingId(null);
     }
@@ -277,11 +302,14 @@ function BucketSheet({ partnershipId, onClose, t }: { partnershipId: string; onC
   async function deleteItem(item: BucketItem) {
     setDeletingId(item.id);
     try {
-      await fetch(`${bucketKey}/${item.id}`, {
+      const res = await fetch(`${bucketKey}/${item.id}`, {
         method: "DELETE",
         credentials: "same-origin",
       });
+      if (!res.ok) showToast(t("common.error"));
       void mutate(bucketKey);
+    } catch {
+      showToast(t("common.error"));
     } finally {
       setDeletingId(null);
     }

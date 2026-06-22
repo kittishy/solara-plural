@@ -7,6 +7,7 @@ import { ThemeRuntime } from "@/components/providers/ThemeRuntime";
 import { SWRProvider } from "@/components/providers/SWRProvider";
 import { ServiceWorkerRuntime } from "@/components/providers/ServiceWorkerRuntime";
 import { KeyboardProvider } from "@/components/providers/KeyboardProvider";
+import { ToastProvider } from "@/components/providers/ToastProvider";
 import { cookies } from "next/headers";
 import { DEFAULT_LANGUAGE, LANGUAGES, LANGUAGE_COOKIE_KEY, isLanguage } from "@/lib/i18n";
 import { getCachedSession } from "@/lib/auth/session";
@@ -61,7 +62,9 @@ export default async function RootLayout({
         >
           <SessionProvider session={session}>
             <SWRProvider>
-              <LanguageProvider>{children}</LanguageProvider>
+              <LanguageProvider>
+                <ToastProvider>{children}</ToastProvider>
+              </LanguageProvider>
             </SWRProvider>
             <ThemeRuntime />
             <ServiceWorkerRuntime />

@@ -110,6 +110,22 @@ export default function ThemeSettingsPage() {
     }
   }, [appearance.autoAdaptTheme, handleAdaptTheme]);
 
+  const handleModeChange = useCallback(
+    (mode: "light" | "dark" | "system") => {
+      setTheme(mode);
+      // A custom palette overrides the light/dark palettes via inline vars on
+      // <html>. If one is active, just calling setTheme() does nothing visible.
+      // Selecting a mode means "use this palette", so clear the custom override
+      // (and reset the editor swatches so the change is visible, not silent).
+      if (isCustomTheme(colors)) {
+        setColors(DEFAULT_SOLARA_COLORS);
+        persistCustomTheme(DEFAULT_SOLARA_COLORS);
+        clearCustomTheme();
+      }
+    },
+    [setTheme, colors]
+  );
+
   const handleSave = useCallback(() => {
     const finalAppearance: SolaraAppearance = {
       ...appearance,
@@ -163,7 +179,7 @@ export default function ThemeSettingsPage() {
               return (
                 <button
                   key={m.value}
-                  onClick={() => setTheme(m.value)}
+                  onClick={() => handleModeChange(m.value)}
                   className={cn(
                     "flex flex-col items-center gap-2 py-4 rounded-ios-lg ios-press ios-transition",
                     theme === m.value

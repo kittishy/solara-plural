@@ -15,6 +15,7 @@ import DynamicAvatarImage from "@/components/ui/DynamicAvatarImage";
 import { cn } from "@/lib/utils";
 import { useHaptics } from "@/lib/haptics";
 import { useLanguage } from "@/components/providers/LanguageProvider";
+import { useToast } from "@/components/providers/ToastProvider";
 
 type Member = {
   id: string;
@@ -85,6 +86,7 @@ function MemberAvatar({ member, size = 12 }: { member: Member; size?: number }) 
 export default function FrontPage() {
   const { t, language } = useLanguage();
   const { success, selection, warning } = useHaptics();
+  const { showToast } = useToast();
   const { data: currentFront, isLoading: loadingFront } = useSWR<FrontEntry | null>(
     swrKeys.front,
     apiFetcher
@@ -137,18 +139,22 @@ export default function FrontPage() {
         : [...frontingIds, memberId];
 
       if (newIds.length === 0) {
-        await fetch("/api/front", { method: "DELETE", credentials: "same-origin" });
+        const res = await fetch("/api/front", { method: "DELETE", credentials: "same-origin" });
+        if (!res.ok) showToast(t("front.endError"));
       } else {
         const newTiers = resolveTiers(newIds, currentTiers);
-        await fetch("/api/front", {
+        const res = await fetch("/api/front", {
           method: "POST",
           credentials: "same-origin",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ memberIds: newIds, memberTiers: newTiers }),
         });
+        if (!res.ok) showToast(t("front.saveError"));
       }
       revalidateMembersAndFront();
       void mutate(swrKeys.frontHistory);
+    } catch {
+      showToast(t("front.saveError"));
     } finally {
       setUpdating(false);
     }
@@ -167,13 +173,16 @@ export default function FrontPage() {
   async function applyTiers(newTiers: Record<string, FrontTier>) {
     setUpdating(true);
     try {
-      await fetch("/api/front", {
+      const res = await fetch("/api/front", {
         method: "POST",
         credentials: "same-origin",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ memberIds: frontingIds, memberTiers: newTiers }),
       });
+      if (!res.ok) showToast(t("front.saveError"));
       revalidateMembersAndFront();
+    } catch {
+      showToast(t("front.saveError"));
     } finally {
       setUpdating(false);
     }
@@ -184,10 +193,13 @@ export default function FrontPage() {
     warning();
     setUpdating(true);
     try {
-      await fetch("/api/front", { method: "DELETE", credentials: "same-origin" });
+      const res = await fetch("/api/front", { method: "DELETE", credentials: "same-origin" });
+      if (!res.ok) showToast(t("front.endError"));
       revalidateMembersAndFront();
       void mutate(swrKeys.frontHistory);
       setSheetOpen(false);
+    } catch {
+      showToast(t("front.endError"));
     } finally {
       setUpdating(false);
     }

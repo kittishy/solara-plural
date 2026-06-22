@@ -17,6 +17,7 @@ import DynamicAvatarImage from "@/components/ui/DynamicAvatarImage";
 import { cn } from "@/lib/utils";
 import { useHaptics } from "@/lib/haptics";
 import { useLanguage } from "@/components/providers/LanguageProvider";
+import { useToast } from "@/components/providers/ToastProvider";
 
 type PartnerSystem = {
   id: string;
@@ -82,6 +83,7 @@ function SystemAvatar({ system, size = 44 }: { system: PartnerSystem; size?: num
 
 export default function PartnersPage() {
   const { t } = useLanguage();
+  const { showToast } = useToast();
   const { success, selection } = useHaptics();
   const { data, isLoading } = useSWR<PartnersPayload>(
     swrKeys.partners,
@@ -127,12 +129,17 @@ export default function PartnersPage() {
   async function respondRequest(id: string, action: "accept" | "decline") {
     if (action === "accept") success();
     else selection();
-    await fetch(`/api/partners/requests/${id}`, {
-      method: "POST",
-      credentials: "same-origin",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action }),
-    });
+    try {
+      const res = await fetch(`/api/partners/requests/${id}`, {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action }),
+      });
+      if (!res.ok) showToast(t("common.error"));
+    } catch {
+      showToast(t("common.error"));
+    }
     void mutate(swrKeys.partners);
   }
 

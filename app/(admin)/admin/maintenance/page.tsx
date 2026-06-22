@@ -107,19 +107,37 @@ export default function AdminMaintenancePage() {
   }
 
   async function toggleAnnouncement(a: Announcement) {
-    await fetch(`/api/admin/announcements/${a.id}`, {
-      method: "PATCH",
-      credentials: "same-origin",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ active: a.active !== 1 }),
-    });
-    await load();
+    setError("");
+    try {
+      const res = await fetch(`/api/admin/announcements/${a.id}`, {
+        method: "PATCH",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ active: a.active !== 1 }),
+      });
+      if (!res.ok) {
+        setError("Failed to update announcement");
+        return;
+      }
+      await load();
+    } catch {
+      setError("Failed to update announcement");
+    }
   }
 
   async function deleteAnnouncement(a: Announcement) {
     if (!window.confirm("Delete this announcement?")) return;
-    await fetch(`/api/admin/announcements/${a.id}`, { method: "DELETE", credentials: "same-origin" });
-    await load();
+    setError("");
+    try {
+      const res = await fetch(`/api/admin/announcements/${a.id}`, { method: "DELETE", credentials: "same-origin" });
+      if (!res.ok) {
+        setError("Failed to delete announcement");
+        return;
+      }
+      await load();
+    } catch {
+      setError("Failed to delete announcement");
+    }
   }
 
   return (

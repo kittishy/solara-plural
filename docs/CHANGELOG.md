@@ -5,6 +5,30 @@
 
 ---
 
+## [fix] — 2026-06-22 — Silent action failures + theme toggle
+
+### Fixed
+- **Actions failed silently across the app** — many client mutations fired `fetch()`
+  without checking `res.ok` and gave no feedback, so when a write failed (validation,
+  500, expired session) the UI just reverted or, worse, kept the wrong state with no
+  error shown. This was the main source of the "I tapped it and nothing happened" feel.
+  Added a lightweight global toast (`components/providers/ToastProvider.tsx`, mounted in
+  the root layout, distinct from the push `NotificationToast`) and wired error feedback
+  into: Front toggle/tier/end (`app/(dashboard)/front/page.tsx`), Home front toggle/end
+  (`app/(dashboard)/HomeContent.tsx`), friends accept/decline/unblock/sharing
+  (`app/(dashboard)/friends/page.tsx`), partner requests + diary/milestones/bucket
+  (`app/(dashboard)/partners/**`), and admin announcement toggle/delete
+  (`app/(admin)/admin/maintenance/page.tsx`).
+- **Home front toggle kept the wrong state on failure** — `HomeContent.toggleMember`
+  returned the optimistic state when the POST failed instead of throwing, so SWR's
+  `rollbackOnError` never triggered and the bad front list stayed on screen. The failed
+  write now throws (rolls back) and revalidates against server truth.
+- **Light/Dark/System toggle did nothing while a custom theme was active** — a custom
+  palette writes inline vars on `<html>` that override both the light and dark palettes,
+  so tapping a mode had no visible effect. Selecting a mode now clears the custom override
+  (and resets the editor swatches so the change is visible, not silent), in
+  `app/(dashboard)/settings/theme/page.tsx`.
+
 ## [feature/fix] — 2026-06-10
 
 ### Fixed

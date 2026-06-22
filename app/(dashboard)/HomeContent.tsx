@@ -9,6 +9,7 @@ import { LargeTitle } from "@/components/layout/NavBar";
 import DynamicAvatarImage from "@/components/ui/DynamicAvatarImage";
 import { Badge } from "@/components/ui/badge";
 import { useLanguage } from "@/components/providers/LanguageProvider";
+import { useToast } from "@/components/providers/ToastProvider";
 import { useHaptics } from "@/lib/haptics";
 import { parseStoredTags } from "@/lib/members/fields";
 import { apiFetcher, swrKeys } from "@/lib/swr";
@@ -95,6 +96,7 @@ export function HomeContent({
   currentFrontSnapshot,
 }: Props) {
   const { t, language } = useLanguage();
+  const { showToast } = useToast();
   const { selection, warning } = useHaptics();
   const [updating, setUpdating] = useState(false);
   const [now, setNow] = useState(() => Date.now());
@@ -164,7 +166,8 @@ export function HomeContent({
       await mutateFront(
         async () => {
           if (newIds.length === 0) {
-            await fetch("/api/front", { method: "DELETE", credentials: "same-origin" });
+            const res = await fetch("/api/front", { method: "DELETE", credentials: "same-origin" });
+            if (!res.ok) throw new Error("front_delete_failed");
             return null;
           }
           const res = await fetch("/api/front", {
@@ -173,14 +176,19 @@ export function HomeContent({
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ memberIds: newIds }),
           });
+          // A failed write must throw so SWR rolls back the optimistic state
+          // instead of leaving the wrong front list painted on screen.
+          if (!res.ok) throw new Error("front_save_failed");
           const json = await res.json().catch(() => null);
           return json?.data
             ? { id: json.data.id, memberIds: json.data.memberIds, startedAt: json.data.startedAt }
             : optimistic;
         },
-        { optimisticData: optimistic, rollbackOnError: true, revalidate: false }
+        { optimisticData: optimistic, rollbackOnError: true, revalidate: true }
       );
       void mutate(swrKeys.frontHistory);
+    } catch {
+      showToast(t("front.saveError"));
     } finally {
       setUpdating(false);
     }
@@ -193,12 +201,15 @@ export function HomeContent({
     try {
       await mutateFront(
         async () => {
-          await fetch("/api/front", { method: "DELETE", credentials: "same-origin" });
+          const res = await fetch("/api/front", { method: "DELETE", credentials: "same-origin" });
+          if (!res.ok) throw new Error("front_end_failed");
           return null;
         },
-        { optimisticData: null, rollbackOnError: true, revalidate: false }
+        { optimisticData: null, rollbackOnError: true, revalidate: true }
       );
       void mutate(swrKeys.frontHistory);
+    } catch {
+      showToast(t("front.endError"));
     } finally {
       setUpdating(false);
     }
