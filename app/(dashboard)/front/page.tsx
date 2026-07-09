@@ -28,7 +28,7 @@ type Member = {
 type FrontTier = 'primary' | 'cofront' | 'coconscious';
 
 const TIER_CONFIG: Record<FrontTier, { label: string; color: string; shortLabel: string }> = {
-  primary:     { label: 'Primary',    color: '#007AFF', shortLabel: 'P' },
+  primary:     { label: 'Primary',    color: '#8B5CF6', shortLabel: 'P' },
   cofront:     { label: 'Co-front',   color: '#34C759', shortLabel: 'CF' },
   coconscious: { label: 'Co-conscient', color: '#8E8E93', shortLabel: 'CC' },
 };

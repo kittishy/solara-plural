@@ -70,13 +70,13 @@ function MemberAvatar({ member, size = 40 }: { member: { name: string; color: st
 function StatCard({ icon: Icon, label, value, color, href }: { icon: React.ElementType; label: string; value: number; color: string; href: string }) {
   return (
     <Link href={href} className="block">
-      <GlassCard padding="md" className="flex flex-col gap-2 ios-press ios-transition h-full">
-        <div className="w-9 h-9 rounded-ios-sm flex items-center justify-center" style={{ background: `${color}22` }}>
-          <Icon size={18} style={{ color }} />
+      <GlassCard padding="md" className="flex items-center gap-3 ios-press ios-transition h-full">
+        <div className="w-10 h-10 rounded-ios flex items-center justify-center flex-shrink-0" style={{ background: `${color}1f` }}>
+          <Icon size={20} style={{ color }} />
         </div>
-        <div>
-          <p className="text-title-2" style={{ color }}>{value}</p>
-          <p className="text-caption-1 text-muted-foreground">{label}</p>
+        <div className="min-w-0">
+          <p className="text-title-2 leading-6 text-foreground">{value}</p>
+          <p className="text-caption-1 font-medium text-muted-foreground truncate">{label}</p>
         </div>
       </GlassCard>
     </Link>
@@ -224,81 +224,104 @@ export function HomeContent({
         <LargeTitle className="px-0">{t("nav.home")}</LargeTitle>
       </div>
 
-      {/* Stats grid */}
-      <div className="grid grid-cols-2 gap-3 px-4 mb-5">
-        <StatCard icon={Users} label={t("home.statMembers")} value={memberCount} color="#007AFF" href="/members" />
-        <StatCard icon={Layers} label={t("home.statFronting")} value={frontingMembers.length} color="#34C759" href="/front" />
-        <StatCard icon={BookOpen} label={t("home.statEntries")} value={journalCount} color="#AF52DE" href="/journal" />
-        <StatCard icon={FileText} label={t("home.statNotes")} value={noteCount} color="#FF9500" href="/notes" />
-        <StatCard icon={UserPlus} label={t("home.statFriends")} value={friendCount} color="#5AC8FA" href="/friends" />
-        <StatCard icon={Heart} label={t("home.statPartnerships")} value={partnerCount} color="#FF2D55" href="/partners" />
-      </div>
-
-      {/* Currently fronting */}
+      {/* Currently fronting — hero card */}
       <div className="px-4 mb-5">
-        <div className="flex items-center justify-between mb-2 px-1">
-          <div className="flex flex-col gap-0">
-            <p className="text-footnote font-semibold text-muted-foreground uppercase tracking-wide">
-              {t("home.nowFronting")}
-            </p>
-            {currentFront?.startedAt && frontingMembers.length > 0 && (
-              <p className="text-caption-2 text-muted-foreground/70">
-                {t("home.frontSince", { time: formatStartTime(currentFront.startedAt) })}
-                {" · "}
-                {formatFrontDuration(currentFront.startedAt)}
-              </p>
+        <GlassCard padding="none" className="overflow-hidden relative border border-ios-blue/20">
+          {/* Soft violet→pink wash so the hero reads "alive", not a settings row */}
+          <div
+            className="absolute inset-0 pointer-events-none"
+            aria-hidden
+            style={{
+              background:
+                "linear-gradient(135deg, rgb(var(--ios-blue-rgb, 124 58 237) / 0.10), transparent 45%, rgba(236, 72, 153, 0.07))",
+            }}
+          />
+          <div className="relative">
+            <div className="flex items-center justify-between px-4 pt-3.5 pb-2">
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="relative flex h-2 w-2 flex-shrink-0" aria-hidden>
+                  {frontingMembers.length > 0 && (
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-ios-blue opacity-60" />
+                  )}
+                  <span
+                    className={`relative inline-flex rounded-full h-2 w-2 ${
+                      frontingMembers.length > 0 ? "bg-ios-blue" : "bg-muted-foreground/40"
+                    }`}
+                  />
+                </span>
+                <p className="text-footnote font-bold text-muted-foreground uppercase tracking-wide truncate">
+                  {t("home.nowFronting")}
+                </p>
+              </div>
+              <div className="flex items-center gap-3 flex-shrink-0">
+                {currentFront?.startedAt && frontingMembers.length > 0 && (
+                  <p className="text-caption-1 text-muted-foreground">
+                    {formatStartTime(currentFront.startedAt)}
+                    {" · "}
+                    {formatFrontDuration(currentFront.startedAt)}
+                  </p>
+                )}
+                {frontingMembers.length > 0 && (
+                  <button
+                    onClick={endFront}
+                    disabled={updating}
+                    className="text-footnote text-ios-red font-bold ios-press disabled:opacity-50"
+                  >
+                    {t("front.endAll")}
+                  </button>
+                )}
+              </div>
+            </div>
+            {frontingMembers.length === 0 ? (
+              <Link
+                href="/front"
+                className="block px-4 pb-5 pt-1 text-center text-muted-foreground text-subheadline active:bg-muted/30 ios-transition"
+              >
+                {t("home.noOneFronting")}
+              </Link>
+            ) : (
+              frontingMembers.map((m) => (
+                <div
+                  key={m.id}
+                  className="flex items-center gap-3 px-4 py-3 border-t border-border/40"
+                >
+                  <Link
+                    href={`/members/${m.id}`}
+                    className="flex items-center gap-3 flex-1 min-w-0"
+                  >
+                    <MemberAvatar member={m} size={44} />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-body font-bold text-foreground truncate">{m.name}</p>
+                      {m.pronouns && (
+                        <p className="text-caption-1 text-muted-foreground truncate">{m.pronouns}</p>
+                      )}
+                    </div>
+                  </Link>
+                  <Badge variant="success">{t("front.title")}</Badge>
+                  <button
+                    onClick={() => toggleMember(m.id)}
+                    disabled={updating}
+                    className="w-7 h-7 rounded-full flex items-center justify-center text-muted-foreground hover:text-ios-red hover:bg-ios-red/10 ios-transition disabled:opacity-50"
+                    title={t("front.removeMemberFront")}
+                    aria-label={t("front.removeMemberFront")}
+                  >
+                    <X size={15} strokeWidth={2.5} />
+                  </button>
+                </div>
+              ))
             )}
           </div>
-          {frontingMembers.length > 0 && (
-            <button
-              onClick={endFront}
-              disabled={updating}
-              className="text-subheadline text-ios-red font-semibold ios-press disabled:opacity-50"
-            >
-              {t("front.endAll")}
-            </button>
-          )}
-        </div>
-        <GlassCard padding="none" className="overflow-hidden">
-          {frontingMembers.length === 0 ? (
-            <Link
-              href="/front"
-              className="block p-5 text-center text-muted-foreground text-subheadline active:bg-muted/30 ios-transition"
-            >
-              {t("home.noOneFronting")}
-            </Link>
-          ) : (
-            frontingMembers.map((m) => (
-              <div
-                key={m.id}
-                className="flex items-center gap-3 px-4 py-3 border-b border-border/50 last:border-0"
-              >
-                <Link
-                  href={`/members/${m.id}`}
-                  className="flex items-center gap-3 flex-1 min-w-0"
-                >
-                  <MemberAvatar member={m} size={44} />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-body font-semibold text-foreground truncate">{m.name}</p>
-                    {m.pronouns && (
-                      <p className="text-caption-1 text-muted-foreground truncate">{m.pronouns}</p>
-                    )}
-                  </div>
-                </Link>
-                <Badge variant="success">{t("front.title")}</Badge>
-                <button
-                  onClick={() => toggleMember(m.id)}
-                  disabled={updating}
-                  className="w-7 h-7 rounded-full flex items-center justify-center text-muted-foreground hover:text-ios-red hover:bg-ios-red/10 ios-transition disabled:opacity-50"
-                  title={t("front.removeMemberFront")}
-                  aria-label={t("front.removeMemberFront")}
-                >
-                  <X size={15} strokeWidth={2.5} />
-                </button>
-              </div>
-            ))
-          )}
         </GlassCard>
+      </div>
+
+      {/* Stats grid */}
+      <div className="grid grid-cols-2 gap-3 px-4 mb-5">
+        <StatCard icon={Users} label={t("home.statMembers")} value={memberCount} color="#8B5CF6" href="/members" />
+        <StatCard icon={Layers} label={t("home.statFronting")} value={frontingMembers.length} color="#34C759" href="/front" />
+        <StatCard icon={BookOpen} label={t("home.statEntries")} value={journalCount} color="#5856D6" href="/journal" />
+        <StatCard icon={FileText} label={t("home.statNotes")} value={noteCount} color="#FF9500" href="/notes" />
+        <StatCard icon={UserPlus} label={t("home.statFriends")} value={friendCount} color="#32ADE6" href="/friends" />
+        <StatCard icon={Heart} label={t("home.statPartnerships")} value={partnerCount} color="#FF2D55" href="/partners" />
       </div>
 
       {/* Recent members */}

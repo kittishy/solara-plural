@@ -49,8 +49,8 @@ export default function LoginPage() {
 
       {/* Logo */}
       <div className="flex flex-col items-center gap-3">
-        <div className="w-20 h-20 rounded-ios-xl bg-ios-blue flex items-center justify-center shadow-ios-md">
-          <span className="text-4xl font-bold text-white select-none">S</span>
+        <div className="w-20 h-20 rounded-ios-2xl bg-gradient-to-br from-[#8b5cf6] to-[#ec4899] flex items-center justify-center shadow-xl shadow-ios-blue/30">
+          <span className="text-4xl font-extrabold text-white select-none">S</span>
         </div>
         <div className="text-center">
           <h1 className="text-title-1 text-foreground">Solara</h1>

@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { Nunito } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import { SessionProvider } from "@/components/providers/SessionProvider";
@@ -11,6 +12,15 @@ import { ToastProvider } from "@/components/providers/ToastProvider";
 import { cookies } from "next/headers";
 import { DEFAULT_LANGUAGE, LANGUAGES, LANGUAGE_COOKIE_KEY, isLanguage } from "@/lib/i18n";
 import { getCachedSession } from "@/lib/auth/session";
+
+// Brand font (see docs/PROJECT_STYLE_GUIDE.md) — warm, rounded, humanist.
+// Falls back to the system stack while loading (display: swap).
+const nunito = Nunito({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700", "800"],
+  variable: "--font-nunito",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "Solara",
@@ -28,8 +38,8 @@ export const viewport: Viewport = {
   initialScale: 1,
   viewportFit: "cover",
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f2f2f7" },
-    { media: "(prefers-color-scheme: dark)", color: "#000000" },
+    { media: "(prefers-color-scheme: light)", color: "#f5f2ef" },
+    { media: "(prefers-color-scheme: dark)", color: "#0e0b16" },
   ],
 };
 
@@ -49,7 +59,7 @@ export default async function RootLayout({
   const session = await getCachedSession();
 
   return (
-    <html lang={getHtmlLang()} suppressHydrationWarning>
+    <html lang={getHtmlLang()} suppressHydrationWarning className={nunito.variable}>
       <head>
         <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
       </head>

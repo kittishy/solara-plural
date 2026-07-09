@@ -5,6 +5,37 @@
 
 ---
 
+## [design] — 2026-07-09 — Premium Solara identity (goodbye "iOS Settings" look)
+
+### Changed
+- **Brand identity at the token layer** — the app no longer reads as a stock iOS
+  Settings clone. The default accent moved from iOS blue `#007AFF` to the Solara
+  violet from `docs/PROJECT_STYLE_GUIDE.md` (`#7C3AED` light / `#8B5CF6` dark), and
+  dark mode moved from flat pure-black/grey to the deep warm purple-black palette
+  the style guide always described (`app/globals.css`). Custom themes are untouched:
+  they override the same variables and still win.
+- **Brand typography** — Nunito (400–800) is now loaded via `next/font` and used
+  everywhere, replacing the system SF Pro stack; large titles/headers stepped up to
+  weight 800 (`app/layout.tsx`, `tailwind.config.ts`).
+- **Buttons are pills with an accent glow**; inputs gained a hairline border and a
+  violet focus ring (`components/ui/button.tsx`, `components/ui/input.tsx`).
+- **Tab bar** — fully rounded floating dock; the active tab gets a tinted violet pill
+  instead of blue text. Fixed a bug where no tab ever highlighted on localized routes
+  (`/en/...`, `/pt-BR/...`): the active check now strips the language prefix
+  (`components/layout/TabBar.tsx`). "More" sheet items got per-destination colored
+  icon chips.
+- **Settings** — every row has a colored icon chip (iOS-style tints, one per area)
+  and the profile header shows a violet→pink gradient avatar
+  (`app/(dashboard)/settings/page.tsx`, `GroupedRow` gained a `tint` prop).
+- **Home** — "Now fronting" is the hero card at the top (per DESIGN.md), with a live
+  pulsing indicator, start-time/duration inline and a soft violet→pink wash; stat
+  tiles switched to a horizontal icon-chip layout (`app/(dashboard)/HomeContent.tsx`).
+- **Login** — gradient brand tile logo with glow (`app/(auth)/login/page.tsx`).
+- **Front tier "Primary"** recolored `#007AFF` → `#8B5CF6` to match the identity
+  (`lib/front.ts`, front + history pages).
+- **PWA/browser chrome** — manifest and `themeColor` updated to the new canvases
+  (`#f5f2ef` light / `#0e0b16` dark).
+
 ## [fix] — 2026-06-22 — Silent action failures + theme toggle
 
 ### Fixed
