@@ -107,10 +107,10 @@ const config: Config = {
       },
       fontFamily: {
         sans: [
+          "var(--font-nunito)",
           "-apple-system",
           "BlinkMacSystemFont",
-          "SF Pro Display",
-          "SF Pro Text",
+          "Segoe UI",
           "Helvetica Neue",
           "Arial",
           "sans-serif",
@@ -118,10 +118,10 @@ const config: Config = {
         mono: ["SF Mono", "Menlo", "Monaco", "Consolas", "monospace"],
       },
       fontSize: {
-        "large-title": ["34px", { lineHeight: "41px", fontWeight: "700" }],
-        "title-1": ["28px", { lineHeight: "34px", fontWeight: "700" }],
+        "large-title": ["34px", { lineHeight: "41px", fontWeight: "800" }],
+        "title-1": ["28px", { lineHeight: "34px", fontWeight: "800" }],
         "title-2": ["22px", { lineHeight: "28px", fontWeight: "700" }],
-        "title-3": ["20px", { lineHeight: "25px", fontWeight: "600" }],
+        "title-3": ["20px", { lineHeight: "25px", fontWeight: "700" }],
         headline: ["17px", { lineHeight: "22px", fontWeight: "600" }],
         body: ["17px", { lineHeight: "22px", fontWeight: "400" }],
         callout: ["16px", { lineHeight: "21px", fontWeight: "400" }],

@@ -100,17 +100,17 @@ export default function SettingsPage() {
       <div className="px-4 mb-6">
         <Link href="/settings/profile">
           <GroupedSection>
-            <div className="flex items-center gap-3 px-4 py-3 min-h-[44px] active:bg-muted/50 ios-transition cursor-pointer">
-              <Avatar className="w-12 h-12">
-                <AvatarFallback className="text-body bg-ios-blue/20 text-ios-blue">
+            <div className="flex items-center gap-3.5 px-4 py-4 active:bg-muted/50 ios-transition cursor-pointer">
+              <Avatar className="w-14 h-14 shadow-lg shadow-ios-blue/20">
+                <AvatarFallback className="text-title-3 font-bold text-white bg-gradient-to-br from-[#8b5cf6] to-[#ec4899]">
                   {(session?.user?.name ?? t("settings.system"))[0].toUpperCase()}
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1 min-w-0">
-                <p className="text-body font-semibold text-foreground truncate">
+                <p className="text-headline font-bold text-foreground truncate">
                   {session?.user?.name ?? t("settings.system")}
                 </p>
-                <p className="text-caption-1 text-muted-foreground truncate">
+                <p className="text-footnote text-muted-foreground truncate">
                   {session?.user?.email ?? t("settings.profile")}
                 </p>
               </div>
@@ -145,6 +145,7 @@ export default function SettingsPage() {
               <GroupedRow
                 label={t("settings.adminPanel")}
                 icon={<ShieldCheck size={18} />}
+                tint="#5856D6"
                 chevron
                 className="cursor-pointer"
               />
@@ -163,13 +164,17 @@ export default function SettingsPage() {
             <GroupedRow
               label={t("settings.themeColors")}
               icon={<Palette size={18} />}
+              tint="#AF52DE"
               value={themeLabel}
               chevron
               className="cursor-pointer"
             />
           </Link>
-          <div className="flex items-center gap-3 px-4 py-2 min-h-[44px]">
-            <span className="w-8 h-8 flex items-center justify-center text-ios-blue flex-shrink-0">
+          <div className="flex items-center gap-3 px-4 py-2 min-h-[48px]">
+            <span
+              className="w-8 h-8 rounded-[9px] flex items-center justify-center flex-shrink-0"
+              style={{ color: "#32ADE6", background: "#32ADE61f" }}
+            >
               <Globe size={18} />
             </span>
             <span className="flex-1 text-body text-foreground">{t("settings.language")}</span>
@@ -188,6 +193,7 @@ export default function SettingsPage() {
             <GroupedRow
               label={t("settings.customFields")}
               icon={<ListPlus size={18} />}
+              tint="#FF9500"
               chevron
               className="cursor-pointer"
             />
@@ -196,6 +202,7 @@ export default function SettingsPage() {
             <GroupedRow
               label={t("settings.integrations")}
               icon={<GitFork size={18} />}
+              tint="#34C759"
               chevron
               className="cursor-pointer"
             />
@@ -213,6 +220,7 @@ export default function SettingsPage() {
             <GroupedRow
               label={t("settings.profile")}
               icon={<User size={18} />}
+              tint="#8B5CF6"
               chevron
               className="cursor-pointer"
             />
@@ -221,6 +229,7 @@ export default function SettingsPage() {
             <GroupedRow
               label={t("settings.notifications")}
               icon={<Bell size={18} />}
+              tint="#FF2D55"
               chevron
               className="cursor-pointer"
             />
@@ -229,6 +238,7 @@ export default function SettingsPage() {
             <GroupedRow
               label={t("settings.privacy")}
               icon={<Shield size={18} />}
+              tint="#3B82F6"
               chevron
               className="cursor-pointer"
             />
@@ -237,6 +247,7 @@ export default function SettingsPage() {
             label={t("settings.accountType")}
             value={currentType === "singlet" ? t("settings.singlet") : t("settings.system")}
             icon={<RefreshCw size={18} />}
+            tint="#8E8E93"
             chevron
             className="cursor-pointer"
             onClick={() => setShowAccountType(true)}
@@ -252,9 +263,12 @@ export default function SettingsPage() {
         <GroupedSection>
           <button
             onClick={handleExport}
-            className="w-full flex items-center gap-3 px-4 py-3 min-h-[44px] active:bg-muted/50 ios-transition"
+            className="w-full flex items-center gap-3 px-4 py-3 min-h-[48px] active:bg-muted/50 ios-transition"
           >
-            <span className="w-8 h-8 flex items-center justify-center text-ios-blue flex-shrink-0">
+            <span
+              className="w-8 h-8 rounded-[9px] flex items-center justify-center flex-shrink-0"
+              style={{ color: "#34C759", background: "#34C7591f" }}
+            >
               <Download size={18} />
             </span>
             <span className="flex-1 text-left text-body text-foreground">
@@ -265,6 +279,7 @@ export default function SettingsPage() {
             <GroupedRow
               label={t("settings.importData")}
               icon={<Upload size={18} />}
+              tint="#32ADE6"
               chevron
               className="cursor-pointer"
             />
@@ -278,7 +293,8 @@ export default function SettingsPage() {
           <Link href="/settings/delete-account">
             <GroupedRow
               label={t("settings.deleteAccount")}
-              icon={<Trash2 size={18} className="text-ios-red" />}
+              icon={<Trash2 size={18} />}
+              tint="#FF3B30"
               chevron
               className="cursor-pointer"
             />

@@ -12,24 +12,24 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default:
-          "bg-ios-blue text-white shadow-ios hover:brightness-110 rounded-ios",
+          "bg-ios-blue text-white shadow-lg shadow-ios-blue/30 hover:brightness-110 rounded-full",
         destructive:
-          "bg-ios-red text-white shadow-ios hover:brightness-110 rounded-ios",
+          "bg-ios-red text-white shadow-lg shadow-ios-red/25 hover:brightness-110 rounded-full",
         outline:
-          "border border-border bg-transparent hover:bg-secondary text-foreground rounded-ios",
+          "border border-border bg-transparent hover:bg-secondary text-foreground rounded-full",
         secondary:
-          "bg-secondary text-secondary-foreground hover:bg-secondary/80 rounded-ios",
-        ghost: "hover:bg-secondary text-foreground rounded-ios",
+          "bg-secondary text-secondary-foreground hover:bg-secondary/80 rounded-full",
+        ghost: "hover:bg-secondary text-foreground rounded-full",
         link: "text-ios-blue underline-offset-4 hover:underline",
         glass:
-          "glass text-foreground hover:brightness-105 rounded-ios shadow-ios",
+          "glass text-foreground hover:brightness-105 rounded-full shadow-ios",
       },
       size: {
-        default: "h-[50px] px-5 text-[17px]",
-        sm: "h-9 px-4 text-[15px] rounded-ios-sm",
-        lg: "h-14 px-6 text-[17px] rounded-ios-lg",
-        icon: "h-10 w-10 rounded-ios-md",
-        "icon-sm": "h-8 w-8 rounded-ios-sm",
+        default: "h-[50px] px-6 text-[17px]",
+        sm: "h-9 px-4 text-[15px]",
+        lg: "h-14 px-7 text-[17px]",
+        icon: "h-10 w-10",
+        "icon-sm": "h-8 w-8",
       },
     },
     defaultVariants: {

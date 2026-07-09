@@ -21,7 +21,7 @@ export function GlassCard({
   return (
     <div
       className={cn(
-        "glass rounded-ios-lg shadow-ios dark:shadow-ios-dark",
+        "glass rounded-ios-xl shadow-ios dark:shadow-ios-dark",
         paddingMap[padding],
         className
       )}
@@ -41,7 +41,7 @@ export function GroupedSection({
   return (
     <div
       className={cn(
-        "rounded-ios-lg bg-[var(--ios-bg-secondary)] shadow-ios dark:shadow-ios-dark overflow-hidden divide-y divide-border/60",
+        "rounded-ios-xl bg-[var(--ios-bg-secondary)] border border-border/40 shadow-ios dark:shadow-ios-dark overflow-hidden divide-y divide-border/50",
         className
       )}
       {...props}
@@ -57,6 +57,8 @@ interface GroupedRowProps extends React.HTMLAttributes<HTMLDivElement> {
   icon?: React.ReactNode;
   value?: React.ReactNode;
   chevron?: boolean;
+  /** Accent hex for the icon chip; gives each row its own personality. */
+  tint?: string;
 }
 
 export function GroupedRow({
@@ -64,19 +66,26 @@ export function GroupedRow({
   icon,
   value,
   chevron = false,
+  tint,
   className,
   ...props
 }: GroupedRowProps) {
   return (
     <div
       className={cn(
-        "flex items-center gap-3 px-4 py-3 min-h-[44px] active:bg-muted/50 transition-colors",
+        "flex items-center gap-3 px-4 py-3 min-h-[48px] active:bg-muted/50 transition-colors",
         className
       )}
       {...props}
     >
       {icon && (
-        <span className="w-8 h-8 flex items-center justify-center text-ios-blue flex-shrink-0">
+        <span
+          className={cn(
+            "w-8 h-8 rounded-[9px] flex items-center justify-center flex-shrink-0",
+            !tint && "text-ios-blue bg-ios-blue/12"
+          )}
+          style={tint ? { color: tint, background: `${tint}1f` } : undefined}
+        >
           {icon}
         </span>
       )}

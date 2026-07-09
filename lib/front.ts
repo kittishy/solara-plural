@@ -7,7 +7,7 @@ export const FRONT_TIERS = ['primary', 'cofront', 'coconscious'] as const;
 export type FrontTier = (typeof FRONT_TIERS)[number];
 
 export const TIER_CONFIG: Record<FrontTier, { label: string; labelPt: string; color: string; shortLabel: string }> = {
-  primary:      { label: 'Primary',    labelPt: 'Primário',      color: '#007AFF', shortLabel: 'P' },
+  primary:      { label: 'Primary',    labelPt: 'Primário',      color: '#8B5CF6', shortLabel: 'P' },
   cofront:      { label: 'Co-front',   labelPt: 'Co-front',      color: '#34C759', shortLabel: 'CF' },
   coconscious:  { label: 'Co-conscious', labelPt: 'Co-consciente', color: '#8E8E93', shortLabel: 'CC' },
 };

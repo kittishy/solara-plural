@@ -4,34 +4,35 @@
 
 @layer base {
   :root {
-    /* shadcn/ui semantic tokens.
-       Neutrals carry a faint warm hue (~34°) instead of the cold blue-grey
-       (240°) of stock iOS — just enough to read "designed & cozy", never beige.
-       Cards stay pure white so they lift off the warm canvas. */
-    --background: 36 16% 96%;
-    --foreground: 24 12% 8%;
+    /* shadcn/ui semantic tokens — the Solara identity.
+       Light mode is a warm ivory canvas with deep plum text; the accent is
+       the Solara violet (see PROJECT_STYLE_GUIDE.md). Neutrals lean faintly
+       warm so the app reads "designed & cozy", never clinical white. */
+    --background: 32 22% 96%;
+    --foreground: 268 22% 11%;
     --card: 0 0% 100%;
-    --card-foreground: 24 12% 8%;
+    --card-foreground: 268 22% 11%;
     --popover: 0 0% 100%;
-    --popover-foreground: 24 12% 8%;
-    --primary: 211 100% 50%;
+    --popover-foreground: 268 22% 11%;
+    --primary: 262 83% 58%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 36 12% 90%;
-    --secondary-foreground: 30 8% 18%;
-    --muted: 36 12% 92%;
-    --muted-foreground: 30 5% 45%;
-    --accent: 36 12% 90%;
-    --accent-foreground: 30 8% 18%;
+    --secondary: 270 14% 92%;
+    --secondary-foreground: 268 12% 20%;
+    --muted: 285 12% 93%;
+    --muted-foreground: 266 8% 44%;
+    --accent: 270 14% 92%;
+    --accent-foreground: 268 12% 20%;
     --destructive: 4 86% 58%;
     --destructive-foreground: 0 0% 100%;
-    --border: 36 10% 87%;
-    --input: 36 10% 87%;
-    --ring: 211 100% 50%;
+    --border: 280 10% 88%;
+    --input: 280 10% 88%;
+    --ring: 262 83% 58%;
     --radius: 14px;
 
-    /* iOS system colors */
-    --ios-blue: #007aff;
-    --ios-blue-rgb: 0 122 255;
+    /* App accent — Solara violet (name kept for compatibility: every
+       text-ios-blue / bg-ios-blue in the tree reads these variables). */
+    --ios-blue: #7c3aed;
+    --ios-blue-rgb: 124 58 237;
     --ios-green: #34c759;
     --ios-red: #ff3b30;
     --ios-orange: #ff9500;
@@ -42,11 +43,11 @@
     --ios-indigo: #5856d6;
     --ios-gray: #8e8e93;
 
-    /* iOS backgrounds — warm-neutral canvas; white stays for raised surfaces */
-    --ios-bg: #f4f2ef;
+    /* App backgrounds — warm-neutral canvas; white stays for raised surfaces */
+    --ios-bg: #f5f2ef;
     --ios-bg-secondary: #ffffff;
-    --ios-bg-tertiary: #f4f2ef;
-    --ios-grouped-bg: #f4f2ef;
+    --ios-bg-tertiary: #f5f2ef;
+    --ios-grouped-bg: #f5f2ef;
 
     /* Glass effect — tint warmed a touch so it sits with the canvas, and a
        slightly richer saturation for that liquid-glass pop. */
@@ -79,43 +80,49 @@
   }
 
   .dark {
-    --background: 0 0% 0%;
-    --foreground: 0 0% 98%;
-    --card: 30 5% 11%;
-    --card-foreground: 0 0% 98%;
-    --popover: 30 5% 11%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 211 100% 50%;
+    /* Dark mode — deep warm purple-black (the "cozy room at dusk" from
+       PROJECT_STYLE_GUIDE.md), never the flat grey of stock iOS dark. */
+    --background: 258 28% 6%;
+    --foreground: 268 35% 94%;
+    --card: 258 24% 12%;
+    --card-foreground: 268 35% 94%;
+    --popover: 258 24% 14%;
+    --popover-foreground: 268 35% 94%;
+    --primary: 258 90% 66%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 240 4% 16%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 240 4% 16%;
-    --muted-foreground: 240 5% 65%;
-    --accent: 240 4% 16%;
-    --accent-foreground: 0 0% 98%;
+    --secondary: 258 20% 17%;
+    --secondary-foreground: 268 35% 94%;
+    --muted: 258 20% 16%;
+    --muted-foreground: 262 16% 68%;
+    --accent: 258 20% 17%;
+    --accent-foreground: 268 35% 94%;
     --destructive: 4 86% 58%;
     --destructive-foreground: 0 0% 100%;
-    --border: 240 4% 18%;
-    --input: 240 4% 18%;
-    --ring: 211 100% 50%;
+    --border: 258 18% 21%;
+    --input: 258 18% 21%;
+    --ring: 258 90% 66%;
 
-    /* iOS dark backgrounds — surfaces warmed a hair off pure grey */
-    --ios-bg: #000000;
-    --ios-bg-secondary: #1c1b1a;
-    --ios-bg-tertiary: #2b2a28;
-    --ios-grouped-bg: #000000;
+    /* Accent dark — lifted a step so it glows on the deep canvas */
+    --ios-blue: #8b5cf6;
+    --ios-blue-rgb: 139 92 246;
+
+    /* Dark backgrounds — purple-black canvas, lifted plum surfaces */
+    --ios-bg: #0e0b16;
+    --ios-bg-secondary: #191426;
+    --ios-bg-tertiary: #241d35;
+    --ios-grouped-bg: #0e0b16;
 
     /* Glass effect dark */
-    --glass-bg: rgba(28, 28, 30, 0.72);
-    --glass-border: rgba(255, 255, 255, 0.08);
+    --glass-bg: rgba(25, 20, 38, 0.72);
+    --glass-border: rgba(200, 180, 255, 0.09);
 
     /* Tab bar dark */
-    --tabbar-bg: rgba(28, 28, 30, 0.88);
-    --tabbar-border: rgba(255, 255, 255, 0.08);
+    --tabbar-bg: rgba(22, 17, 34, 0.88);
+    --tabbar-border: rgba(200, 180, 255, 0.1);
 
     /* Separators dark */
-    --separator: rgba(84, 84, 88, 0.6);
-    --separator-opaque: #38383a;
+    --separator: rgba(160, 148, 194, 0.22);
+    --separator-opaque: #363046;
   }
 }
 
@@ -151,14 +158,14 @@
 
   body {
     @apply bg-[var(--ios-bg)] text-foreground;
-    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display",
-      "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+    font-family: var(--font-nunito, "Nunito"), -apple-system,
+      BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
     min-height: 100dvh;
     overflow-x: clip;
   }
 
   ::selection {
-    background: rgba(0, 122, 255, 0.2);
+    background: rgb(var(--ios-blue-rgb, 124 58 237) / 0.22);
   }
 
   /* iOS-style scrollbar */
@@ -223,8 +230,8 @@
   }
 
   .dark .glass-subtle {
-    background: rgba(28, 28, 30, 0.5);
-    border: 1px solid rgba(255, 255, 255, 0.06);
+    background: rgba(25, 20, 38, 0.5);
+    border: 1px solid rgba(200, 180, 255, 0.07);
   }
 
   /* iOS-style fill */
@@ -244,7 +251,7 @@
   /* Large title animation */
   .large-title {
     font-size: 34px;
-    font-weight: 700;
+    font-weight: 800;
     line-height: 41px;
     letter-spacing: -0.5px;
   }
@@ -399,8 +406,9 @@ body::after {
 
 .dark body::after {
   background:
-    radial-gradient(118% 72% at 12% -8%, rgba(255, 150, 80, 0.08), transparent 56%),
-    radial-gradient(122% 78% at 108% 2%, rgba(140, 104, 255, 0.10), transparent 58%);
+    radial-gradient(118% 72% at 12% -8%, rgba(255, 150, 80, 0.07), transparent 56%),
+    radial-gradient(122% 78% at 108% 2%, rgba(140, 104, 255, 0.14), transparent 58%),
+    radial-gradient(140% 60% at 50% 112%, rgba(120, 80, 220, 0.08), transparent 60%);
 }
 
 /* Reduce texture option */
@@ -414,22 +422,22 @@ body::after {
    Stronger text and borders, near-opaque surfaces instead of translucent
    glass, and no ambient wash — readability first. Both palettes covered. */
 :root[data-solara-high-contrast] {
-  --muted-foreground: 30 8% 30%;
-  --border: 36 10% 62%;
-  --input: 36 10% 62%;
-  --separator: rgba(60, 60, 67, 0.4);
+  --muted-foreground: 266 10% 30%;
+  --border: 280 8% 62%;
+  --input: 280 8% 62%;
+  --separator: rgba(60, 55, 70, 0.4);
   --glass-bg: rgba(255, 253, 250, 0.96);
   --tabbar-bg: rgba(250, 248, 245, 0.98);
   --tabbar-border: rgba(0, 0, 0, 0.22);
 }
 
 :root[data-solara-high-contrast].dark {
-  --muted-foreground: 240 5% 80%;
-  --border: 240 4% 36%;
-  --input: 240 4% 36%;
-  --separator: rgba(160, 160, 168, 0.55);
-  --glass-bg: rgba(20, 20, 22, 0.97);
-  --tabbar-bg: rgba(20, 20, 22, 0.98);
+  --muted-foreground: 262 14% 80%;
+  --border: 258 14% 38%;
+  --input: 258 14% 38%;
+  --separator: rgba(170, 160, 200, 0.55);
+  --glass-bg: rgba(18, 14, 28, 0.97);
+  --tabbar-bg: rgba(18, 14, 28, 0.98);
   --tabbar-border: rgba(255, 255, 255, 0.25);
 }
 
