@@ -5,6 +5,21 @@
 
 ---
 
+## [remove] — 2026-07-09 — Chat feature removed (low usage)
+
+### Removed
+- **In-system chat** — low usage, not worth the surface area right now. Deleted the
+  page (`app/(dashboard)/chat/`), all API routes (`app/api/chat/**`, including the
+  SSE stream), `components/chat/EmojiPicker.tsx`, and `lib/chat/realtime-broker.ts`
+  (this was a chat-only broker, distinct from `lib/notifications/realtime-broker.ts`
+  which is unrelated and untouched). Removed the Chat tab from `TabBar`, the "Chat"
+  PWA shortcut from `public/manifest.json`, and the `nav.chat` / `chat.*` translation
+  keys (all three locales) from `lib/i18n.ts`.
+- **Kept intentionally**: the `system_chat_channels`, `system_chat_messages`, and
+  `chat_channel_reads` tables and their Drizzle migrations are untouched — no data
+  is dropped, so the feature can come back later without a schema migration.
+- Bottom nav is now 3 primary tabs (Home, Members, Front) + More, down from 4.
+
 ## [design] — 2026-07-09 — Premium Solara identity (goodbye "iOS Settings" look)
 
 ### Changed
