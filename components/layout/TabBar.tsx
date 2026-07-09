@@ -9,7 +9,6 @@ import {
   Layers,
   BookOpen,
   Grid3X3,
-  MessageCircle,
   Heart,
   FileText,
   Bell,
@@ -23,7 +22,6 @@ import { useHaptics } from "@/lib/haptics";
 import { stripLanguageFromPathname } from "@/lib/i18n";
 import { apiFetcher, swrKeys } from "@/lib/swr";
 
-const tabHrefs = ["/", "/members", "/front", "/chat"];
 const moreHrefList = ["/journal", "/friends", "/partners", "/notes", "/notifications", "/settings"];
 
 export function TabBar() {
@@ -38,7 +36,6 @@ export function TabBar() {
     { href: "/", icon: Home, label: t("nav.home") },
     { href: "/members", icon: Users, label: t("nav.members") },
     { href: "/front", icon: Layers, label: t("front.title") },
-    { href: "/chat", icon: MessageCircle, label: t("nav.chat") },
   ];
 
   const moreItems = [

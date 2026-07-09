@@ -54,13 +54,6 @@
       "description": "View notifications",
       "url": "/notifications?source=shortcut",
       "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
-    },
-    {
-      "name": "Chat",
-      "short_name": "Chat",
-      "description": "Open chat",
-      "url": "/chat?source=shortcut",
-      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
     }
   ]
 }
