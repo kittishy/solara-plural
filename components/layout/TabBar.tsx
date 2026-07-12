@@ -9,7 +9,6 @@ import {
   Layers,
   BookOpen,
   Grid3X3,
-  Heart,
   FileText,
   Bell,
   Settings,
@@ -22,7 +21,7 @@ import { useHaptics } from "@/lib/haptics";
 import { stripLanguageFromPathname } from "@/lib/i18n";
 import { apiFetcher, swrKeys } from "@/lib/swr";
 
-const moreHrefList = ["/journal", "/friends", "/partners", "/notes", "/notifications", "/settings"];
+const moreHrefList = ["/journal", "/friends", "/notes", "/notifications", "/settings"];
 
 export function TabBar() {
   // Localized routes are prefixed with the language (/en, /pt-BR, …) —
@@ -41,7 +40,6 @@ export function TabBar() {
   const moreItems = [
     { href: "/journal", icon: BookOpen, label: t("journal.title"), color: "#AF52DE" },
     { href: "/friends", icon: Users, label: t("nav.friends"), color: "#32ADE6" },
-    { href: "/partners", icon: Heart, label: t("nav.partners"), color: "#FF2D55" },
     { href: "/notes", icon: FileText, label: t("notes.title"), color: "#FF9500" },
     { href: "/notifications", icon: Bell, label: t("nav.notifications"), color: "#34C759" },
     { href: "/settings", icon: Settings, label: t("nav.settings"), color: "#8E8E93" },

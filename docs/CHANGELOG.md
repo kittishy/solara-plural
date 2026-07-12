@@ -5,6 +5,24 @@
 
 ---
 
+## [remove] — 2026-07-12 — Partner feature removed
+
+### Removed
+- **Partnerships** (system-to-system "partner" relationships, distinct from friends) —
+  deleted the pages (`app/(dashboard)/partners/**`), all API routes
+  (`app/api/partners/**`, covering requests, notes, milestones, bucket list, and
+  alter↔alter pairings), and `lib/partnerships.ts`. Removed the Partners tab from
+  `TabBar`, the partnerships stat card from the home dashboard, the partner-request
+  row from notification settings, and the `nav.partners` / `home.statPartnerships` /
+  `notifications.partnerRequests` / `notifications.checkInReminders` / `partners.*`
+  translation keys (all three locales) from `lib/i18n.ts`. Cleaned up the
+  partnership/partner-request cleanup blocks in the unfriend and block routes
+  (`app/api/friends/[friendSystemId]/route.ts`, `app/api/friends/blocks/route.ts`).
+- **Kept intentionally**: the `system_partner_requests`, `system_partnerships`,
+  `partnership_notes`, `alter_partner_pairings`, `partnership_milestones`, and
+  `partnership_bucket_items` tables and their Drizzle migrations are untouched — no
+  data is dropped, so the feature can come back later without a schema migration.
+
 ## [remove] — 2026-07-09 — Chat feature removed (low usage)
 
 ### Removed

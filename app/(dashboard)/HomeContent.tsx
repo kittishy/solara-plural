@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Users, Layers, BookOpen, FileText, Heart, UserPlus, X } from "lucide-react";
+import { Users, Layers, BookOpen, FileText, UserPlus, X } from "lucide-react";
 import useSWR, { mutate } from "swr";
 import { useState, useEffect, useMemo } from "react";
 import { GlassCard } from "@/components/glass/GlassCard";
@@ -43,7 +43,6 @@ type Props = {
   journalCount: number;
   noteCount: number;
   friendCount: number;
-  partnerCount: number;
   frontingMembers: FrontingMember[];
   recentMembers: RecentMember[];
   hasFrontHistory: boolean;
@@ -89,7 +88,6 @@ export function HomeContent({
   journalCount,
   noteCount,
   friendCount,
-  partnerCount,
   frontingMembers: initialFrontingMembers,
   recentMembers,
   hasFrontHistory,
@@ -321,7 +319,6 @@ export function HomeContent({
         <StatCard icon={BookOpen} label={t("home.statEntries")} value={journalCount} color="#5856D6" href="/journal" />
         <StatCard icon={FileText} label={t("home.statNotes")} value={noteCount} color="#FF9500" href="/notes" />
         <StatCard icon={UserPlus} label={t("home.statFriends")} value={friendCount} color="#32ADE6" href="/friends" />
-        <StatCard icon={Heart} label={t("home.statPartnerships")} value={partnerCount} color="#FF2D55" href="/partners" />
       </div>
 
       {/* Recent members */}

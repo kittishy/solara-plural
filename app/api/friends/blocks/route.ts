@@ -7,8 +7,6 @@ import {
   systemFriendMemberShares,
   systemFriendRequests,
   systemFriendships,
-  systemPartnerRequests,
-  systemPartnerships,
   systems,
 } from '@/lib/db/schema';
 import { err, ok, requireAuth, parseJsonRecord } from '@/lib/api/helpers';
@@ -93,36 +91,12 @@ export async function POST(request: Request) {
         ),
       ));
 
-    await tx
-      .delete(systemPartnerships)
-      .where(and(
-        eq(systemPartnerships.systemAId, pair.systemAId),
-        eq(systemPartnerships.systemBId, pair.systemBId),
-      ));
-
-    await tx
-      .delete(systemPartnerRequests)
-      .where(and(
-        eq(systemPartnerRequests.status, 'pending'),
-        or(
-          and(
-            eq(systemPartnerRequests.senderSystemId, auth.systemId),
-            eq(systemPartnerRequests.receiverSystemId, blockedSystemId),
-          ),
-          and(
-            eq(systemPartnerRequests.senderSystemId, blockedSystemId),
-            eq(systemPartnerRequests.receiverSystemId, auth.systemId),
-          ),
-        ),
-      ));
-
     return {
       created: created[0] ?? null,
     };
   });
 
   revalidatePath('/friends');
-  revalidatePath('/partners');
   revalidatePath('/');
 
   return ok({

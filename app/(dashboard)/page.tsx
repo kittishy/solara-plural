@@ -6,7 +6,6 @@ import {
   systemNotes,
   systems,
   systemFriendships,
-  systemPartnerships,
 } from "@/lib/db/schema";
 import { and, count, desc, eq, inArray, isNull, or } from "drizzle-orm";
 import { requireSystemId } from "@/lib/auth/session";
@@ -24,7 +23,6 @@ export default async function DashboardPage() {
     [journalCountRow],
     [noteCountRow],
     [friendCountRow],
-    [partnerCountRow],
     recentHistory,
   ] = await Promise.all([
     db.select({ name: systems.name, description: systems.description })
@@ -45,12 +43,6 @@ export default async function DashboardPage() {
       or(
         eq(systemFriendships.systemAId, systemId),
         eq(systemFriendships.systemBId, systemId)
-      )
-    ),
-    db.select({ value: count() }).from(systemPartnerships).where(
-      or(
-        eq(systemPartnerships.systemAId, systemId),
-        eq(systemPartnerships.systemBId, systemId)
       )
     ),
     db.select({ memberIds: frontEntries.memberIds }).from(frontEntries)
@@ -152,7 +144,6 @@ export default async function DashboardPage() {
       journalCount={journalCountRow?.value ?? 0}
       noteCount={noteCountRow?.value ?? 0}
       friendCount={friendCountRow?.value ?? 0}
-      partnerCount={partnerCountRow?.value ?? 0}
       frontingMembers={frontingMembers}
       recentMembers={recentMembers}
       hasFrontHistory={recentlyFrontedIds.length > 0}

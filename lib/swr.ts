@@ -10,7 +10,6 @@ export const swrKeys = {
   journal: '/api/journal',
   frontHistory: '/api/front/history?limit=50&offset=0',
   notifications: '/api/notifications',
-  partners: '/api/partners',
   friends: '/api/friends',
   customFields: '/api/custom-fields',
 } as const;
@@ -95,8 +94,4 @@ export function revalidateFrontHistory() {
 
 export function revalidateJournal() {
   void mutate(swrKeys.journal);
-}
-
-export function revalidatePartners() {
-  void mutate(swrKeys.partners);
 }

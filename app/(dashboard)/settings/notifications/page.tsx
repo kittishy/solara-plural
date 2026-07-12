@@ -324,8 +324,6 @@ export default function NotificationsSettingsPage() {
           <GroupedSection>
             <GroupedRow label={t("notifications.frontChanges")} value={t("notifications.active")} />
             <GroupedRow label={t("notifications.friendRequests")} value={t("notifications.active")} />
-            <GroupedRow label={t("notifications.partnerRequests")} value={t("notifications.active")} />
-            <GroupedRow label={t("notifications.checkInReminders")} value={t("notifications.active")} />
           </GroupedSection>
           <p className="text-caption-1 text-muted-foreground mt-2 px-1">
             {t("notifications.allSentWhenActive")}

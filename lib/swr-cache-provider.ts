@@ -28,7 +28,6 @@ const ACTIVE_KEY = `${CACHE_PREFIX}active`;
 const NEVER_PERSIST_PREFIXES = [
   '/api/notifications', // live notifications (SSE drives the realtime push)
   '/api/friends', // friends list + friend member shares (shared, realtime)
-  '/api/partners', // partner systems' live front/state (shared, realtime)
 ];
 
 function storageKeyFor(userId: string): string {
