@@ -1,29 +1,36 @@
 import type { FrontEntry } from '@/lib/db/schema';
 
 // ---------------------------------------------------------------------------
-// Front tiers (primary / co-front / co-conscious)
+// Front tiers / roles (primary / co-front / co-conscious / background / guest)
+//
+// Tiers are OPTIONAL: a fronting member may have no role at all. When a member
+// has no role, they simply have no entry in the memberTiers map — there is no
+// default role assigned automatically.
 // ---------------------------------------------------------------------------
-export const FRONT_TIERS = ['primary', 'cofront', 'coconscious'] as const;
+export const FRONT_TIERS = ['primary', 'cofront', 'coconscious', 'background', 'guest'] as const;
 export type FrontTier = (typeof FRONT_TIERS)[number];
 
-export const TIER_CONFIG: Record<FrontTier, { label: string; labelPt: string; color: string; shortLabel: string }> = {
-  primary:      { label: 'Primary',    labelPt: 'Primário',      color: '#8B5CF6', shortLabel: 'P' },
-  cofront:      { label: 'Co-front',   labelPt: 'Co-front',      color: '#34C759', shortLabel: 'CF' },
-  coconscious:  { label: 'Co-conscious', labelPt: 'Co-consciente', color: '#8E8E93', shortLabel: 'CC' },
+/**
+ * Presentation config for each role. Human-readable labels live in i18n
+ * (`labelKey` / `descKey`); `label` is only an English fallback for non-React
+ * contexts. `color` and `shortLabel` drive the badge styling.
+ */
+export const TIER_CONFIG: Record<
+  FrontTier,
+  { label: string; labelKey: string; descKey: string; color: string; shortLabel: string }
+> = {
+  primary:      { label: 'Primary',      labelKey: 'front.tierPrimary',      descKey: 'front.tierPrimaryDesc',      color: '#8B5CF6', shortLabel: 'P' },
+  cofront:      { label: 'Co-front',     labelKey: 'front.tierCofront',      descKey: 'front.tierCofrontDesc',      color: '#34C759', shortLabel: 'CF' },
+  coconscious:  { label: 'Co-conscious', labelKey: 'front.tierCoconscious',  descKey: 'front.tierCoconsciousDesc',  color: '#5AC8FA', shortLabel: 'CC' },
+  background:   { label: 'Background',   labelKey: 'front.tierBackground',   descKey: 'front.tierBackgroundDesc',   color: '#8E8E93', shortLabel: 'BG' },
+  guest:        { label: 'Guest',        labelKey: 'front.tierGuest',        descKey: 'front.tierGuestDesc',        color: '#FF9F0A', shortLabel: 'G' },
 };
+
+/** Order in which roles are presented in pickers. */
+export const TIER_ORDER: FrontTier[] = ['primary', 'cofront', 'coconscious', 'background', 'guest'];
 
 export function isFrontTier(value: string): value is FrontTier {
   return FRONT_TIERS.includes(value as FrontTier);
-}
-
-/** Auto-assign tiers: first member → primary, rest → cofront. */
-export function autoAssignTiers(memberIds: string[]): Record<string, FrontTier> {
-  if (memberIds.length === 0) return {};
-  const tiers: Record<string, FrontTier> = {};
-  memberIds.forEach((id, i) => {
-    tiers[id] = i === 0 ? 'primary' : 'cofront';
-  });
-  return tiers;
 }
 
 export function parseMemberTiers(value: string | null | undefined): Record<string, FrontTier> {

@@ -336,7 +336,7 @@ export const frontEntries = pgTable('front_entries', {
   id:          text('id').primaryKey(),
   systemId:    text('system_id').notNull().references(() => systems.id, { onDelete: 'cascade' }),
   memberIds:   text('member_ids').notNull(), // JSON array of member IDs
-  memberTiers: text('member_tiers'),         // JSON map: { memberId: "primary"|"cofront"|"coconscious" }
+  memberTiers: text('member_tiers'),         // JSON map: { memberId: "primary"|"cofront"|"coconscious"|"background"|"guest" }. Roles are optional — members without a role are simply omitted.
   startedAt:   timestamp('started_at', { mode: 'date' }).notNull(),
   endedAt:     timestamp('ended_at', { mode: 'date' }),
   note:        text('note'),

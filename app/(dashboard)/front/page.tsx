@@ -10,12 +10,14 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { BottomSheet } from "@/components/glass/BottomSheet";
+import { RolePicker } from "@/components/front/RolePicker";
 import { apiFetcher, swrKeys, revalidateMembersAndFront } from "@/lib/swr";
 import DynamicAvatarImage from "@/components/ui/DynamicAvatarImage";
 import { cn } from "@/lib/utils";
 import { useHaptics } from "@/lib/haptics";
 import { useLanguage } from "@/components/providers/LanguageProvider";
 import { useToast } from "@/components/providers/ToastProvider";
+import { TIER_CONFIG, type FrontTier } from "@/lib/front";
 
 type Member = {
   id: string;
@@ -24,16 +26,6 @@ type Member = {
   color?: string | null;
   avatarUrl?: string | null;
 };
-
-type FrontTier = 'primary' | 'cofront' | 'coconscious';
-
-const TIER_CONFIG: Record<FrontTier, { label: string; color: string; shortLabel: string }> = {
-  primary:     { label: 'Primary',    color: '#8B5CF6', shortLabel: 'P' },
-  cofront:     { label: 'Co-front',   color: '#34C759', shortLabel: 'CF' },
-  coconscious: { label: 'Co-conscient', color: '#8E8E93', shortLabel: 'CC' },
-};
-
-const TIER_ORDER: FrontTier[] = ['primary', 'cofront', 'coconscious'];
 
 type FrontEntry = {
   id: string;
@@ -103,6 +95,8 @@ export default function FrontPage() {
 
   const [updating, setUpdating] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
+  // Which member's role picker is open (null = closed).
+  const [rolePickerFor, setRolePickerFor] = useState<string | null>(null);
 
   const memberList = members ?? [];
   const memberById = new Map(memberList.map((m) => [m.id, m]));
@@ -111,16 +105,14 @@ export default function FrontPage() {
   const currentTiers: Record<string, FrontTier> = currentFront?.memberTiers ?? {};
   const history = historyData ?? [];
 
-  /** Auto-assign tiers for a given set of member IDs. */
+  /**
+   * Keep only the roles for members still in the front. Roles are opt-in, so
+   * members without an explicit role stay role-less (no default is assigned).
+   */
   function resolveTiers(ids: string[], existingTiers: Record<string, FrontTier>): Record<string, FrontTier> {
     const tiers: Record<string, FrontTier> = {};
-    ids.forEach((id, i) => {
-      // Preserve existing tier if available, else auto-assign
-      if (existingTiers[id] && ids.includes(id)) {
-        tiers[id] = existingTiers[id];
-      } else {
-        tiers[id] = i === 0 ? 'primary' : 'cofront';
-      }
+    ids.forEach((id) => {
+      if (existingTiers[id]) tiers[id] = existingTiers[id];
     });
     return tiers;
   }
@@ -160,13 +152,15 @@ export default function FrontPage() {
     }
   }
 
-  /** Cycle a member's tier: primary → cofront → coconscious → primary */
-  function cycleTier(memberId: string) {
-    if (updating || !frontingSet.has(memberId)) return;
-    const current = currentTiers[memberId] ?? 'cofront';
-    const idx = TIER_ORDER.indexOf(current);
-    const next = TIER_ORDER[(idx + 1) % TIER_ORDER.length];
-    const newTiers = { ...currentTiers, [memberId]: next };
+  /** Set (or clear, when tier is null) a member's role from the picker modal. */
+  function setRole(memberId: string, tier: FrontTier | null) {
+    if (!frontingSet.has(memberId)) return;
+    const newTiers = { ...currentTiers };
+    if (tier === null) {
+      delete newTiers[memberId];
+    } else {
+      newTiers[memberId] = tier;
+    }
     applyTiers(newTiers);
   }
 
@@ -275,20 +269,33 @@ export default function FrontPage() {
                         <Clock size={11} />
                         {t("members.sinceTime", { time: formatTime(currentFront!.startedAt, language) })}
                       </p>
-                      {/* Tier badge — tap to cycle */}
-                      <button
-                        onClick={() => cycleTier(id)}
-                        disabled={updating}
-                        className="text-caption-1 font-semibold mt-1 inline-flex items-center gap-1 ios-press disabled:opacity-50"
-                        style={{ color: TIER_CONFIG[currentTiers[id] ?? 'cofront'].color }}
-                        title={t("front.changeTier")}
-                      >
-                        <span
-                          className="inline-block w-1.5 h-1.5 rounded-full"
-                          style={{ background: TIER_CONFIG[currentTiers[id] ?? 'cofront'].color }}
-                        />
-                        {TIER_CONFIG[currentTiers[id] ?? 'cofront'].label}
-                      </button>
+                      {/* Role badge — tap to open the role picker modal. Roles
+                          are optional, so members without one show "Set role". */}
+                      {currentTiers[id] ? (
+                        <button
+                          onClick={() => setRolePickerFor(id)}
+                          disabled={updating}
+                          className="text-caption-1 font-semibold mt-1 inline-flex items-center gap-1 ios-press disabled:opacity-50"
+                          style={{ color: TIER_CONFIG[currentTiers[id]].color }}
+                          title={t("front.chooseRole")}
+                        >
+                          <span
+                            className="inline-block w-1.5 h-1.5 rounded-full"
+                            style={{ background: TIER_CONFIG[currentTiers[id]].color }}
+                          />
+                          {t(TIER_CONFIG[currentTiers[id]].labelKey as Parameters<typeof t>[0])}
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => setRolePickerFor(id)}
+                          disabled={updating}
+                          className="text-caption-1 font-semibold mt-1 inline-flex items-center gap-1 text-muted-foreground ios-press disabled:opacity-50"
+                          title={t("front.chooseRole")}
+                        >
+                          <Plus size={11} strokeWidth={2.5} />
+                          {t("front.setRole")}
+                        </button>
+                      )}
                     </div>
                     <Badge variant="success">{t("members.fronting")}</Badge>
                     <button
@@ -334,17 +341,19 @@ export default function FrontPage() {
                     <div className="flex flex-wrap items-center gap-1 mb-0.5">
                       {entry.memberIds.map((id) => {
                         const m = memberById.get(id);
-                        const tierCfg = TIER_CONFIG[((entry as Record<string, unknown>).memberTiers as Record<string, FrontTier>)?.[id] ?? 'cofront'];
+                        const tier = ((entry as Record<string, unknown>).memberTiers as Record<string, FrontTier> | undefined)?.[id];
                         return (
                           <span
                             key={id}
                             className="inline-flex items-center gap-1 text-caption-1 font-semibold"
                             style={{ color: m?.color ?? "#8E8E93" }}
                           >
-                            <span
-                              className="inline-block w-1.5 h-1.5 rounded-full"
-                              style={{ background: tierCfg.color }}
-                            />
+                            {tier && (
+                              <span
+                                className="inline-block w-1.5 h-1.5 rounded-full"
+                                style={{ background: TIER_CONFIG[tier].color }}
+                              />
+                            )}
                             {m?.name ?? "—"}
                           </span>
                         );
@@ -448,24 +457,39 @@ export default function FrontPage() {
                       )}
                     </div>
 
-                    {/* Tier indicator + check */}
+                    {/* Role indicator + check. Tapping the role chip opens the
+                        picker modal; roles remain optional. */}
                     <div className="flex items-center gap-2 flex-shrink-0">
                       {isActive && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            cycleTier(m.id);
-                          }}
-                          disabled={updating}
-                          className="text-caption-2 font-semibold px-1.5 py-0.5 rounded-full ios-press disabled:opacity-50"
-                          style={{
-                            background: `${TIER_CONFIG[currentTiers[m.id] ?? 'cofront'].color}22`,
-                            color: TIER_CONFIG[currentTiers[m.id] ?? 'cofront'].color,
-                          }}
-                          title={t("front.changeTier")}
-                        >
-                          {TIER_CONFIG[currentTiers[m.id] ?? 'cofront'].shortLabel}
-                        </button>
+                        currentTiers[m.id] ? (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setRolePickerFor(m.id);
+                            }}
+                            disabled={updating}
+                            className="text-caption-2 font-semibold px-1.5 py-0.5 rounded-full ios-press disabled:opacity-50"
+                            style={{
+                              background: `${TIER_CONFIG[currentTiers[m.id]].color}22`,
+                              color: TIER_CONFIG[currentTiers[m.id]].color,
+                            }}
+                            title={t("front.chooseRole")}
+                          >
+                            {TIER_CONFIG[currentTiers[m.id]].shortLabel}
+                          </button>
+                        ) : (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setRolePickerFor(m.id);
+                            }}
+                            disabled={updating}
+                            className="text-caption-2 font-semibold px-2 py-0.5 rounded-full ios-press disabled:opacity-50 bg-muted text-muted-foreground"
+                            title={t("front.chooseRole")}
+                          >
+                            {t("front.setRole")}
+                          </button>
+                        )
                       )}
                       <div
                         className={cn(
@@ -497,6 +521,17 @@ export default function FrontPage() {
           )}
         </div>
       </BottomSheet>
+
+      {/* Role picker modal — choose between primary, co-front and more, or no role */}
+      <RolePicker
+        open={rolePickerFor !== null}
+        onClose={() => setRolePickerFor(null)}
+        memberName={rolePickerFor ? memberById.get(rolePickerFor)?.name : undefined}
+        value={rolePickerFor ? currentTiers[rolePickerFor] ?? null : null}
+        onSelect={(tier) => {
+          if (rolePickerFor) setRole(rolePickerFor, tier);
+        }}
+      />
     </div>
   );
 }

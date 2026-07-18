@@ -10,22 +10,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { BottomSheet } from "@/components/glass/BottomSheet";
+import { RolePicker } from "@/components/front/RolePicker";
 import { FrontStats } from "@/components/front/FrontStats";
 import { apiFetcher, swrKeys } from "@/lib/swr";
 import { useLanguage } from "@/components/providers/LanguageProvider";
+import { TIER_CONFIG, type FrontTier } from "@/lib/front";
 
 type Member = {
   id: string;
   name: string;
   color?: string | null;
-};
-
-type FrontTier = 'primary' | 'cofront' | 'coconscious';
-
-const TIER_CONFIG: Record<FrontTier, { label: string; color: string }> = {
-  primary:     { label: 'Primary',    color: '#8B5CF6' },
-  cofront:     { label: 'Co-front',   color: '#34C759' },
-  coconscious: { label: 'Co-conscient', color: '#8E8E93' },
 };
 
 type FrontEntry = {
@@ -84,6 +78,8 @@ export default function FrontHistoryPage() {
   const [formNote, setFormNote] = useState("");
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState("");
+  // Which member's role picker is open within the entry form (null = closed).
+  const [rolePickerFor, setRolePickerFor] = useState<string | null>(null);
 
   function openNewForm() {
     setEditEntry(null);
@@ -99,11 +95,11 @@ export default function FrontHistoryPage() {
   function openEditForm(entry: FrontEntry) {
     setEditEntry(entry);
     setFormMemberIds(entry.memberIds);
-    // Preserve existing tiers or auto-assign
+    // Preserve existing roles only — roles are optional, no default assigned.
     const tiers = entry.memberTiers ?? {};
     const resolved: Record<string, FrontTier> = {};
-    entry.memberIds.forEach((id, i) => {
-      resolved[id] = (tiers[id] as FrontTier) ?? (i === 0 ? 'primary' : 'cofront');
+    entry.memberIds.forEach((id) => {
+      if (tiers[id]) resolved[id] = tiers[id] as FrontTier;
     });
     setFormMemberTiers(resolved);
     const started = new Date(entry.startedAt);
@@ -173,23 +169,20 @@ export default function FrontHistoryPage() {
         });
         return prev.filter((x) => x !== id);
       }
-      // Add — auto-assign tier
-      const next = [...prev, id];
-      setFormMemberTiers((t) => ({
-        ...t,
-        [id]: prev.length === 0 ? 'primary' : 'cofront',
-      }));
-      return next;
+      // Add — no role assigned by default (roles are opt-in)
+      return [...prev, id];
     });
   }
 
-  function cycleFormTier(memberId: string) {
+  function setFormRole(memberId: string, tier: FrontTier | null) {
     setFormMemberTiers((prev) => {
-      const current = prev[memberId] ?? 'cofront';
-      const order: FrontTier[] = ['primary', 'cofront', 'coconscious'];
-      const idx = order.indexOf(current);
-      const next = order[(idx + 1) % order.length];
-      return { ...prev, [memberId]: next };
+      const next = { ...prev };
+      if (tier === null) {
+        delete next[memberId];
+      } else {
+        next[memberId] = tier;
+      }
+      return next;
     });
   }
 
@@ -259,8 +252,7 @@ export default function FrontHistoryPage() {
                   <div className="flex-1 min-w-0">
                     <div className="flex flex-wrap items-center gap-1.5 mb-1">
                       {entryMembers.map((m) => {
-                        const tier = entry.memberTiers?.[m.id] ?? 'cofront';
-                        const tierCfg = TIER_CONFIG[tier];
+                        const tier = entry.memberTiers?.[m.id];
                         return (
                           <span
                             key={m.id}
@@ -270,10 +262,12 @@ export default function FrontHistoryPage() {
                               color: m.color ?? "#8E8E93",
                             }}
                           >
-                            <span
-                              className="inline-block w-1.5 h-1.5 rounded-full"
-                              style={{ background: tierCfg.color }}
-                            />
+                            {tier && (
+                              <span
+                                className="inline-block w-1.5 h-1.5 rounded-full"
+                                style={{ background: TIER_CONFIG[tier].color }}
+                              />
+                            )}
                             {m.name}
                           </span>
                         );
@@ -318,8 +312,7 @@ export default function FrontHistoryPage() {
             <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto p-2 rounded-ios-md bg-secondary">
               {(members ?? []).map((m) => {
                 const selected = formMemberIds.includes(m.id);
-                const tier = formMemberTiers[m.id] ?? 'cofront';
-                const tierCfg = TIER_CONFIG[tier];
+                const tier = formMemberTiers[m.id];
                 return (
                   <div key={m.id} className="inline-flex items-center gap-1">
                     <button
@@ -334,18 +327,29 @@ export default function FrontHistoryPage() {
                       {m.name}
                     </button>
                     {selected && (
-                      <button
-                        type="button"
-                        onClick={() => cycleFormTier(m.id)}
-                        className="text-caption-2 font-semibold px-1.5 py-0.5 rounded-full ios-press"
-                        style={{
-                          background: `${tierCfg.color}22`,
-                          color: tierCfg.color,
-                        }}
-                        title="Change tier"
-                      >
-                        {tierCfg.label}
-                      </button>
+                      tier ? (
+                        <button
+                          type="button"
+                          onClick={() => setRolePickerFor(m.id)}
+                          className="text-caption-2 font-semibold px-1.5 py-0.5 rounded-full ios-press"
+                          style={{
+                            background: `${TIER_CONFIG[tier].color}22`,
+                            color: TIER_CONFIG[tier].color,
+                          }}
+                          title={t("front.chooseRole")}
+                        >
+                          {t(TIER_CONFIG[tier].labelKey as Parameters<typeof t>[0])}
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setRolePickerFor(m.id)}
+                          className="text-caption-2 font-semibold px-2 py-0.5 rounded-full ios-press bg-muted text-muted-foreground"
+                          title={t("front.chooseRole")}
+                        >
+                          {t("front.setRole")}
+                        </button>
+                      )
                     )}
                   </div>
                 );
@@ -403,6 +407,17 @@ export default function FrontHistoryPage() {
           </Button>
         </form>
       </BottomSheet>
+
+      {/* Role picker modal for the entry form */}
+      <RolePicker
+        open={rolePickerFor !== null}
+        onClose={() => setRolePickerFor(null)}
+        memberName={rolePickerFor ? memberById.get(rolePickerFor)?.name : undefined}
+        value={rolePickerFor ? formMemberTiers[rolePickerFor] ?? null : null}
+        onSelect={(tier) => {
+          if (rolePickerFor) setFormRole(rolePickerFor, tier);
+        }}
+      />
     </div>
   );
 }

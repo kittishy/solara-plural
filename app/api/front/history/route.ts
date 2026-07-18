@@ -3,7 +3,8 @@ import { frontEntries, members } from '@/lib/db/schema';
 import { eq, and, isNotNull, desc, inArray } from 'drizzle-orm';
 import { requireAuth, ok, err, parseJsonRecord } from '@/lib/api/helpers';
 import { createId } from '@paralleldrive/cuid2';
-import { parseDatetimeLocalValue, parseMemberIds, safeParseMemberTiers, serializeMemberIds, serializeMemberTiers, autoAssignTiers, isFrontTier } from '@/lib/front';
+import { parseDatetimeLocalValue, parseMemberIds, safeParseMemberTiers, serializeMemberIds, serializeMemberTiers, isFrontTier, FRONT_TIERS } from '@/lib/front';
+import type { FrontTier } from '@/lib/front';
 import { revalidatePath } from 'next/cache';
 
 // GET /api/front/history — front history
@@ -64,8 +65,8 @@ export async function POST(request: Request) {
     return err('One or more memberIds are invalid');
   }
 
-  // Validate optional memberTiers
-  let memberTiers: Record<string, 'primary' | 'cofront' | 'coconscious'> | null = null;
+  // Validate optional memberTiers. Roles are optional per-member.
+  let memberTiers: Record<string, FrontTier> | null = null;
   if (body.memberTiers !== undefined && body.memberTiers !== null) {
     if (typeof body.memberTiers !== 'object' || Array.isArray(body.memberTiers)) {
       return err('memberTiers must be an object mapping member IDs to tier values');
@@ -76,13 +77,13 @@ export async function POST(request: Request) {
         return err(`memberTiers references member "${memberId}" not in memberIds`);
       }
       if (!isFrontTier(tier)) {
-        return err(`Invalid tier "${tier}" for member "${memberId}". Must be primary, cofront, or coconscious`);
+        return err(`Invalid tier "${tier}" for member "${memberId}". Must be one of: ${FRONT_TIERS.join(', ')}`);
       }
     }
-    memberTiers = tiers as Record<string, 'primary' | 'cofront' | 'coconscious'>;
+    memberTiers = tiers as Record<string, FrontTier>;
   }
 
-  const resolvedTiers = memberTiers ?? autoAssignTiers(memberIds);
+  const resolvedTiers = memberTiers ?? {};
 
   const created = await db.insert(frontEntries).values({
     id: createId(),
