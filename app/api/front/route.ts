@@ -133,6 +133,13 @@ function sameMemberList(a: string[], b: string[]) {
   return a.every((value, index) => value === b[index]);
 }
 
+function sameTierMap(a: Record<string, FrontTier>, b: Record<string, FrontTier>) {
+  const aKeys = Object.keys(a);
+  const bKeys = Object.keys(b);
+  if (aKeys.length !== bKeys.length) return false;
+  return aKeys.every((key) => a[key] === b[key]);
+}
+
 function deferPluralKitFrontSync(systemId: string, memberIds: string[], requestId: string, reasonCode: string): PluralKitSyncMeta {
   void syncFrontToPluralKit(systemId, memberIds, { requestId })
     .then((providerSync) => {
@@ -265,10 +272,43 @@ export async function POST(request: Request) {
     try {
       const activeMemberIds = parseMemberIds(activeFront.memberIds);
       if (sameMemberList(activeMemberIds, uniqueMemberIds)) {
+        const activeTiers = safeParseMemberTiers(activeFront.memberTiers);
+
+        // Same members but the caller wants different roles: update the roles
+        // in place so we keep the current session (startedAt) intact. The
+        // front membership is unchanged, so there's no need to re-sync.
+        if (memberTiers !== null && !sameTierMap(activeTiers, memberTiers)) {
+          const [updated] = await db.update(frontEntries)
+            .set({ memberTiers: serializeMemberTiers(memberTiers) })
+            .where(eq(frontEntries.id, activeFront.id))
+            .returning();
+
+          revalidatePath('/');
+          revalidatePath('/front');
+          revalidatePath('/members');
+          revalidatePath('/front/history');
+
+          return ok({
+            ...updated,
+            memberIds: activeMemberIds,
+            memberTiers,
+            pluralKitSync: {
+              requestId,
+              status: 'skipped',
+              providerStatus: 'skipped',
+              reasonCode: 'roles_updated',
+              httpStatus: null,
+              mappedCount: 0,
+              unmappedIds: [],
+              details: null,
+            },
+          });
+        }
+
         return ok({
           ...activeFront,
           memberIds: activeMemberIds,
-          memberTiers: safeParseMemberTiers(activeFront.memberTiers),
+          memberTiers: activeTiers,
           pluralKitSync: {
             requestId,
             status: 'skipped',
