@@ -133,6 +133,7 @@ export default function FrontPage() {
       if (newIds.length === 0) {
         const res = await fetch("/api/front", { method: "DELETE", credentials: "same-origin" });
         if (!res.ok) showToast(t("front.endError"));
+        else void mutate(swrKeys.front, null, { revalidate: false });
       } else {
         const newTiers = resolveTiers(newIds, currentTiers);
         const res = await fetch("/api/front", {
@@ -141,9 +142,18 @@ export default function FrontPage() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ memberIds: newIds, memberTiers: newTiers }),
         });
-        if (!res.ok) showToast(t("front.saveError"));
+        if (!res.ok) {
+          showToast(t("front.saveError"));
+        } else {
+          // Write server truth into the cache (see applyTiers) so the short
+          // browser cache on GET /api/front can't resurrect stale state.
+          const json = await res.json().catch(() => null);
+          if (json?.success && json.data) {
+            void mutate(swrKeys.front, json.data, { revalidate: false });
+          }
+        }
       }
-      revalidateMembersAndFront();
+      void mutate(swrKeys.members);
       void mutate(swrKeys.frontHistory);
     } catch {
       showToast(t("front.saveError"));
@@ -165,7 +175,14 @@ export default function FrontPage() {
   }
 
   async function applyTiers(newTiers: Record<string, FrontTier>) {
+    if (!currentFront) return;
     setUpdating(true);
+    const previous = currentFront;
+    // Reflect the new roles immediately in the SWR cache. The GET /api/front
+    // response is browser-cached for a few seconds, so a plain revalidation can
+    // return the *old* roles — writing the truth into the cache directly keeps
+    // successive edits building on fresh state instead of clobbering each other.
+    void mutate(swrKeys.front, { ...currentFront, memberTiers: newTiers }, { revalidate: false });
     try {
       const res = await fetch("/api/front", {
         method: "POST",
@@ -173,10 +190,19 @@ export default function FrontPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ memberIds: frontingIds, memberTiers: newTiers }),
       });
-      if (!res.ok) showToast(t("front.saveError"));
-      revalidateMembersAndFront();
+      if (!res.ok) {
+        showToast(t("front.saveError"));
+        void mutate(swrKeys.front, previous, { revalidate: false });
+        return;
+      }
+      const json = await res.json().catch(() => null);
+      if (json?.success && json.data) {
+        void mutate(swrKeys.front, json.data, { revalidate: false });
+      }
+      void mutate(swrKeys.members);
     } catch {
       showToast(t("front.saveError"));
+      void mutate(swrKeys.front, previous, { revalidate: false });
     } finally {
       setUpdating(false);
     }
