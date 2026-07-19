@@ -22,7 +22,12 @@ export const runtime = 'nodejs';
 // the client EventSource reconnects automatically.
 export const maxDuration = 60;
 
-const POLL_INTERVAL_MS = 15_000;
+// This stream is a FALLBACK for push-denied sessions only — push-granted tabs
+// and the native app never open it (lib/notifications/sse-gate.ts). Each open
+// stream is a continuous serverless invocation, so the poll is deliberately
+// coarse: 30s keeps the fallback UX at "under half a minute" while halving
+// the per-connection DB query load (docs/SYSTEM_DESIGN.md §5).
+const POLL_INTERVAL_MS = 30_000;
 const HEARTBEAT_INTERVAL_MS = 25_000;
 
 export async function GET() {

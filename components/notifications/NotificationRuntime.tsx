@@ -2,29 +2,29 @@
 
 import { useEffect } from "react";
 import { mutate } from "swr";
-import { swrKeys } from "@/lib/swr";
+import { swrKeys, isNativeAppRuntime } from "@/lib/swr";
 import {
   ensureNativeNotificationPermission,
   showNativeAppNotification,
 } from "@/lib/notifications/native-app";
+import { shouldOpenSseStream } from "@/lib/notifications/sse-gate";
 
 // Realtime notification runtime.
 //
-// Strategy:
-// - Connect to /api/notifications/stream (SSE) for live delivery while the
-//   PWA is open. New notifications trigger immediate SWR revalidation, so
-//   the badge + list update without polling.
+// Strategy (docs/SYSTEM_DESIGN.md §3/§5 — realtime rides on push first):
+// - Push-granted browser tabs and the Capacitor app get realtime via push:
+//   the service worker posts `solara-push` to open tabs and we revalidate
+//   SWR on that message. These sessions NEVER open the SSE stream — each
+//   open stream costs a continuous serverless invocation on the free tier.
+// - Only when push is unavailable (permission denied/undecided, or no
+//   Notification API) do we fall back to /api/notifications/stream (SSE).
+//   New notifications there trigger immediate SWR revalidation.
 // - Dispatch a `solara:notification` CustomEvent so other components (the
-//   in-app toast) can react without opening their own SSE connection.
+//   in-app toast) can react without opening their own SSE connection. For
+//   push-granted tabs the OS notification takes that role instead.
 // - When the document regains focus or visibility, force a revalidation as
-//   a belt-and-suspenders catch-up.
-// - When the SW posts a `solara-push` message (background push received),
-//   revalidate too.
-// - EventSource handles reconnect automatically on close/error.
-//
-// The user no longer sees a 60s delay — updates land within ~100ms of the
-// notification being created (same-instance) or within 3s (DB poll fallback
-// for cross-instance).
+//   a belt-and-suspenders catch-up, and re-evaluate the SSE gate (the user
+//   may have granted or revoked push mid-session).
 
 export type SolaraNotificationPayload = {
   id: string;
@@ -97,8 +97,16 @@ export function NotificationRuntime() {
       }
     };
 
+    const sseAllowed = () =>
+      shouldOpenSseStream({
+        permission: "Notification" in window ? Notification.permission : null,
+        isCapacitorNative: isNativeAppRuntime(),
+      });
+
     const connect = () => {
       if (stopped || document.visibilityState === "hidden") return;
+      // Cost gate: push-covered sessions must not hold an SSE stream open.
+      if (!sseAllowed()) return;
       if (source && source.readyState !== EventSource.CLOSED) return;
       try {
         source = new EventSource("/api/notifications/stream", { withCredentials: true });
@@ -132,11 +140,14 @@ export function NotificationRuntime() {
 
     connect();
 
-    // --- Catch-up on focus / visibility ---
+    // --- Catch-up on focus / visibility (also re-evaluates the SSE gate) ---
     const onVisibilityChange = () => {
       if (document.visibilityState === "visible") {
         refreshNotifications();
-        if (!source || source.readyState === EventSource.CLOSED) {
+        if (source && !sseAllowed()) {
+          // Push was granted mid-session — the stream is now redundant cost.
+          closeSource();
+        } else if (!source || source.readyState === EventSource.CLOSED) {
           if (retryTimer) window.clearTimeout(retryTimer);
           connect();
         }
@@ -147,6 +158,27 @@ export function NotificationRuntime() {
     };
     document.addEventListener("visibilitychange", onVisibilityChange);
     window.addEventListener("focus", refreshNotifications);
+
+    // --- React to permission changes without waiting for a tab switch ---
+    // Chromium fires this when the user grants/revokes notifications while
+    // the page is open; Safari lacks 'notifications' in the Permissions API,
+    // in which case the visibilitychange re-check above is the fallback.
+    let permissionStatus: PermissionStatus | null = null;
+    const onPermissionChange = () => {
+      if (stopped) return;
+      if (source && !sseAllowed()) closeSource();
+      else if (!source) connect();
+    };
+    if (navigator.permissions?.query) {
+      navigator.permissions
+        .query({ name: "notifications" as PermissionName })
+        .then((status) => {
+          if (stopped) return;
+          permissionStatus = status;
+          status.addEventListener("change", onPermissionChange);
+        })
+        .catch(() => { /* unsupported — visibility fallback covers it */ });
+    }
 
     // --- SW push messages (background push received while tab open) ---
     let removeSwListener: (() => void) | null = null;
@@ -166,6 +198,7 @@ export function NotificationRuntime() {
       closeSource();
       document.removeEventListener("visibilitychange", onVisibilityChange);
       window.removeEventListener("focus", refreshNotifications);
+      if (permissionStatus) permissionStatus.removeEventListener("change", onPermissionChange);
       if (removeSwListener) removeSwListener();
     };
   }, []);
