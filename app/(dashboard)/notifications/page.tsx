@@ -1,6 +1,6 @@
 "use client";
 
-import useSWR, { mutate } from "swr";
+import useSWR from "swr";
 import { useEffect, useState } from "react";
 import { Bell, BellOff, BellRing, Check, CheckCheck } from "lucide-react";
 import { LargeTitle } from "@/components/layout/NavBar";
@@ -134,26 +134,53 @@ export default function NotificationsPage() {
 
   async function markRead(id: string) {
     selection();
-    await fetch(`/api/notifications/${id}`, {
-      method: "PATCH",
-      credentials: "same-origin",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ read: true }),
-    });
-    void mutate(swrKeys.notifications);
+    // Optimistically flip this notification to read so the tap feels instant;
+    // reconcile with the server afterwards.
+    void mutateNotifications((cur) => {
+      if (!cur) return cur;
+      const target = cur.notifications.find((n) => n.id === id);
+      if (!target || target.readAt) return cur;
+      return {
+        ...cur,
+        notifications: cur.notifications.map((n) =>
+          n.id === id ? { ...n, readAt: new Date().toISOString() } : n
+        ),
+        unreadCount: Math.max(0, cur.unreadCount - 1),
+      };
+    }, { revalidate: false });
+    try {
+      await fetch(`/api/notifications/${id}`, {
+        method: "PATCH",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ read: true }),
+      });
+    } finally {
+      void mutateNotifications();
+    }
   }
 
   async function markAllRead() {
     success();
     setMarking(true);
+    const nowIso = new Date().toISOString();
+    void mutateNotifications((cur) =>
+      cur
+        ? {
+            ...cur,
+            notifications: cur.notifications.map((n) => (n.readAt ? n : { ...n, readAt: nowIso })),
+            unreadCount: 0,
+          }
+        : cur,
+      { revalidate: false }
+    );
     try {
       await fetch("/api/notifications/read-all", {
         method: "POST",
         credentials: "same-origin",
       });
-      void mutate(swrKeys.notifications);
     } finally {
-      setMarking(false);
+      void mutateNotifications();
     }
   }
 
