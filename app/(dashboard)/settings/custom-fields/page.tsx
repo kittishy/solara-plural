@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { BottomSheet } from "@/components/glass/BottomSheet";
 import { apiFetcher, swrKeys } from "@/lib/swr";
 import { useLanguage } from "@/components/providers/LanguageProvider";
@@ -143,9 +144,18 @@ export default function CustomFieldsSettingsPage() {
               ))}
             </div>
           ) : fields.length === 0 ? (
-            <div className="py-12 text-center text-muted-foreground text-subheadline">
-              {t("settings.noCustomFields")}
-            </div>
+            <EmptyState
+              icon={Plus}
+              title={t("settings.noCustomFields")}
+              description={t("settings.customFieldsDesc")}
+              tint="var(--ios-blue)"
+              action={
+                <Button variant="outline" size="sm" onClick={() => setShowNew(true)}>
+                  <Plus size={16} />
+                  {t("settings.newField")}
+                </Button>
+              }
+            />
           ) : (
             fields.map((f) => (
               <div

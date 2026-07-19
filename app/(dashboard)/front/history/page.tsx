@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { BottomSheet } from "@/components/glass/BottomSheet";
 import { RolePicker } from "@/components/front/RolePicker";
 import { FrontStats } from "@/components/front/FrontStats";
@@ -232,9 +233,18 @@ export default function FrontHistoryPage() {
               ))}
             </div>
           ) : entries.length === 0 ? (
-            <div className="py-12 text-center text-muted-foreground text-subheadline">
-              {t("front.noHistory")}
-            </div>
+            <EmptyState
+              icon={Clock}
+              title={t("front.noHistory")}
+              description={t("front.historyEmptyDesc")}
+              tint="var(--ios-blue)"
+              action={
+                <Button variant="outline" size="sm" onClick={openNewForm}>
+                  <Plus size={16} />
+                  {t("front.addEntry")}
+                </Button>
+              }
+            />
           ) : (
             entries.map((entry) => {
               const entryMembers = entry.memberIds
