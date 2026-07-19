@@ -258,7 +258,11 @@
 
   /* iOS spring transition */
   .ios-transition {
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    /* Explicit property list — `all` also animated layout properties
+       (width/padding), forcing reflow-driven jank on weak devices. */
+    transition-property: transform, opacity, background-color, border-color, color, box-shadow;
+    transition-duration: 0.3s;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   /* Active press effect — now springy, so every existing `ios-press`

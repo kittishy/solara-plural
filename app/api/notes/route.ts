@@ -7,10 +7,16 @@ import { revalidatePath } from 'next/cache';
 import { resolveOptionalOwnedMemberId } from '@/lib/api/member-ownership';
 import { CAPS, firstCapViolation } from '@/lib/api/validate';
 
-// GET /api/notes
-export async function GET() {
+// GET /api/notes?limit=&offset=
+// Bounded like every other list route (members 500, journal 50, history 100).
+// The response stays a plain array so existing clients keep working.
+export async function GET(request: Request) {
   const auth = await requireAuth();
   if (auth.error) return auth.error;
+
+  const { searchParams } = new URL(request.url);
+  const limit = Math.min(Math.max(Number(searchParams.get('limit')) || 200, 1), 500);
+  const offset = Math.max(Number(searchParams.get('offset')) || 0, 0);
 
   const notes = await db.query.systemNotes.findMany({
     columns: {
@@ -24,6 +30,8 @@ export async function GET() {
     },
     where: eq(systemNotes.systemId, auth.systemId),
     orderBy: (n, { desc }) => [desc(n.updatedAt)],
+    limit,
+    offset,
   });
 
   return ok(notes, 200, {

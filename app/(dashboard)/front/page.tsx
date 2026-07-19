@@ -85,7 +85,7 @@ export default function FrontPage() {
     apiFetcher
   );
   const { data: membersData, isLoading: loadingMembers } = useSWR<{ data: Member[] }>(
-    "/api/members?limit=9999",
+    "/api/members?limit=500",
     apiFetcher
   );
   const members = membersData?.data ?? [];

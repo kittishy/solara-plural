@@ -65,7 +65,7 @@ describe('/api/notes', () => {
   });
 
   it('returns privacy and member linkage fields needed by the notes UI', async () => {
-    await GET();
+    await GET(new Request('https://solara.local/api/notes'));
 
     expect(mocks.findNotes).toHaveBeenCalledTimes(1);
     expect(mocks.findNotes.mock.calls[0][0].columns).toMatchObject({
@@ -73,6 +73,14 @@ describe('/api/notes', () => {
       isPrivate: true,
       memberId: true,
     });
+  });
+
+  it('caps and clamps the list limit', async () => {
+    await GET(new Request('https://solara.local/api/notes?limit=99999&offset=-5'));
+
+    const args = mocks.findNotes.mock.calls[0][0];
+    expect(args.limit).toBe(500);
+    expect(args.offset).toBe(0);
   });
 
   it('rejects a linked member id that does not belong to the authenticated system', async () => {

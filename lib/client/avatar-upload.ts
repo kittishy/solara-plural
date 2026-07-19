@@ -1,12 +1,13 @@
-const RUNTIME_UPLOAD_TARGET_BYTES = 4 * 1024 * 1024;
-const MAX_DIMENSION = 2048;
-const AVATAR_DATA_URL_DIMENSION = 512;
-const AVATAR_DATA_URL_TARGET_BYTES = 350 * 1024;
+// Client-side avatar encoding (docs/SYSTEM_DESIGN.md §5).
+//
+// Avatars are stored IN the database as data URLs, so their encoded size is a
+// direct database-budget question. 256px covers the largest rendered avatar
+// (~96 CSS px at 2-3x dpr) and the ~80KB target (~110KB as base64) gives a
+// ceiling of roughly 4,600 avatars inside Supabase's 500MB free tier.
+// Existing larger avatars re-encode lazily the next time they're edited.
+const AVATAR_DATA_URL_DIMENSION = 256;
+const AVATAR_DATA_URL_TARGET_BYTES = 80 * 1024;
 const AVATAR_MIME_TYPE = 'image/webp';
-
-function isGif(file: File): boolean {
-  return file.type === 'image/gif' || file.name.toLowerCase().endsWith('.gif');
-}
 
 function loadImage(file: File): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
@@ -24,17 +25,6 @@ function loadImage(file: File): Promise<HTMLImageElement> {
   });
 }
 
-function downscaleSize(width: number, height: number): { width: number; height: number } {
-  if (width <= MAX_DIMENSION && height <= MAX_DIMENSION) {
-    return { width, height };
-  }
-  const ratio = Math.min(MAX_DIMENSION / width, MAX_DIMENSION / height);
-  return {
-    width: Math.max(1, Math.round(width * ratio)),
-    height: Math.max(1, Math.round(height * ratio)),
-  };
-}
-
 function fitWithinSize(width: number, height: number, maxDimension: number): { width: number; height: number } {
   if (width <= maxDimension && height <= maxDimension) {
     return { width, height };
@@ -46,56 +36,10 @@ function fitWithinSize(width: number, height: number, maxDimension: number): { w
   };
 }
 
-async function canvasToBlob(canvas: HTMLCanvasElement, quality: number): Promise<Blob> {
-  return new Promise((resolve, reject) => {
-    canvas.toBlob(
-      (blob) => {
-        if (!blob) {
-          reject(new Error('Could not encode image.'));
-          return;
-        }
-        resolve(blob);
-      },
-      AVATAR_MIME_TYPE,
-      quality
-    );
-  });
-}
-
 function canvasToAvatarDataUrl(canvas: HTMLCanvasElement, quality: number): string {
   const webp = canvas.toDataURL(AVATAR_MIME_TYPE, quality);
   if (webp.startsWith(`data:${AVATAR_MIME_TYPE}`)) return webp;
   return canvas.toDataURL('image/jpeg', quality);
-}
-
-export async function prepareAvatarFileForUpload(file: File): Promise<File> {
-  if (file.size <= RUNTIME_UPLOAD_TARGET_BYTES) return file;
-  if (isGif(file)) return file;
-
-  const img = await loadImage(file);
-  const size = downscaleSize(img.naturalWidth || img.width, img.naturalHeight || img.height);
-  const canvas = document.createElement('canvas');
-  canvas.width = size.width;
-  canvas.height = size.height;
-
-  const ctx = canvas.getContext('2d');
-  if (!ctx) throw new Error('Could not process image.');
-  ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-
-  const qualitySteps = [0.9, 0.82, 0.74, 0.66, 0.58, 0.5, 0.42];
-  for (const quality of qualitySteps) {
-    const blob = await canvasToBlob(canvas, quality);
-    if (blob.size <= RUNTIME_UPLOAD_TARGET_BYTES) {
-      return new File([blob], file.name.replace(/\.[^.]+$/, '.webp'), { type: AVATAR_MIME_TYPE });
-    }
-  }
-
-  const fallback = await canvasToBlob(canvas, 0.35);
-  return new File([fallback], file.name.replace(/\.[^.]+$/, '.webp'), { type: AVATAR_MIME_TYPE });
-}
-
-export function getRuntimeUploadTargetMb(): number {
-  return Math.round(RUNTIME_UPLOAD_TARGET_BYTES / (1024 * 1024));
 }
 
 export async function prepareAvatarDataUrl(file: File): Promise<string> {

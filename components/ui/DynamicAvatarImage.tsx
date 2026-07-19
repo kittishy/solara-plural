@@ -6,6 +6,13 @@ interface DynamicAvatarImageProps {
   alt: string;
   className?: string;
   title?: string;
+  /**
+   * Intrinsic square size hint in px. Avatars are always displayed as
+   * squares/circles sized by CSS; the width/height attributes only need to
+   * reserve a correctly-shaped box before the image loads, killing layout
+   * shift (CLS). 96 covers the largest rendered avatar (~96 CSS px).
+   */
+  size?: number;
 }
 
 export default function DynamicAvatarImage({
@@ -13,6 +20,7 @@ export default function DynamicAvatarImage({
   alt,
   className,
   title,
+  size = 96,
 }: DynamicAvatarImageProps) {
   return (
     <img
@@ -20,6 +28,9 @@ export default function DynamicAvatarImage({
       alt={alt}
       title={title}
       className={className}
+      width={size}
+      height={size}
+      style={{ aspectRatio: "1 / 1" }}
       loading="lazy"
       decoding="async"
     />
