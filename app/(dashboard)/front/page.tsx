@@ -232,7 +232,7 @@ export default function FrontPage() {
     <div className="animate-fade-in">
       <div className="px-4 pt-14 pb-2 flex items-end justify-between">
         <LargeTitle className="px-0">{t("front.title")}</LargeTitle>
-        <Button size="icon" className="mb-1" onClick={() => setSheetOpen(true)}>
+        <Button size="icon" className="mb-1" onClick={() => setSheetOpen(true)} aria-label={t("front.startFront")}>
           <Plus size={20} />
         </Button>
       </div>

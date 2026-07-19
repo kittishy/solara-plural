@@ -59,7 +59,7 @@ export default function NotesPage() {
       <div className="px-4 pt-14 pb-2 flex items-end justify-between">
         <LargeTitle className="px-0">{t("notes.title")}</LargeTitle>
         <Button asChild size="icon" className="mb-1">
-          <Link href="/notes/new">
+          <Link href="/notes/new" aria-label={t("notes.new")}>
             <Plus size={20} />
           </Link>
         </Button>

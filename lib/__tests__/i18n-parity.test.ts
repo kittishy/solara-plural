@@ -28,8 +28,8 @@ describe('i18n key parity', () => {
     if (lang === 'en') continue;
     it(`"${lang}" has the same keys as en (no missing, no extra)`, () => {
       const langKeys = new Set(keyPaths((translations as Record<string, unknown>)[lang]));
-      const missing = [...enKeys].filter((k) => !langKeys.has(k));
-      const extra = [...langKeys].filter((k) => !enKeys.has(k));
+      const missing = Array.from(enKeys).filter((k) => !langKeys.has(k));
+      const extra = Array.from(langKeys).filter((k) => !enKeys.has(k));
       expect(missing, `"${lang}" is missing keys`).toEqual([]);
       expect(extra, `"${lang}" has keys not in en`).toEqual([]);
     });

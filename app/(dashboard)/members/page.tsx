@@ -158,7 +158,7 @@ export default function MembersPage() {
       <div className="px-4 pt-14 pb-2 flex items-end justify-between">
         <LargeTitle className="px-0">{t("members.title")}</LargeTitle>
         <Button asChild size="icon" className="mb-1">
-          <Link href="/members/new">
+          <Link href="/members/new" aria-label={t("members.addMember")}>
             <Plus size={20} />
           </Link>
         </Button>

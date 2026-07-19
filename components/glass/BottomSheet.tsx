@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -32,6 +32,7 @@ export function BottomSheet({
   const [mounted, setMounted] = useState(false);
   const sheetRef = useRef<HTMLDivElement>(null);
   const idRef = useRef<symbol>(Symbol("bottom-sheet"));
+  const titleId = useId();
 
   useEffect(() => {
     setMounted(true);
@@ -150,6 +151,8 @@ export function BottomSheet({
         )}
         role="dialog"
         aria-modal="true"
+        aria-labelledby={title ? titleId : undefined}
+        aria-label={title ? undefined : t("common.dialog")}
       >
         {/* Handle */}
         <div className="flex justify-center pt-2 pb-1 sm:hidden">
@@ -159,7 +162,7 @@ export function BottomSheet({
         {/* Header */}
         {title && (
           <div className="flex items-center justify-between px-4 py-3 border-b border-border/50">
-            <h2 className="text-headline font-semibold text-foreground">{title}</h2>
+            <h2 id={titleId} className="text-headline font-semibold text-foreground">{title}</h2>
             <button
               type="button"
               onClick={onClose}

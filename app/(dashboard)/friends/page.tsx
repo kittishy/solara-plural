@@ -226,7 +226,7 @@ export default function FriendsPage() {
     <div className="animate-fade-in">
       <div className="px-4 pt-14 pb-2 flex items-end justify-between">
         <LargeTitle className="px-0">{t("friends.title")}</LargeTitle>
-        <Button size="icon" className="mb-1" onClick={() => setShowInvite(true)}>
+        <Button size="icon" className="mb-1" onClick={() => setShowInvite(true)} aria-label={t("friends.inviteTitle")}>
           <UserPlus size={20} />
         </Button>
       </div>
