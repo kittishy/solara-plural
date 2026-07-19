@@ -12,7 +12,18 @@ function initDb(): SchemaDB {
   if (!url) throw new Error('SUPABASE_DATABASE_URL environment variable is not set');
   // The app runs against the Supabase transaction pooler (port 6543). pgBouncer
   // in transaction mode does not support prepared statements, so disable them.
-  const client = postgres(url, { prepare: false });
+  // Pool sizing (docs/SYSTEM_DESIGN.md §5): the postgres.js default of 10
+  // connections per serverless instance risks exhausting the shared pooler as
+  // instances multiply, and holds idle sockets indefinitely. 5 covers a burst
+  // of parallel route handlers on one instance; idle/lifetime caps return
+  // connections to the pooler promptly.
+  const client = postgres(url, {
+    prepare: false,
+    max: 5,
+    idle_timeout: 20,
+    connect_timeout: 10,
+    max_lifetime: 60 * 30,
+  });
   _db = drizzle(client, { schema });
   // Postgres enforces foreign keys natively — no PRAGMA needed.
   return _db;

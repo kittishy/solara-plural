@@ -1,6 +1,7 @@
 import { db } from '@/lib/db';
 import { frontEntries, memberExternalLinks, members, systemIntegrations } from '@/lib/db/schema';
 import { requireAuth, ok, err, isRecord, parseJsonRecord } from '@/lib/api/helpers';
+import { consumeDurableRateLimit } from '@/lib/rate-limit';
 import { createId } from '@paralleldrive/cuid2';
 import { and, eq, inArray, isNull, or } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
@@ -18,6 +19,8 @@ import {
   planMemberSync,
   sanitizeSyncOptions,
 } from '@/lib/integrations/member-sync-core.js';
+
+export const maxDuration = 60;
 
 type SyncProvider = 'pluralkit';
 type SyncAction = 'create' | 'update' | 'link' | 'skip' | 'unchanged';
@@ -92,6 +95,17 @@ export async function POST(request: Request) {
   const auth = await requireAuth();
   if (auth.error) return auth.error;
 
+  // Each sync run can fan out into many external PluralKit calls (8s timeout
+  // each), making this one of the most compute-expensive routes. Budgeted per
+  // system (docs/SYSTEM_DESIGN.md §5).
+  const rate = await consumeDurableRateLimit(`member-sync:${auth.systemId}`, {
+    limit: 3,
+    windowMs: 10 * 60_000,
+  });
+  if (!rate.allowed) {
+    return err(`Too many sync runs. Try again in ${rate.retryAfterSeconds}s.`, 429);
+  }
+
   const parsed = await parseJsonRecord(request);
   if (parsed.error) return parsed.error;
   const body = parsed.data as SyncBody;
@@ -144,8 +158,9 @@ export async function POST(request: Request) {
 
       const exportPlan = planExportToPluralKit(localMembers, existingLinks, pkMemberNameMap);
 
+      let exportBudget: { executed: number; skippedForBudget: number } | null = null;
       if (apply) {
-        await applyExportToPluralKit(auth.systemId, exportPlan.operations as SyncOperation[], token, existingLinks);
+        exportBudget = await applyExportToPluralKit(auth.systemId, exportPlan.operations as SyncOperation[], token, existingLinks);
         revalidatePath('/members');
       }
 
@@ -156,6 +171,7 @@ export async function POST(request: Request) {
         summary: exportPlan.summary,
         operations: compactOperations(exportPlan.operations as SyncOperation[]),
         operationLimit: MAX_PREVIEW_OPERATIONS,
+        ...(exportBudget && exportBudget.skippedForBudget > 0 ? { exportBudget } : {}),
       });
     }
 
@@ -752,12 +768,19 @@ function makeSummary(operations: SyncOperation[]) {
   return summary;
 }
 
+// Export runs are budgeted so one request can never hold the function for the
+// full 60s maxDuration doing unbounded external calls: a wall-clock ceiling
+// plus a per-run operation cap. Requests stay sequential on purpose —
+// PluralKit rate-limits at ~2 req/s. (docs/SYSTEM_DESIGN.md §5)
+const EXPORT_BUDGET_MS = 45_000;
+const EXPORT_MAX_OPERATIONS = 100;
+
 async function applyExportToPluralKit(
   systemId: string,
   operations: SyncOperation[],
   token: string,
   existingLinks: typeof memberExternalLinks.$inferSelect[],
-) {
+): Promise<{ executed: number; skippedForBudget: number }> {
   const headers = {
     Authorization: token,
     'User-Agent': SOLARA_USER_AGENT,
@@ -765,8 +788,18 @@ async function applyExportToPluralKit(
     Accept: 'application/json',
   };
 
+  const startedAt = Date.now();
+  let executed = 0;
+  let skippedForBudget = 0;
+
   for (const op of operations) {
     if (op.action === 'skip') continue;
+
+    if (executed >= EXPORT_MAX_OPERATIONS || Date.now() - startedAt > EXPORT_BUDGET_MS) {
+      skippedForBudget += 1;
+      continue;
+    }
+    executed += 1;
 
     try {
       if (op.action === 'create' && op.member && op.memberId) {
@@ -848,6 +881,8 @@ async function applyExportToPluralKit(
       throw error;
     }
   }
+
+  return { executed, skippedForBudget };
 }
 
 async function remoteJsonWithBody(url: string, init: RequestInit): Promise<unknown> {

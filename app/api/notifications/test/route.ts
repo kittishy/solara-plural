@@ -3,6 +3,7 @@ import { createId } from '@paralleldrive/cuid2';
 import { db } from '@/lib/db';
 import { notificationDeliveries, notificationPushTokens, notifications } from '@/lib/db/schema';
 import { requireAuth } from '@/lib/api/helpers';
+import { consumeDurableRateLimit } from '@/lib/rate-limit';
 import { NextResponse } from 'next/server';
 import { decryptPushSubscription } from '@/lib/notifications/tokens';
 import { sendFcmMessages, shouldRevokeFcmToken } from '@/lib/notifications/fcm';
@@ -33,6 +34,18 @@ function readStoredFcmToken(json: string): string | null {
 export async function POST() {
   const auth = await requireAuth();
   if (auth.error) return auth.error;
+
+  // Awaits real push-service round-trips, so keep it budgeted per system.
+  const rate = await consumeDurableRateLimit(`notif-test:${auth.systemId}`, {
+    limit: 5,
+    windowMs: 10 * 60_000,
+  });
+  if (!rate.allowed) {
+    return NextResponse.json(
+      { success: false, error: `Too many test notifications. Try again in ${rate.retryAfterSeconds}s.` },
+      { status: 429 },
+    );
+  }
 
   const tokens = await db.query.notificationPushTokens.findMany({
     where: and(

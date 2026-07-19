@@ -10,17 +10,10 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "cleanup:dupes": "node scripts/cleanup-dupes.cjs",
-    "cleanup:dupes:apply": "node scripts/cleanup-dupes.cjs --apply",
-    "cleanup:validation": "node scripts/cleanup-validation-data.cjs",
-    "cleanup:validation:apply": "node scripts/cleanup-validation-data.cjs --apply",
-    "cleanup:scheduled-deletions": "node scripts/purge-scheduled-deletions.cjs",
-    "cleanup:scheduled-deletions:apply": "node scripts/purge-scheduled-deletions.cjs --apply",
     "validate:friends-flow": "node scripts/validate-friends-flow.cjs",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
-    "db:copy-from-turso": "node scripts/migrate-turso-to-supabase.cjs",
     "vapid:generate": "node scripts/generate-vapid-keys.cjs"
   },
   "dependencies": {
@@ -60,7 +53,6 @@
     "ws": "^8.21.0"
   },
   "devDependencies": {
-    "@libsql/client": "^0.17.3",
     "@types/bcryptjs": "^2.4.6",
     "@types/node": "^20",
     "@types/react": "^18",
