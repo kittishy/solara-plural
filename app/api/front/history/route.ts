@@ -2,6 +2,7 @@ import { db } from '@/lib/db';
 import { frontEntries, members } from '@/lib/db/schema';
 import { eq, and, isNotNull, desc, inArray } from 'drizzle-orm';
 import { requireAuth, ok, err, parseJsonRecord } from '@/lib/api/helpers';
+import { CAPS } from '@/lib/api/validate';
 import { createId } from '@paralleldrive/cuid2';
 import { parseDatetimeLocalValue, parseMemberIds, safeParseMemberTiers, serializeMemberIds, serializeMemberTiers, isFrontTier, FRONT_TIERS } from '@/lib/front';
 import type { FrontTier } from '@/lib/front';
@@ -52,6 +53,7 @@ export async function POST(request: Request) {
   const startedAt = typeof body.startedAt === 'string' ? parseDatetimeLocalValue(body.startedAt) : null;
   const endedAt = typeof body.endedAt === 'string' ? parseDatetimeLocalValue(body.endedAt) : null;
   const note = typeof body.note === 'string' ? body.note.trim() : '';
+  if (note.length > CAPS.frontNote) return err(`Note is too long (max ${CAPS.frontNote} characters)`);
 
   if (!memberIds || memberIds.length === 0) return err('memberIds must be a non-empty array');
   if (!startedAt || !endedAt) return err('startedAt and endedAt are required');

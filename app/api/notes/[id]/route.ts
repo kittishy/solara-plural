@@ -4,6 +4,7 @@ import { eq, and } from 'drizzle-orm';
 import { requireAuth, ok, err, parseJsonRecord } from '@/lib/api/helpers';
 import { revalidatePath } from 'next/cache';
 import { resolveOptionalOwnedMemberId } from '@/lib/api/member-ownership';
+import { CAPS, firstCapViolation } from '@/lib/api/validate';
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -31,6 +32,13 @@ export async function PUT(request: Request, { params }: Params) {
   const body = parsed.data;
   const content = typeof body.content === 'string' ? body.content.trim() : '';
   if (!content) return err('Content is required');
+
+  const capError = firstCapViolation([
+    { label: 'Title', value: body.title, max: CAPS.noteTitle },
+    { label: 'Content', value: content, max: CAPS.noteContent },
+    { label: 'Category', value: body.category, max: CAPS.noteCategory },
+  ]);
+  if (capError) return err(capError);
 
   let memberId: string | null | undefined;
   if (Object.prototype.hasOwnProperty.call(body, 'memberId')) {

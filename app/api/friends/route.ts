@@ -12,6 +12,7 @@ import {
   systems,
 } from '@/lib/db/schema';
 import { err, ok, requireAuth, parseJsonRecord } from '@/lib/api/helpers';
+import { consumeDurableRateLimit } from '@/lib/rate-limit';
 import {
   canonicalFriendPair,
   normalizeEmail,
@@ -373,6 +374,16 @@ export async function POST(request: Request) {
   const auth = await requireAuth();
   if (auth.error) return auth.error;
 
+  // Bounded per system: invites probe account existence by email, so the
+  // rate limit is what keeps this from being an enumeration oracle at scale.
+  const rate = await consumeDurableRateLimit(`friend-req:${auth.systemId}`, {
+    limit: 20,
+    windowMs: 60 * 60_000,
+  });
+  if (!rate.allowed) {
+    return err(`Too many invites. Try again in ${rate.retryAfterSeconds}s.`, 429);
+  }
+
   const parsed = await parseJsonRecord(request);
   if (parsed.error) return parsed.error;
 
@@ -385,7 +396,9 @@ export async function POST(request: Request) {
   });
 
   if (!receiver) {
-    return err('No account found with that email yet.', 404);
+    // Deliberately non-confirming: don't reveal whether the address has an
+    // account (docs/SYSTEM_DESIGN.md §4).
+    return err("We couldn't send an invite to that email right now.", 404);
   }
 
   if (receiver.id === auth.systemId) {

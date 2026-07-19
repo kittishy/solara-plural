@@ -5,6 +5,7 @@ import { requireAuth, ok, err, parseJsonRecord } from '@/lib/api/helpers';
 import { createId } from '@paralleldrive/cuid2';
 import { revalidatePath } from 'next/cache';
 import { resolveOptionalOwnedMemberId } from '@/lib/api/member-ownership';
+import { CAPS, firstCapViolation } from '@/lib/api/validate';
 
 // GET /api/notes
 export async function GET() {
@@ -43,6 +44,13 @@ export async function POST(request: Request) {
   const body = parsed.data;
   const content = typeof body.content === 'string' ? body.content.trim() : '';
   if (!content) return err('Content is required');
+
+  const capError = firstCapViolation([
+    { label: 'Title', value: body.title, max: CAPS.noteTitle },
+    { label: 'Content', value: content, max: CAPS.noteContent },
+    { label: 'Category', value: body.category, max: CAPS.noteCategory },
+  ]);
+  if (capError) return err(capError);
 
   const member = await resolveOptionalOwnedMemberId(auth.systemId, body.memberId);
   if (!member.ok) return err(member.error, 400);

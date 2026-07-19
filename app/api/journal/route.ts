@@ -2,6 +2,7 @@ import { db } from '@/lib/db';
 import { systemJournal } from '@/lib/db/schema';
 import { eq, desc } from 'drizzle-orm';
 import { requireAuth, ok, err, parseJsonRecord } from '@/lib/api/helpers';
+import { CAPS, firstCapViolation } from '@/lib/api/validate';
 import { createId } from '@paralleldrive/cuid2';
 import { revalidatePath } from 'next/cache';
 import { resolveOwnedMemberIds } from '@/lib/api/member-ownership';
@@ -40,6 +41,13 @@ export async function POST(request: Request) {
   const body = parsed.data;
   const content = typeof body.content === 'string' ? body.content.trim() : '';
   if (!content) return err('Content is required');
+
+  const capError = firstCapViolation([
+    { label: 'Title', value: body.title, max: CAPS.journalTitle },
+    { label: 'Content', value: content, max: CAPS.journalContent },
+  ]);
+  if (capError) return err(capError);
+
 
   const frontingMembers = await resolveOwnedMemberIds(auth.systemId, body.frontingMemberIds, 'frontingMemberIds');
   if (!frontingMembers.ok) return err(frontingMembers.error, 400);

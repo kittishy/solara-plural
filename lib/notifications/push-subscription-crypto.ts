@@ -45,8 +45,15 @@ function deriveKey(secret: string): Buffer {
 export function encryptPushSubscription(json: string): string {
   const secret = readSecret();
   if (!secret) {
-    // No secret at all — store plaintext with marker. We still log so the
-    // operator can fix their config, but we DO NOT break notifications.
+    // Production fails closed (docs/SYSTEM_DESIGN.md invariant 8): storing a
+    // push subscription in plaintext because an env var is missing is a
+    // silent security downgrade. In practice NEXTAUTH_SECRET always exists in
+    // prod, so this is a tripwire for misconfiguration, not a behavior change.
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('push-subscription-crypto: no encryption secret configured');
+    }
+    // Dev-only plaintext fallback with marker, so local setups without
+    // secrets keep working. decrypt() continues to read legacy plain rows.
     return `${FORMAT_PLAIN}.${Buffer.from(json, 'utf8').toString('base64url')}`;
   }
 

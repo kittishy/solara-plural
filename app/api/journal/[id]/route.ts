@@ -2,6 +2,7 @@ import { db } from '@/lib/db';
 import { systemJournal } from '@/lib/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { requireAuth, ok, err, parseJsonRecord } from '@/lib/api/helpers';
+import { CAPS, firstCapViolation } from '@/lib/api/validate';
 import { revalidatePath } from 'next/cache';
 
 type Params = { params: Promise<{ id: string }> };
@@ -30,6 +31,13 @@ export async function PUT(request: Request, { params }: Params) {
   const body = parsed.data;
   const content = typeof body.content === 'string' ? body.content.trim() : '';
   if (!content) return err('Content is required');
+
+  const capError = firstCapViolation([
+    { label: 'Title', value: body.title, max: CAPS.journalTitle },
+    { label: 'Content', value: content, max: CAPS.journalContent },
+  ]);
+  if (capError) return err(capError);
+
 
   const frontingMemberIds =
     Array.isArray(body.frontingMemberIds) && body.frontingMemberIds.every((v: unknown) => typeof v === 'string')

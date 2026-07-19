@@ -7,6 +7,7 @@ import { createId } from '@paralleldrive/cuid2';
 import { revalidatePath } from 'next/cache';
 import { saveMemberCustomFieldValues } from '@/lib/member-custom-fields';
 import { parseStoredTags, readOptionalString, readTags } from '@/lib/members/fields';
+import { CAPS, firstCapViolation, tagsCapViolation, isValidAvatarUrl } from '@/lib/api/validate';
 
 // GET /api/members — list all members for current system
 export async function GET(request: Request) {
@@ -66,6 +67,21 @@ export async function POST(request: Request) {
   if (!name) return err('Name is required');
   if (!tags) return err('tags must be an array of strings');
 
+  const capError = firstCapViolation([
+    { label: 'Name', value: name, max: CAPS.memberName },
+    { label: 'Pronouns', value: body.pronouns, max: CAPS.pronouns },
+    { label: 'Role', value: body.role, max: CAPS.role },
+    { label: 'Color', value: body.color, max: CAPS.color },
+    { label: 'Description', value: body.description, max: CAPS.description },
+    { label: 'Notes', value: body.notes, max: CAPS.memberNotes },
+  ]) ?? tagsCapViolation(tags);
+  if (capError) return err(capError);
+
+  const avatarUrl = readOptionalString(body.avatarUrl);
+  if (avatarUrl && !isValidAvatarUrl(avatarUrl.trim())) {
+    return err('Avatar must be an https:// URL or an image data URL within the size limit');
+  }
+
   const now = new Date();
   const newMemberId = createId();
   const newMember = await db.insert(members).values({
@@ -73,7 +89,7 @@ export async function POST(request: Request) {
     systemId:    auth.systemId,
     name,
     pronouns:    readOptionalString(body.pronouns),
-    avatarUrl:   readOptionalString(body.avatarUrl),
+    avatarUrl,
     description: readOptionalString(body.description),
     color:       readOptionalString(body.color),
     role:        readOptionalString(body.role),

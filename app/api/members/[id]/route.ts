@@ -5,6 +5,7 @@ import { requireAuth, ok, err, parseJsonRecord } from '@/lib/api/helpers';
 import { revalidatePath } from 'next/cache';
 import { readMemberCustomFieldValues, saveMemberCustomFieldValues } from '@/lib/member-custom-fields';
 import { parseStoredTags, readOptionalString, readTags } from '@/lib/members/fields';
+import { CAPS, firstCapViolation, tagsCapViolation, isValidAvatarUrl } from '@/lib/api/validate';
 
 // Next.js 14 App Router: params is now a Promise — must be awaited in route handlers
 type Params = { params: Promise<{ id: string }> };
@@ -41,11 +42,26 @@ export async function PUT(request: Request, { params }: Params) {
   if (!name) return err('Name is required');
   if (!tags) return err('tags must be an array of strings');
 
+  const capError = firstCapViolation([
+    { label: 'Name', value: name, max: CAPS.memberName },
+    { label: 'Pronouns', value: body.pronouns, max: CAPS.pronouns },
+    { label: 'Role', value: body.role, max: CAPS.role },
+    { label: 'Color', value: body.color, max: CAPS.color },
+    { label: 'Description', value: body.description, max: CAPS.description },
+    { label: 'Notes', value: body.notes, max: CAPS.memberNotes },
+  ]) ?? tagsCapViolation(tags);
+  if (capError) return err(capError);
+
+  const avatarUrl = readOptionalString(body.avatarUrl);
+  if (avatarUrl && !isValidAvatarUrl(avatarUrl.trim())) {
+    return err('Avatar must be an https:// URL or an image data URL within the size limit');
+  }
+
   const updated = await db.update(members)
     .set({
       name,
       pronouns:    readOptionalString(body.pronouns),
-      avatarUrl:   readOptionalString(body.avatarUrl),
+      avatarUrl,
       description: readOptionalString(body.description),
       color:       readOptionalString(body.color),
       role:        readOptionalString(body.role),

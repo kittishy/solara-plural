@@ -1,6 +1,6 @@
 import { db } from '@/lib/db';
 import { systems, passwordResetTokens } from '@/lib/db/schema';
-import { eq } from 'drizzle-orm';
+import { and, eq, isNull } from 'drizzle-orm';
 import { createId } from '@paralleldrive/cuid2';
 import { ok, err } from '@/lib/api/helpers';
 import { requireAdminApi } from '@/lib/auth/admin';
@@ -29,6 +29,12 @@ export async function POST(
 
   const rawToken = generatePasswordResetToken();
   const now = new Date();
+
+  // Match the self-service flow: only one live reset token per account —
+  // issuing a new one invalidates any unused predecessors.
+  await db
+    .delete(passwordResetTokens)
+    .where(and(eq(passwordResetTokens.systemId, account.id), isNull(passwordResetTokens.usedAt)));
 
   await db.insert(passwordResetTokens).values({
     id: createId(),

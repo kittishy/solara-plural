@@ -5,6 +5,7 @@ import { requireAuth, ok, err, parseJsonRecord } from '@/lib/api/helpers';
 import { CACHE_FRESH_SHORT } from '@/lib/api/cache-headers';
 import { createId } from '@paralleldrive/cuid2';
 import { parseMemberIds, safeParseMemberTiers, serializeMemberIds, serializeMemberTiers, isFrontTier, FRONT_TIERS } from '@/lib/front';
+import { CAPS } from '@/lib/api/validate';
 import type { FrontTier } from '@/lib/front';
 import { revalidatePath } from 'next/cache';
 import { decryptIntegrationToken } from '@/lib/integrations/token-crypto';
@@ -220,6 +221,9 @@ export async function POST(request: Request) {
   if (parsed.error) return parsed.error;
 
   const body = parsed.data;
+  if (typeof body.note === 'string' && body.note.trim().length > CAPS.frontNote) {
+    return err(`Note is too long (max ${CAPS.frontNote} characters)`);
+  }
   const memberIds = body.memberIds;
   if (!Array.isArray(memberIds) || memberIds.length === 0) {
     return err('memberIds must be a non-empty array');

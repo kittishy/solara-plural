@@ -3,6 +3,7 @@ import { revalidatePath } from 'next/cache';
 import { db } from '@/lib/db';
 import { systems } from '@/lib/db/schema';
 import { err, ok, requireAuth, parseJsonRecord } from '@/lib/api/helpers';
+import { isValidAvatarUrl } from '@/lib/api/validate';
 
 type AvatarMode = 'emoji' | 'url';
 
@@ -18,21 +19,14 @@ function parseAvatarEmoji(value: unknown): string {
   return trimmed.length > 0 ? trimmed.slice(0, 16) : DEFAULT_AVATAR_EMOJI;
 }
 
+// Shared avatar validation (lib/api/validate.ts): https:// or a bounded
+// image data URL. Previously-stored http:// avatars keep rendering; new
+// saves require https.
 function parseAvatarUrl(value: unknown): string | null {
   if (typeof value !== 'string') return null;
   const trimmed = value.trim();
   if (!trimmed) return null;
-  if (/^data:image\/(jpeg|jpg|png|webp);base64,/i.test(trimmed) && trimmed.length <= 600_000) {
-    return trimmed;
-  }
-
-  try {
-    const parsed = new URL(trimmed);
-    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return null;
-    return trimmed;
-  } catch {
-    return null;
-  }
+  return isValidAvatarUrl(trimmed) ? trimmed : null;
 }
 
 function parseName(value: unknown): string | null {
