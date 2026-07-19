@@ -13,7 +13,7 @@ import {
   CustomFieldInputs,
   type MemberCustomField,
 } from "@/components/members/CustomFieldInputs";
-import { BottomSheet } from "@/components/glass/BottomSheet";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { revalidateMembersAndFront } from "@/lib/swr";
 import { useLanguage } from "@/components/providers/LanguageProvider";
 
@@ -357,34 +357,14 @@ export function MemberEditor({ memberId }: MemberEditorProps) {
         </Button>
       </form>
 
-      <BottomSheet
+      <ConfirmDialog
         open={confirmDelete}
         onClose={() => setConfirmDelete(false)}
+        onConfirm={handleDelete}
         title={t("members.confirmDeleteTitle")}
-      >
-        <div className="flex flex-col gap-4">
-          <p className="text-body text-foreground">
-            {t("members.confirmDeleteDesc", { name })}
-          </p>
-          <div className="flex flex-col gap-2">
-            <Button
-              variant="destructive"
-              onClick={handleDelete}
-              disabled={deleting}
-              className="w-full"
-            >
-              {deleting ? t("common.deleting") : t("common.yes")}
-            </Button>
-            <Button
-              variant="ghost"
-              onClick={() => setConfirmDelete(false)}
-              className="w-full"
-            >
-              {t("common.cancel")}
-            </Button>
-          </div>
-        </div>
-      </BottomSheet>
+        description={t("members.confirmDeleteDesc", { name })}
+        loading={deleting}
+      />
     </div>
   );
 }

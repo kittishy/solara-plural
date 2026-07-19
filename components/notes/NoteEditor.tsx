@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { GlassCard } from "@/components/glass/GlassCard";
-import { BottomSheet } from "@/components/glass/BottomSheet";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { revalidateNotes } from "@/lib/swr";
 import { useLanguage } from "@/components/providers/LanguageProvider";
 import { cn } from "@/lib/utils";
@@ -238,34 +238,13 @@ export function NoteEditor({ noteId }: NoteEditorProps) {
         </Button>
       </form>
 
-      <BottomSheet
+      <ConfirmDialog
         open={confirmDelete}
         onClose={() => setConfirmDelete(false)}
+        onConfirm={handleDelete}
         title={t("notes.confirmDeleteTitle")}
-      >
-        <div className="flex flex-col gap-4">
-          <p className="text-body text-foreground">
-            {t("common.irreversible")}
-          </p>
-          <div className="flex flex-col gap-2">
-            <Button
-              variant="destructive"
-              onClick={handleDelete}
-              disabled={deleting}
-              className="w-full"
-            >
-              {deleting ? t("common.deleting") : t("common.yes")}
-            </Button>
-            <Button
-              variant="ghost"
-              onClick={() => setConfirmDelete(false)}
-              className="w-full"
-            >
-              {t("common.cancel")}
-            </Button>
-          </div>
-        </div>
-      </BottomSheet>
+        loading={deleting}
+      />
     </div>
   );
 }
