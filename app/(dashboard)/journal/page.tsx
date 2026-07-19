@@ -8,6 +8,7 @@ import { GlassCard } from "@/components/glass/GlassCard";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { ErrorState } from "@/components/ui/ErrorState";
 import { apiFetcher, swrKeys } from "@/lib/swr";
 import { useLanguage } from "@/components/providers/LanguageProvider";
 
@@ -38,7 +39,7 @@ function formatDate(value: string | number | Date, lang: string) {
 
 export default function JournalPage() {
   const { t, language } = useLanguage();
-  const { data, isLoading } = useSWR<JournalEntry[]>(
+  const { data, isLoading, error, mutate, isValidating } = useSWR<JournalEntry[]>(
     swrKeys.journal,
     apiFetcher
   );
@@ -57,7 +58,9 @@ export default function JournalPage() {
 
       <div className="px-4">
         <GlassCard padding="none" className="overflow-hidden">
-          {isLoading ? (
+          {error && !data ? (
+            <ErrorState onRetry={() => mutate()} retrying={isValidating} />
+          ) : isLoading ? (
             <div className="p-4 flex flex-col gap-0">
               {[1, 2, 3, 4].map((i) => (
                 <div

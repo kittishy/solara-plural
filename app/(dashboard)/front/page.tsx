@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { BottomSheet } from "@/components/glass/BottomSheet";
 import { RolePicker } from "@/components/front/RolePicker";
+import { ErrorState } from "@/components/ui/ErrorState";
 import { apiFetcher, swrKeys, revalidateMembersAndFront } from "@/lib/swr";
 import DynamicAvatarImage from "@/components/ui/DynamicAvatarImage";
 import { cn } from "@/lib/utils";
@@ -79,7 +80,7 @@ export default function FrontPage() {
   const { t, language } = useLanguage();
   const { success, selection, warning } = useHaptics();
   const { showToast } = useToast();
-  const { data: currentFront, isLoading: loadingFront } = useSWR<FrontEntry | null>(
+  const { data: currentFront, isLoading: loadingFront, error: frontError, mutate: mutateFront, isValidating: frontValidating } = useSWR<FrontEntry | null>(
     swrKeys.front,
     apiFetcher
   );
@@ -253,7 +254,9 @@ export default function FrontPage() {
           )}
         </div>
         <GlassCard padding="none" className="overflow-hidden">
-          {loadingFront ? (
+          {frontError && !currentFront ? (
+            <ErrorState onRetry={() => mutateFront()} retrying={frontValidating} />
+          ) : loadingFront ? (
             <div className="p-4 flex gap-3">
               <Skeleton className="w-12 h-12 rounded-full" />
               <div className="flex-1 flex flex-col gap-2">

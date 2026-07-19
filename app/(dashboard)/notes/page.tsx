@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { ErrorState } from "@/components/ui/ErrorState";
 import { apiFetcher, swrKeys } from "@/lib/swr";
 import { useLanguage } from "@/components/providers/LanguageProvider";
 import { useHaptics } from "@/lib/haptics";
@@ -37,7 +38,7 @@ export default function NotesPage() {
   const { selection } = useHaptics();
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
   const [search, setSearch] = useState("");
-  const { data, isLoading } = useSWR<Note[]>(swrKeys.notes, apiFetcher);
+  const { data, isLoading, error, mutate, isValidating } = useSWR<Note[]>(swrKeys.notes, apiFetcher);
   const notes = useMemo(() => data ?? [], [data]);
 
   const categories = Array.from(new Set(notes.map((n) => n.category).filter(Boolean) as string[]));
@@ -114,7 +115,9 @@ export default function NotesPage() {
 
       <div className="px-4">
         <GlassCard padding="none" className="overflow-hidden">
-          {isLoading ? (
+          {error && !data ? (
+            <ErrorState onRetry={() => mutate()} retrying={isValidating} />
+          ) : isLoading ? (
             <div className="p-4 flex flex-col gap-3">
               {[1, 2, 3].map((i) => (
                 <div key={i} className="flex flex-col gap-2">

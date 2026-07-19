@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { ErrorState } from "@/components/ui/ErrorState";
 import { BottomSheet } from "@/components/glass/BottomSheet";
 import { apiFetcher, swrKeys } from "@/lib/swr";
 import DynamicAvatarImage from "@/components/ui/DynamicAvatarImage";
@@ -46,7 +47,7 @@ export default function MembersPage() {
     [push]
   );
 
-  const { data, isLoading } = useSWR<{ data: Member[]; total: number }>(
+  const { data, isLoading, error, mutate: mutateMembers, isValidating } = useSWR<{ data: Member[]; total: number }>(
     "/api/members?limit=500",
     apiFetcher,
     { revalidateOnFocus: false, dedupingInterval: 30_000 }
@@ -180,7 +181,9 @@ export default function MembersPage() {
       {/* List */}
       <div className="px-4">
         <GlassCard padding="none" className="overflow-hidden">
-          {isLoading ? (
+          {error && !data ? (
+            <ErrorState onRetry={() => mutateMembers()} retrying={isValidating} />
+          ) : isLoading ? (
             <div className="p-4 flex flex-col gap-0">
               {[1, 2, 3, 4, 5].map((i) => (
                 <div

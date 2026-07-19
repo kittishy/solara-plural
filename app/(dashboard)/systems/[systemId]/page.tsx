@@ -5,6 +5,7 @@ import { ArrowLeft, Layers } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { GlassCard } from "@/components/glass/GlassCard";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ErrorState } from "@/components/ui/ErrorState";
 import DynamicAvatarImage from "@/components/ui/DynamicAvatarImage";
 import { apiFetcher } from "@/lib/swr";
 import { useLanguage } from "@/components/providers/LanguageProvider";
@@ -33,10 +34,18 @@ export default function ExternalSystemPage({
 }) {
   const router = useRouter();
   const { t } = useLanguage();
-  const { data, isLoading } = useSWR<FriendSystemData>(
+  const { data, isLoading, error, mutate, isValidating } = useSWR<FriendSystemData>(
     `/api/friends/${params.systemId}`,
     apiFetcher
   );
+
+  if (error && !data) {
+    return (
+      <div className="px-4 pt-20">
+        <ErrorState onRetry={() => mutate()} retrying={isValidating} />
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (

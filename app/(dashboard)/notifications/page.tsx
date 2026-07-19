@@ -8,6 +8,7 @@ import { GlassCard } from "@/components/glass/GlassCard";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { ErrorState } from "@/components/ui/ErrorState";
 import { apiFetcher, swrKeys } from "@/lib/swr";
 import { requestAndSavePushToken, getPushEnabledState } from "@/lib/notifications/browser";
 import { getNativePushState, isCapacitorNative, registerNativePush } from "@/lib/notifications/native-push";
@@ -47,7 +48,7 @@ export default function NotificationsPage() {
     if (min > 0) return `${min}min`;
     return t("notifications.timeNow");
   }
-  const { data, isLoading } = useSWR<NotificationsPayload>(
+  const { data, isLoading, error, mutate: mutateNotifications, isValidating } = useSWR<NotificationsPayload>(
     swrKeys.notifications,
     apiFetcher
   );
@@ -248,7 +249,9 @@ export default function NotificationsPage() {
       {/* List */}
       <div className="px-4">
         <GlassCard padding="none" className="overflow-hidden">
-          {isLoading ? (
+          {error && !data ? (
+            <ErrorState onRetry={() => mutateNotifications()} retrying={isValidating} />
+          ) : isLoading ? (
             <div className="p-4 flex flex-col gap-3">
               {[1, 2, 3].map((i) => (
                 <div key={i} className="flex gap-3">
