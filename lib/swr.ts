@@ -63,9 +63,17 @@ export function isAppRuntime() {
 export async function apiFetcher<T>(url: string): Promise<T> {
   const res = await fetch(url, {
     credentials: 'same-origin',
-    // In the app, always read server truth — bypass the service worker's
-    // stale-while-revalidate API cache so we never paint stale records.
-    cache: isAppRuntime() ? 'no-store' : 'default',
+    // Always read server truth. `no-store` bypasses BOTH the browser HTTP
+    // cache (the GET routes send `max-age=5..60`) and the service worker's
+    // stale-while-revalidate API cache (it early-returns on `no-store`).
+    //
+    // Without this, on the web a mutation + SWR revalidation would refetch
+    // from those caches and paint the PRE-mutation data — making the app feel
+    // laggy or broken (e.g. a saved change reverting until the cache expired).
+    // Perceived speed is unaffected: SWR still paints its in-memory /
+    // localStorage-seeded cache instantly (keepPreviousData), then this fetch
+    // refreshes it against the server.
+    cache: 'no-store',
   });
   const json = (await res.json().catch(() => null)) as ApiSuccess<T> | ApiFailure | null;
 

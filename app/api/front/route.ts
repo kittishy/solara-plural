@@ -334,8 +334,22 @@ export async function POST(request: Request) {
       isNull(frontEntries.endedAt)
     ));
 
-  // Resolve tiers: use provided tiers, or none (roles are opt-in)
-  const resolvedTiers = memberTiers ?? {};
+  // Resolve tiers. If the caller specified roles, honour them exactly.
+  // Otherwise carry over the roles of members who were already fronting (so a
+  // client that only sends memberIds — e.g. adding someone from the Members
+  // list — never silently wipes everyone's roles). New members stay role-less.
+  let resolvedTiers: Record<string, FrontTier>;
+  if (memberTiers !== null) {
+    resolvedTiers = memberTiers;
+  } else if (activeFront) {
+    const previousTiers = safeParseMemberTiers(activeFront.memberTiers);
+    resolvedTiers = {};
+    for (const id of uniqueMemberIds) {
+      if (previousTiers[id]) resolvedTiers[id] = previousTiers[id];
+    }
+  } else {
+    resolvedTiers = {};
+  }
 
   // Create new front entry
   const newEntry = await db.insert(frontEntries).values({
