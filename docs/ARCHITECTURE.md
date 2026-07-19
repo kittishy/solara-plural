@@ -2,6 +2,10 @@
 
 > System architecture for the Solara Plural web application.
 > Read before making structural decisions.
+>
+> ⚠️ Infrastructure sections here predate the Supabase migration.
+> **`SYSTEM_DESIGN.md` is the authoritative source** for infrastructure,
+> security model, zero-cost budget, operations, and invariants.
 
 ---
 

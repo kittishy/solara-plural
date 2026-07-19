@@ -1,6 +1,8 @@
 # MASTER_CONTEXT.md — Solara Plural
 
 > Source of truth for the entire project. Read before every decision.
+> For infrastructure, security, cost budget, and operational invariants,
+> see **`SYSTEM_DESIGN.md`** (authoritative).
 
 ---
 
