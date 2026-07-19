@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -15,6 +15,12 @@ interface BottomSheetProps {
   className?: string;
 }
 
+// A stack of currently-open sheets so that, when sheets are layered (e.g. the
+// role picker over the member picker), only the topmost one reacts to Escape
+// and Tab. Without this, every open sheet's window listeners fire at once and
+// fight over focus.
+const openSheetStack: symbol[] = [];
+
 export function BottomSheet({
   open,
   onClose,
@@ -24,10 +30,26 @@ export function BottomSheet({
 }: BottomSheetProps) {
   const { t } = useLanguage();
   const [mounted, setMounted] = useState(false);
+  const sheetRef = useRef<HTMLDivElement>(null);
+  const idRef = useRef<symbol>(Symbol("bottom-sheet"));
 
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Register this sheet on the stack while it's open so the topmost-only
+  // guards below can tell whether it owns the keyboard.
+  useEffect(() => {
+    if (!open) return;
+    const id = idRef.current;
+    openSheetStack.push(id);
+    return () => {
+      const i = openSheetStack.lastIndexOf(id);
+      if (i !== -1) openSheetStack.splice(i, 1);
+    };
+  }, [open]);
+
+  const isTopmost = () => openSheetStack[openSheetStack.length - 1] === idRef.current;
 
   useEffect(() => {
     if (!open) return;
@@ -40,10 +62,65 @@ export function BottomSheet({
     };
   }, [open]);
 
+  // Focus management: move focus into the sheet on open, keep it trapped while
+  // open, and return it to whatever was focused before (usually the trigger)
+  // on close. Without this, keyboard/screen-reader users are left behind the
+  // modal and Tab escapes to the page underneath.
+  useEffect(() => {
+    if (!open || !mounted) return;
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+
+    // Focus the first focusable control, or the sheet itself as a fallback.
+    const focusFirst = () => {
+      const sheet = sheetRef.current;
+      if (!sheet) return;
+      const focusable = sheet.querySelector<HTMLElement>(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      );
+      (focusable ?? sheet).focus();
+    };
+    // Defer to the next frame so the animated element is in the DOM/visible.
+    const raf = requestAnimationFrame(focusFirst);
+
+    return () => {
+      cancelAnimationFrame(raf);
+      // Return focus only if it's still inside the sheet (don't yank it away
+      // from wherever the user has since moved).
+      if (previouslyFocused && typeof previouslyFocused.focus === "function") {
+        previouslyFocused.focus();
+      }
+    };
+  }, [open, mounted]);
+
   useEffect(() => {
     if (!open) return;
     function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
+      // Only the topmost sheet owns the keyboard when sheets are layered.
+      if (!isTopmost()) return;
+      if (e.key === "Escape") {
+        onClose();
+        return;
+      }
+      if (e.key !== "Tab") return;
+      const sheet = sheetRef.current;
+      if (!sheet) return;
+      const focusable = Array.from(
+        sheet.querySelectorAll<HTMLElement>(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        )
+      ).filter((el) => !el.hasAttribute("disabled") && el.offsetParent !== null);
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      const active = document.activeElement as HTMLElement | null;
+      // Wrap focus at the edges so Tab never leaves the modal.
+      if (e.shiftKey && (active === first || !sheet.contains(active))) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && active === last) {
+        e.preventDefault();
+        first.focus();
+      }
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -62,11 +139,13 @@ export function BottomSheet({
 
       {/* Sheet */}
       <div
+        ref={sheetRef}
+        tabIndex={-1}
         className={cn(
           "relative w-full sm:max-w-md mx-auto sm:mb-0 rounded-t-ios-2xl sm:rounded-ios-2xl",
           "bg-[var(--ios-bg-secondary)] shadow-ios-lg dark:shadow-ios-dark",
           "animate-slide-up max-h-[90vh] overflow-hidden flex flex-col",
-          "safe-bottom",
+          "safe-bottom outline-none",
           className
         )}
         role="dialog"
