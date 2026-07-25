@@ -1,12 +1,13 @@
 // Client-side avatar encoding (docs/SYSTEM_DESIGN.md §5).
 //
-// Avatars are stored IN the database as data URLs, so their encoded size is a
-// direct database-budget question. 256px covers the largest rendered avatar
-// (~96 CSS px at 2-3x dpr) and the ~80KB target (~110KB as base64) gives a
-// ceiling of roughly 4,600 avatars inside Supabase's 500MB free tier.
-// Existing larger avatars re-encode lazily the next time they're edited.
-const AVATAR_DATA_URL_DIMENSION = 256;
-const AVATAR_DATA_URL_TARGET_BYTES = 80 * 1024;
+// Avatars are stored IN the database as data URLs. At current real-world
+// usage (2 active systems, ~weekly), the 500MB Supabase free-tier ceiling is
+// nowhere near a constraint even at higher quality — a few hundred avatars at
+// this size is still a rounding error. 512px/~350KB is chosen deliberately
+// for photo quality over storage thrift; revisit only if usage grows enough
+// to make the budget math in SYSTEM_DESIGN.md §5 actually bite.
+const AVATAR_DATA_URL_DIMENSION = 512;
+const AVATAR_DATA_URL_TARGET_BYTES = 350 * 1024;
 const AVATAR_MIME_TYPE = 'image/webp';
 
 function loadImage(file: File): Promise<HTMLImageElement> {

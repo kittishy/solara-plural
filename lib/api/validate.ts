@@ -26,11 +26,12 @@ export const CAPS = {
   avatarHttpsUrl: 2_048,
 } as const;
 
-// Data-URL avatars are stored in the DB, so their size is a database-budget
-// question (docs/SYSTEM_DESIGN.md §5). Client encodes at 256px/~80KB
-// (~110KB base64); the server cap is looser to accept stale cached clients
-// still encoding at the old 512px size. Tighten to 160_000 one release later.
-export const AVATAR_DATA_URL_MAX = 500_000;
+// Data-URL avatars are stored in the DB. Client encodes at 512px/~350KB
+// (~480KB base64) favoring photo quality over storage thrift — at current
+// usage (2 active systems) the 500MB Supabase free tier isn't a real
+// constraint (docs/SYSTEM_DESIGN.md §5). The cap just needs headroom above
+// the encoder's own worst case.
+export const AVATAR_DATA_URL_MAX = 600_000;
 
 // ---------------------------------------------------------------------------
 // String helpers

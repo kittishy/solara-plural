@@ -200,7 +200,7 @@ regression even if the feature works.
 | Vercel invocations | ~1 M/mo | API reads/writes | SWR deduping (1–4 s), focus-throttle, no polling loops (`refreshInterval: 0`) |
 | Vercel cron | 2/day (Hobby) | **1**: `/api/cron/maintenance` daily 06:00 UTC | keep the second slot free |
 | Vercel maxDuration | 60 s (Node) | SSE 55 s close; cron ≤ 60 s; member-sync 45 s internal budget | explicit `maxDuration` exports |
-| Supabase DB size | 500 MB | rows + **avatars as data URLs** | avatars client-encoded at 256 px WebP ~80 KB (~110 KB base64), server cap enforced in `validate.ts`; ceiling ≈ 4 600 avatars; cron logs total avatar bytes |
+| Supabase DB size | 500 MB | rows + **avatars as data URLs** | avatars client-encoded at 512 px WebP ~350 KB (~480 KB base64), server cap enforced in `validate.ts`; ceiling ≈ 1 000 avatars — a deliberate quality-over-thrift choice at current usage (2 active systems, weekly), see §5 note below; cron logs total avatar bytes so this is revisited if usage ever grows enough to matter |
 | Supabase pooler connections | shared pool | postgres.js client | `max: 5, idle_timeout: 20 s, connect_timeout: 10 s, max_lifetime: 30 min` in `lib/db/index.ts` |
 | Supabase row growth | — | append-only op tables | **cron retention** (§6): notifications 60/90 d, deliveries 30 d, rate_limits 1 d past reset, reset tokens 7 d, audit 180 d, revoked push tokens 30 d. `system_chat_messages`, notes, journal are user content — never auto-pruned (future: per-system retention setting). |
 | FCM / web-push | free | push delivery | tokens revoked on permanent failure; deliveries pruned |
@@ -270,8 +270,11 @@ Removed (do not re-add): `CATBOX_USERHASH`, `SSE_URL`, `DATABASE_URL`/
    unavailable) — one tab must never cost a continuous function.
 6. **Every append-only table has a retention rule in the maintenance cron**,
    or a documented exemption (user content: notes, journal, chat).
-7. **Avatars live in the DB as bounded data URLs** (256 px / capped base64) —
-   no external image hosts for user content.
+7. **Avatars live in the DB as bounded data URLs** (512 px / capped base64) —
+   no external image hosts for user content. The size is a deliberate
+   quality-over-thrift choice at current usage (§5); if the system ever grows
+   past a handful of active systems, revisit against the DB-size budget math
+   before defaulting back to a smaller encode.
 8. **Secrets fail closed in production** — never store plaintext because an
    env var was missing.
 9. **Realtime rides on push first**; SSE/polling are fallbacks, and any new
