@@ -140,16 +140,24 @@ See IDEAS.md for the full backlog of feature ideas.
 
 ---
 
-## Android App Track
+## 🥇 Primary Track: Android APK
+
+> **The Android APK is the primary build target.** Website and PWA are secondary platforms
+> sharing the same backend. Everything is designed for Android first.
 
 - [x] Create isolated Expo/React Native workspace in `mobile-app`
 - [x] Configure Android package, icons, splash, TypeScript, Expo Router, EAS Build, and EAS Update
 - [x] Recreate primary mobile surfaces: Home, Members, Front, Notes, Settings
 - [x] Keep API/backend access behind `src/services`
-- [ ] Add mobile-safe auth/session API on the web backend
+- [ ] **Add mobile-safe auth/session API on the web backend** — blocker for APK production writes
 - [ ] Persist native tokens with Expo SecureStore after the auth adapter exists
 - [ ] Replace bundled preview writes with authenticated API writes
 - [x] Add Android push notification strategy via Capacitor Push Notifications + FCM native tokens
+
+## 🥈 Secondary Tracks: Website + PWA
+
+> Website and PWA receive the same features as Android, but Android is the first target.
+> Website UI is optimized for desktop browser; PWA adds installability and notifications.
 
 ---
 

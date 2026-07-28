@@ -272,3 +272,27 @@ module.exports = {
 
 ---
 
+## 2026 Minimal Redesign — The System's Light
+
+The July 2026 redesign evolves the interface from a dense dashboard into a calm,
+identity-led home without changing the product's data contracts.
+
+- The primary home metaphor is **the system's light**. Current front members are
+  presented in a central beacon, with member colors limited to identity accents.
+- The main front action is named **Pass the light** and always routes through the
+  existing front tracker, preserving tiers, notes, history, integrations, and
+  optimistic error recovery.
+- Core mobile navigation is Home, Who we are, The day, and More. The day maps to
+  the complete front history; all existing secondary routes remain available.
+- App surfaces are quiet, solid plum or warm-plum cards. Blur and texture are
+  decorative only and must never be required for hierarchy or legibility.
+- Functional text remains at least 14px outside compact navigation, where 12px is
+  the minimum. Touch targets remain at least 44x44px.
+- Light, dark, system, high-contrast, reduced-motion, reduced-texture, wallpaper,
+  localization, and safe-area behavior remain supported.
+- Concepts without an authoritative data model — inferred catch-up summaries,
+  note authorship, frequent-member ranking, discreet mode, and biometrics — must
+  not be presented as working features.
+
+---
+

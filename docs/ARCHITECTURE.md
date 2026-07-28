@@ -1,6 +1,6 @@
 # ARCHITECTURE.md — Solara Plural
 
-> System architecture for the Solara Plural web application.
+> System architecture for Solara Plural.
 > Read before making structural decisions.
 >
 > ⚠️ Infrastructure sections here predate the Supabase migration.
@@ -11,9 +11,12 @@
 
 ## Overview
 
-Solara Plural is a Next.js 14 web application with App Router, backed by Turso (libSQL)
-via Drizzle ORM, deployed on Vercel. It is a warm, accessible digital space for plural
-systems to organize their internal world.
+Solara Plural is built **first for Android** (the APK), with the website and PWA as
+secondary platforms. All three share the same backend (Turso/libSQL via Drizzle ORM,
+Auth.js v5) but the Android app is the primary design target — features work on Android
+first, then the website and PWA.
+
+It is a warm, accessible digital space for plural systems to organize their internal world.
 
 ---
 
@@ -21,7 +24,8 @@ systems to organize their internal world.
 
 | Layer | Technology | Notes |
 |-------|-----------|-------|
-| Framework | Next.js 14 (App Router) | Canonical production stack; Ruby lives in experiments/ |
+| **Primary** (Android APK) | **Expo/React Native** | `mobile-app/` — Android-first design |
+| **Secondary** (Site + PWA) | **Next.js 14 (App Router)** | Vercel; Ruby lives in experiments/ |
 | Languages | TypeScript (production), Ruby (experiment) | Ruby SSR/API layer staged in `experiments/ruby-api/` |
 | Database | Turso (libSQL) | SQLite-compatible, serverless-ready |
 | ORM | Drizzle ORM (Node.js), raw SQL (Ruby) | Ruby uses Turso HTTP Pipeline API directly |
@@ -314,6 +318,25 @@ Solara should borrow architecture habits, not external implementation code:
 - Avoid copying AGPL source code from Sheaf or PluralKit into this codebase without an explicit license decision.
 
 ---
+
+## 2026-06-16 Architecture Update: Android APK Is Primary
+
+The **Android APK** is now the primary build target. The website and PWA are secondary
+platforms that share the same backend and data model.
+
+| Platform | Status | Notes |
+|----------|--------|-------|
+| **Android APK** | **Primary** | Expo/React Native em `mobile-app/` — tudo é desenhado para Android primeiro |
+| Website | Secondary | Next.js 14 App Router, Vercel — recebe as mesmas features, UI otimizada para desktop |
+| PWA | Secondary | Progressive Web App — instalável, notificações push, offline parcial |
+
+Princípio: **Android-first design**. Features funcionam no Android primeiro. O site e PWA
+recebem as mesmas features mas podem ter UI diferente, otimizada para navegador desktop
+ou instalação PWA.
+
+O backend (Turso/libSQL, Drizzle ORM, Auth.js v5) é compartilhado entre todas as plataformas.
+O app Android consome as APIs através de `mobile-app/src/services` — não importa código
+web, Drizzle, ou Auth.js internals.
 
 ## 2026-05-15 Architecture Update: Android App Workspace
 

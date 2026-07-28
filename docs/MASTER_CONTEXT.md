@@ -19,7 +19,8 @@ A web version of Simply Plural as a safe space for plural systems to organize. T
 - Focus now: private use, internal organization, front tracking, members, history, notes, solid technical base
 
 ## 4. Plataforma
-- Hosted on Vercel
+- **Primary:** Android APK — tudo é desenhado para Android primeiro
+- **Secondary:** Website (Vercel, Next.js 14) + PWA — compartilham backend e data model
 - Responsive desktop + mobile
 - Usable as web/app
 - Future PWA-ready

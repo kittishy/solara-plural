@@ -5,7 +5,6 @@ import Link from "next/link";
 import { Plus, Search, Minus, Sun, X, Users } from "lucide-react";
 import { useState, useMemo, useCallback } from "react";
 import { LargeTitle } from "@/components/layout/NavBar";
-import { GlassCard } from "@/components/glass/GlassCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -15,8 +14,10 @@ import { BottomSheet } from "@/components/glass/BottomSheet";
 import { apiFetcher, swrKeys } from "@/lib/swr";
 import DynamicAvatarImage from "@/components/ui/DynamicAvatarImage";
 import { useLanguage } from "@/components/providers/LanguageProvider";
+import { useToast } from "@/components/providers/ToastProvider";
 import { useViewTransitionRouter, HERO_AVATAR } from "@/lib/view-transition";
 import { useHaptics } from "@/lib/haptics";
+import type { FrontTier } from "@/lib/front";
 import { cn } from "@/lib/utils";
 
 type Member = {
@@ -29,10 +30,15 @@ type Member = {
   avatarUrl?: string | null;
 };
 
-type FrontEntry = { memberIds: string[] };
+type FrontEntry = {
+  memberIds: string[];
+  memberTiers?: Record<string, FrontTier>;
+  note?: string | null;
+};
 
 export default function MembersPage() {
   const { t } = useLanguage();
+  const { showToast } = useToast();
   const { push } = useViewTransitionRouter();
   const { selection } = useHaptics();
 
@@ -55,6 +61,7 @@ export default function MembersPage() {
   const { data: currentFront } = useSWR<FrontEntry | null>(swrKeys.front, apiFetcher);
 
   const [search, setSearch] = useState("");
+  const [frontFilter, setFrontFilter] = useState<"all" | "front">("all");
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
   const [updating, setUpdating] = useState(false);
 
@@ -69,6 +76,19 @@ export default function MembersPage() {
     [currentFront]
   );
   const selectedIsFronting = selectedMember ? frontingSet.has(selectedMember.id) : false;
+
+  const frontContextFor = useCallback(
+    (memberIds: string[]) => ({
+      memberIds,
+      memberTiers: Object.fromEntries(
+        Object.entries(currentFront?.memberTiers ?? {}).filter(([id]) =>
+          memberIds.includes(id)
+        )
+      ),
+      note: currentFront?.note ?? undefined,
+    }),
+    [currentFront]
+  );
 
   const revalidateAfterFrontChange = useCallback(() => {
     void mutate(swrKeys.front);
@@ -89,14 +109,19 @@ export default function MembersPage() {
     if (!selectedMember || updating) return;
     setUpdating(true);
     try {
-      await fetch("/api/front", {
+      const response = await fetch("/api/front", {
         method: "POST",
         credentials: "same-origin",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ memberIds: [...frontingIds, selectedMember.id] }),
+        body: JSON.stringify(
+          frontContextFor([...frontingIds, selectedMember.id])
+        ),
       });
+      if (!response.ok) throw new Error("front_save_failed");
       revalidateAfterFrontChange();
       closeSheet();
+    } catch {
+      showToast(t("front.saveError"));
     } finally {
       setUpdating(false);
     }
@@ -108,17 +133,24 @@ export default function MembersPage() {
     try {
       const newIds = frontingIds.filter((id) => id !== selectedMember.id);
       if (newIds.length === 0) {
-        await fetch("/api/front", { method: "DELETE", credentials: "same-origin" });
+        const response = await fetch("/api/front", {
+          method: "DELETE",
+          credentials: "same-origin",
+        });
+        if (!response.ok) throw new Error("front_delete_failed");
       } else {
-        await fetch("/api/front", {
+        const response = await fetch("/api/front", {
           method: "POST",
           credentials: "same-origin",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ memberIds: newIds }),
+          body: JSON.stringify(frontContextFor(newIds)),
         });
+        if (!response.ok) throw new Error("front_save_failed");
       }
       revalidateAfterFrontChange();
       closeSheet();
+    } catch {
+      showToast(t("front.saveError"));
     } finally {
       setUpdating(false);
     }
@@ -128,14 +160,17 @@ export default function MembersPage() {
     if (!selectedMember || updating) return;
     setUpdating(true);
     try {
-      await fetch("/api/front", {
+      const response = await fetch("/api/front", {
         method: "POST",
         credentials: "same-origin",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ memberIds: [selectedMember.id] }),
+        body: JSON.stringify(frontContextFor([selectedMember.id])),
       });
+      if (!response.ok) throw new Error("front_save_failed");
       revalidateAfterFrontChange();
       closeSheet();
+    } catch {
+      showToast(t("front.saveError"));
     } finally {
       setUpdating(false);
     }
@@ -143,20 +178,28 @@ export default function MembersPage() {
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
-    if (!q) return allMembers;
     return allMembers.filter(
       (m) =>
+        (frontFilter === "all" || frontingSet.has(m.id)) &&
+        (!q ||
         m.name?.toLowerCase().includes(q) ||
         m.pronouns?.toLowerCase().includes(q) ||
         m.role?.toLowerCase().includes(q) ||
-        m.tags.some((tag) => tag.toLowerCase().includes(q))
+        m.tags.some((tag) => tag.toLowerCase().includes(q)))
     );
-  }, [allMembers, search]);
+  }, [allMembers, frontFilter, frontingSet, search]);
 
   return (
     <div className="animate-fade-in">
-      <div className="px-4 pt-14 pb-2 flex items-end justify-between">
-        <LargeTitle className="px-0">{t("members.title")}</LargeTitle>
+      <div className="px-4 pt-14 pb-3 flex items-end justify-between">
+        <div>
+          <LargeTitle className="px-0 pb-1">{t("members.title")}</LargeTitle>
+          <p className="text-sm text-muted-foreground">
+            {data?.total ?? allMembers.length} {t("home.statMembers")}
+            {" · "}
+            {frontingIds.length} {t("home.statFronting")}
+          </p>
+        </div>
         <Button asChild size="icon" className="mb-1">
           <Link href="/members/new" aria-label={t("members.addMember")}>
             <Plus size={20} />
@@ -178,17 +221,52 @@ export default function MembersPage() {
         />
       </div>
 
+      <div
+        className="mx-4 mb-4 grid grid-cols-2 gap-1 rounded-full border border-border bg-secondary/50 p-1"
+        aria-label={t("members.title")}
+        role="group"
+      >
+        <button
+          type="button"
+          onClick={() => setFrontFilter("all")}
+          aria-pressed={frontFilter === "all"}
+          className={cn(
+            "min-h-11 rounded-full px-4 text-sm font-bold transition-colors",
+            frontFilter === "all"
+              ? "bg-primary/15 text-primary"
+              : "text-muted-foreground hover:text-foreground"
+          )}
+        >
+          {t("common.all")}
+        </button>
+        <button
+          type="button"
+          onClick={() => setFrontFilter("front")}
+          aria-pressed={frontFilter === "front"}
+          className={cn(
+            "min-h-11 rounded-full px-4 text-sm font-bold transition-colors",
+            frontFilter === "front"
+              ? "bg-primary/15 text-primary"
+              : "text-muted-foreground hover:text-foreground"
+          )}
+        >
+          {t("front.currentlyFronting")}
+        </button>
+      </div>
+
       {/* List */}
       <div className="px-4">
-        <GlassCard padding="none" className="overflow-hidden">
+        <div className="flex flex-col gap-2.5">
           {error && !data ? (
-            <ErrorState onRetry={() => mutateMembers()} retrying={isValidating} />
+            <div className="rounded-ios-lg border border-border bg-card">
+              <ErrorState onRetry={() => mutateMembers()} retrying={isValidating} />
+            </div>
           ) : isLoading ? (
-            <div className="p-4 flex flex-col gap-0">
+            <div className="flex flex-col gap-2.5">
               {[1, 2, 3, 4, 5].map((i) => (
                 <div
                   key={i}
-                  className="flex items-center gap-3 py-3 border-b border-border/50 last:border-0"
+                  className="flex items-center gap-3 rounded-ios-lg border border-border bg-card px-4 py-3"
                 >
                   <Skeleton className="w-11 h-11 rounded-full flex-shrink-0" />
                   <div className="flex-1 flex flex-col gap-2">
@@ -199,28 +277,47 @@ export default function MembersPage() {
               ))}
             </div>
           ) : filtered.length === 0 ? (
-            <EmptyState
-              icon={Users}
-              title={search ? t("members.noMembersFound") : t("members.noMembers")}
-              description={search ? undefined : t("members.emptyDescription")}
-              action={
-                !search ? (
-                  <Button asChild variant="outline" size="sm">
-                    <Link href="/members/new">
-                      <Plus size={16} />
-                      {t("members.addMember")}
-                    </Link>
-                  </Button>
-                ) : undefined
-              }
-            />
+            <div className="rounded-ios-lg border border-border bg-card">
+              <EmptyState
+                icon={Users}
+                title={
+                  search
+                    ? t("members.noMembersFound")
+                    : frontFilter === "front"
+                      ? t("members.noFronting")
+                      : t("members.noMembers")
+                }
+                description={
+                  search || frontFilter === "front"
+                    ? undefined
+                    : t("members.emptyDescription")
+                }
+                action={
+                  !search && frontFilter === "front" ? (
+                    <Button asChild variant="outline" size="sm">
+                      <Link href="/front">
+                        <Sun size={16} />
+                        {t("home.passLight")}
+                      </Link>
+                    </Button>
+                  ) : !search ? (
+                    <Button asChild variant="outline" size="sm">
+                      <Link href="/members/new">
+                        <Plus size={16} />
+                        {t("members.addMember")}
+                      </Link>
+                    </Button>
+                  ) : undefined
+                }
+              />
+            </div>
           ) : (
             filtered.map((member) => {
               const isFronting = frontingSet.has(member.id);
               return (
                 <div
                   key={member.id}
-                  className="flex items-center border-b border-border/50 last:border-0"
+                  className="flex min-h-[68px] items-center overflow-hidden rounded-ios-lg border border-border bg-card shadow-ios dark:shadow-ios-dark"
                 >
                   <Link
                     href={`/members/${member.id}`}
@@ -252,17 +349,38 @@ export default function MembersPage() {
                       <p className="text-body font-semibold text-foreground truncate">
                         {member.name}
                       </p>
-                      {member.pronouns && (
+                      {(member.pronouns || member.role) && (
                         <p className="text-caption-1 text-muted-foreground truncate">
-                          {member.pronouns}
+                          {[member.pronouns, member.role].filter(Boolean).join(" · ")}
                         </p>
                       )}
+                      {member.tags.length > 0 && (
+                        <div className="mt-1.5 flex gap-1.5 overflow-hidden">
+                          {member.tags.slice(0, 3).map((tag) => (
+                            <span
+                              key={tag}
+                              className="max-w-28 truncate rounded-full border px-2 py-0.5 text-xs font-semibold text-foreground"
+                              style={{
+                                borderColor: member.color ? `${member.color}4d` : "hsl(var(--border))",
+                                background: member.color ? `${member.color}1f` : "hsl(var(--secondary))",
+                              }}
+                            >
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </div>
-                    {member.color && (
+                    {isFronting && (
                       <div
-                        className="w-3 h-3 rounded-full flex-shrink-0"
-                        style={{ background: member.color }}
-                      />
+                        className="rounded-full border px-2 py-1 text-xs font-bold text-foreground"
+                        style={{
+                          borderColor: member.color ? `${member.color}4d` : "hsl(var(--border))",
+                          background: member.color ? `${member.color}1f` : "hsl(var(--secondary))",
+                        }}
+                      >
+                        {t("front.title")}
+                      </div>
                     )}
                   </Link>
 
@@ -271,7 +389,7 @@ export default function MembersPage() {
                     onClick={(e) => openSheet(e, member)}
                     aria-label={t("front.addToFront")}
                     className={cn(
-                      "flex-shrink-0 mr-3 w-8 h-8 rounded-full flex items-center justify-center ios-transition",
+                      "flex-shrink-0 mr-2 w-11 h-11 rounded-full flex items-center justify-center ios-transition",
                       isFronting
                         ? "bg-ios-green/20 text-ios-green"
                         : "bg-secondary text-muted-foreground"
@@ -285,7 +403,7 @@ export default function MembersPage() {
               );
             })
           )}
-        </GlassCard>
+        </div>
       </div>
 
       {/* Per-member front action sheet */}

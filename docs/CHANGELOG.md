@@ -166,6 +166,7 @@
 ## [Unreleased]
 
 ### Added
+- Cross-runtime Agent Engineering Harness for Claude Code, OpenCode, Codex, and model-variant agents: `docs/AGENT_HARNESS.md`, Claude skills (`/agent-harness`, `/idea-fit`, `/production-gate`), OpenCode commands with the same names, and shared quality/model-routing gates.
 - Native Android APK push delivery via Capacitor FCM tokens, Firebase Admin fanout, `/api/notifications/native-tokens`, and per-device self-test diagnostics for `android-fcm`.
 - Isolated Expo/React Native Android app in `mobile-app`, with TypeScript, Expo Router tabs, EAS Build profiles, EAS Update setup, Android package `app.solara.plural`, and docs for APK/OTA/repository separation
 - Defensive unit coverage for token encryption, password reset helpers, custom fields, friend visibility helpers, front helpers, and in-memory rate limiting

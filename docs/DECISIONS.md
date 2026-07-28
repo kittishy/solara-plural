@@ -778,3 +778,90 @@
 - Updated the notification self-test to report per-device `android-fcm` results.
 - Updated Capacitor runtime/settings flows to register native push before attempting the self-test.
 - Production requires `FIREBASE_SERVICE_ACCOUNT_JSON` or the supported split Firebase env vars in Vercel.
+
+---
+
+## [2026-06-16] D043 - Cross-runtime Agent Engineering Harness
+
+**Decision:** Add `docs/AGENT_HARNESS.md` as the shared operating brain for Claude Code, OpenCode, Codex, and model-variant agents, with native Claude skills and OpenCode commands for harness planning, idea fit, and production gates.
+
+**Justification:**
+- The project is maintained through multiple agent runtimes and many model families, including free/open-source models.
+- Fast or experimental models are useful for exploration and first-pass work, but they need explicit context, production-safety gates, and review/QA escalation rules.
+- Solara's product intent is sensitive: agents must preserve privacy, warmth, plural-system safety, roadmap coherence, and existing architectural decisions.
+- A shared harness reduces drift between `AGENTS.md`, `CLAUDE.md`, `.claude/agents`, `.opencode/agents`, and model-specific workflows.
+
+**Implementation:**
+- Added `docs/AGENT_HARNESS.md` with source-of-truth order, model routing, quality gates, idea-fit rubric, validation matrix, and memory/documentation protocol.
+- Added Claude Code skills: `/agent-harness`, `/idea-fit`, and `/production-gate`.
+- Added OpenCode commands with the same names.
+- Configured `opencode.json` to include the harness as an instruction file.
+- Updated project agent instructions and core agent prompts to load the harness for non-trivial work.
+
+---
+
+## [2026-06-16] D044 — Hermes Agent Enrichment: Memory, Self-Improvement, SOUL.md & Subagents
+
+**Decision:** Enrich the agent harness with four capabilities inspired by Hermes Agent
+(Nous Research, MIT, 194K+ GitHub stars, v0.15+): layered memory architecture,
+GEPA-inspired reflection loop, SOUL.md personality system, and subagent coordination
+patterns.
+
+**Justification:**
+- Hermes Agent's 4-layer memory model (working context → MEMORY.md/USER.md →
+  project artifacts → skills) maps directly to Solara's need for persistent agent
+  knowledge across sessions.
+- The GEPA self-improvement mechanism (ICLR 2026 Oral, 35× fewer rollouts than GRPO)
+  inspired a lightweight reflection protocol that makes every task contribute to
+  process optimization without requiring automated prompt evolution.
+- The SOUL.md personality system gives every agent a consistent identity, tone, and
+  values — critical for Solara's warm, human, private product DNA.
+- Hermes's isolated subagent system inspired parallel coordination patterns that
+  reduce context pollution when multiple agents work in parallel.
+
+**Implementation:**
+- Refactored `docs/AGENT_HARNESS.md` section 9 into a 4-layer memory architecture
+  with MEMORY.md, USER.md, bounded curation, and skill auto-creation.
+- Added section 11: Self-Improvement & Reflection Loop — structured post-task
+  reflections that compound into process improvements.
+- Added section 12: Agent Personality & Voice (SOUL.md) — defines identity, tone,
+  values, boundaries, and role-specific voice adaptations.
+- Added section 13: Subagent & Parallel Work Patterns — isolation rules and
+  coordination flow for parallel agent work.
+- Added section 14: Hermes Agent Runtime (Optional) — when and how to use Hermes
+  Agent alongside this harness.
+- Created `docs/SOUL.md` with full personality definition.
+- Created Claude Code skills: `/reflect`, `/soul`.
+- Created OpenCode commands: `/reflect`, `/soul`.
+- Updated `docs/DECISIONS.md` with integration notes for Hermes Agent memory format
+  and SOUL.md compatibility.
+
+---
+
+## [2026-07-28] D045 — Minimal Redesign Uses Existing Product Contracts
+
+**Decision:** Adopt the Claude Design minimal visual direction as a shared,
+mobile-first presentation layer while keeping the existing routes, APIs, database
+model, themes, localization, and accessibility contracts authoritative.
+
+**Justification:**
+- The light beacon and "Pass the light" language give the front workflow a warmer,
+  clearer identity without requiring a data migration.
+- Copying the prototype's hard-coded data or standalone HTML would bypass current
+  front history, tiers, notes, integrations, optimistic recovery, and permissions.
+- Several prototype concepts do not yet have reliable backend semantics, including
+  inferred catch-up summaries, note authorship, frequent-member ranking, discreet
+  mode, and biometrics.
+- Android remains the primary interaction target, so safe areas, touch targets,
+  reduced motion, high contrast, and solid low-cost surfaces take precedence over
+  decorative blur.
+
+**Implementation:**
+- Restyled semantic theme tokens and shared card, sheet, and mobile navigation
+  components instead of distributing prototype colors throughout feature code.
+- Rebuilt Home around real current-front data with 0/1/2/N member states, tiers,
+  elapsed time, notes, and the existing front mutation workflow.
+- Updated member discovery and profile entry points while preserving search,
+  pagination, creation, editing, and front actions.
+- Kept unsupported prototype concepts out of the production UI until their data
+  and privacy contracts are defined.

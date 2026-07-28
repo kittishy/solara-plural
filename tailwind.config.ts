@@ -93,14 +93,14 @@ const config: Config = {
         ring: "hsl(var(--ring))",
       },
       borderRadius: {
-        "ios-xs": "8px",
-        "ios-sm": "10px",
-        ios: "14px",
-        "ios-md": "16px",
-        "ios-lg": "20px",
-        "ios-xl": "24px",
-        "ios-2xl": "28px",
-        "ios-3xl": "36px",
+        "ios-xs": "6px",
+        "ios-sm": "8px",
+        ios: "10px",
+        "ios-md": "12px",
+        "ios-lg": "14px",
+        "ios-xl": "16px",
+        "ios-2xl": "20px",
+        "ios-3xl": "24px",
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
@@ -139,13 +139,10 @@ const config: Config = {
         // Softer, more diffuse, faintly warm (brown-black) floats with a
         // hairline top highlight so cards read "lit from above" — premium glass
         // instead of the hard generic drop shadow.
-        ios: "inset 0 1px 0 0 rgba(255, 255, 255, 0.6), 0 1px 2px rgba(28, 20, 12, 0.05), 0 8px 24px rgba(28, 20, 12, 0.07)",
-        "ios-md":
-          "inset 0 1px 0 0 rgba(255, 255, 255, 0.6), 0 2px 6px rgba(28, 20, 12, 0.06), 0 14px 36px rgba(28, 20, 12, 0.09)",
-        "ios-lg":
-          "inset 0 1px 0 0 rgba(255, 255, 255, 0.7), 0 4px 12px rgba(28, 20, 12, 0.07), 0 24px 56px rgba(28, 20, 12, 0.12)",
-        "ios-dark":
-          "inset 0 1px 0 0 rgba(255, 255, 255, 0.05), 0 2px 8px rgba(0, 0, 0, 0.4), 0 14px 36px rgba(0, 0, 0, 0.32)",
+        ios: "0 1px 2px rgba(39, 24, 50, 0.06)",
+        "ios-md": "0 8px 24px rgba(39, 24, 50, 0.09)",
+        "ios-lg": "0 18px 48px rgba(39, 24, 50, 0.13)",
+        "ios-dark": "0 12px 36px rgba(0, 0, 0, 0.3)",
       },
       keyframes: {
         "fade-in": {

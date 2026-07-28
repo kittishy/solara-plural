@@ -133,7 +133,7 @@ export function BottomSheet({
     <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center">
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-black/30 backdrop-blur-sm animate-fade-in"
+        className="absolute inset-0 bg-black/60 animate-fade-in"
         onClick={onClose}
         aria-hidden
       />
@@ -143,8 +143,8 @@ export function BottomSheet({
         ref={sheetRef}
         tabIndex={-1}
         className={cn(
-          "relative w-full sm:max-w-md mx-auto sm:mb-0 rounded-t-ios-2xl sm:rounded-ios-2xl",
-          "bg-[var(--ios-bg-secondary)] shadow-ios-lg dark:shadow-ios-dark",
+          "relative w-full sm:max-w-md mx-auto sm:mb-0 rounded-t-ios-lg sm:rounded-ios-lg",
+          "bg-[var(--ios-bg-secondary)] border border-border/70 shadow-ios-lg",
           "animate-slide-up max-h-[90vh] overflow-hidden flex flex-col",
           "safe-bottom outline-none",
           className
@@ -166,7 +166,7 @@ export function BottomSheet({
             <button
               type="button"
               onClick={onClose}
-              className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center ios-press"
+              className="w-11 h-11 rounded-full bg-secondary flex items-center justify-center ios-press"
               aria-label={t("common.close")}
             >
               <X size={16} />

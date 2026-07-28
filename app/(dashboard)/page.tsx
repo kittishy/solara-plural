@@ -9,7 +9,7 @@ import {
 } from "@/lib/db/schema";
 import { and, count, desc, eq, inArray, isNull, or } from "drizzle-orm";
 import { requireSystemId } from "@/lib/auth/session";
-import { parseMemberIds, safeParseMemberIds } from "@/lib/front";
+import { parseMemberIds, safeParseMemberIds, safeParseMemberTiers } from "@/lib/front";
 import { HomeContent } from "./HomeContent";
 
 export default async function DashboardPage() {
@@ -128,12 +128,20 @@ export default async function DashboardPage() {
     ).orderBy(desc(members.createdAt)).limit(5);
   }
 
+  // Preserve the order chosen in the front tracker. Database IN queries do not
+  // guarantee row order, while the first person in the list leads the beacon.
+  frontingMembers = frontingIds
+    .map((id) => frontingMembers.find((member) => member.id === id))
+    .filter(Boolean) as FrontingMemberRow[];
+
   // SSR snapshot of the current front entry, shaped for SWR fallbackData.
   const currentFrontSnapshot = activeFront
     ? {
         id: activeFront.id,
         memberIds: frontingIds,
+        memberTiers: safeParseMemberTiers(activeFront.memberTiers),
         startedAt: (activeFront.startedAt as Date).toISOString(),
+        note: activeFront.note,
       }
     : null;
 
@@ -148,6 +156,7 @@ export default async function DashboardPage() {
       recentMembers={recentMembers}
       hasFrontHistory={recentlyFrontedIds.length > 0}
       currentFrontSnapshot={currentFrontSnapshot}
+      renderedAt={new Date().toISOString()}
     />
   );
 }
