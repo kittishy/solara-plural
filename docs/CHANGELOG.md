@@ -5,6 +5,31 @@
 
 ---
 
+## [fix] - 2026-07-28 - Fluid Android/PWA navigation and front workflow
+
+### Fixed
+- Dashboard navigation now keeps the active locale on the first request, eliminating
+  middleware redirect round trips and language flicker.
+- The mobile dock exposes Home, Members, Front, Front history, and Menu directly with
+  Android-sized touch targets.
+- Persistent SWR data no longer causes server/client hydration mismatches or full-page
+  React rebuilds on member and front screens.
+- The service worker no longer caches authenticated API responses by URL; live data is
+  refreshed through SWR without duplicate focus/resume storms. RSC/prefetch responses
+  are also network-only, with a public data-free page as the offline fallback.
+- Front membership, all selected roles, and the session note can be reviewed and saved
+  together from one searchable bottom sheet instead of one network request per tap.
+- Large member lists use browser rendering containment, and installed app navigation
+  skips decorative document snapshots that delayed Android taps.
+- Password visibility controls now have accessible names and touch targets; the login
+  registration link meets text contrast requirements.
+- Front replacement is transactional and serialized per system; stale drafts from a
+  second device are rejected and refreshed instead of overwriting newer state.
+
+### Verified
+- Strict TypeScript and Next.js lint pass.
+- Vitest suite passes 112 tests across 18 files.
+
 ## [remove] — 2026-07-12 — Partner feature removed
 
 ### Removed

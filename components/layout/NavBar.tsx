@@ -1,7 +1,7 @@
 "use client";
 
 import { ArrowLeft } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useLocalizedRouter } from "@/components/navigation/useLocalizedRouter";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/components/providers/LanguageProvider";
 
@@ -22,7 +22,7 @@ export function NavBar({
   transparent = false,
   className,
 }: NavBarProps) {
-  const router = useRouter();
+  const router = useLocalizedRouter();
   const { t } = useLanguage();
 
   return (

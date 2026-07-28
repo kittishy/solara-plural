@@ -5,6 +5,9 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), back: vi.fn(), replace: vi.fn() }),
 }));
+vi.mock("@/components/navigation/useLocalizedRouter", () => ({
+  useLocalizedRouter: () => ({ push: vi.fn(), back: vi.fn(), replace: vi.fn() }),
+}));
 
 import { withViewTransition } from "../view-transition";
 

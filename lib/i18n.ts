@@ -84,6 +84,14 @@ export function stripLanguageFromPathname(pathname: string): string {
   return getLanguageFromPathname(pathname).pathnameWithoutLanguage;
 }
 
+export function resolveInitialLanguage(
+  initialLanguage: Language,
+  pathname: string | null | undefined
+): Language {
+  if (!pathname) return initialLanguage;
+  return getLanguageFromPathname(pathname).language ?? initialLanguage;
+}
+
 export const translations = {
   en: {
     language: {
@@ -92,6 +100,8 @@ export const translations = {
       current: 'Current language',
     },
     auth: {
+      showPassword: 'Show password',
+      hidePassword: 'Hide password',
       login: {
         tagline: 'Your warm space, waiting for you',
         title: 'Welcome back',
@@ -318,6 +328,7 @@ export const translations = {
       starting: 'Starting...',
       openHistory: 'Open front history',
       saveError: 'Could not save front session. Try again.',
+      editConflict: 'Front changed on another device. The latest version was loaded; review it and try again.',
       endError: 'Could not end front. Try again.',
       noMemberSelected: 'Select at least one member.',
       endBeforeStart: 'End time must be after start time.',
@@ -718,6 +729,8 @@ export const translations = {
       current: 'Idioma atual',
     },
     auth: {
+      showPassword: 'Mostrar senha',
+      hidePassword: 'Ocultar senha',
       login: {
         tagline: 'Seu espaço acolhedor, esperando por você',
         title: 'Boas-vindas de volta',
@@ -944,6 +957,7 @@ export const translations = {
       starting: 'Iniciando...',
       openHistory: 'Abrir histórico de front',
       saveError: 'Não foi possível salvar a sessão de front. Tente de novo.',
+      editConflict: 'O front mudou em outro dispositivo. A versão mais recente foi carregada; confira e tente de novo.',
       endError: 'Não foi possível encerrar o front. Tente de novo.',
       noMemberSelected: 'Selecione pelo menos um membro.',
       endBeforeStart: 'O horário de término deve ser após o início.',
@@ -1344,6 +1358,8 @@ export const translations = {
       current: 'Idioma actual',
     },
     auth: {
+      showPassword: 'Mostrar contraseña',
+      hidePassword: 'Ocultar contraseña',
       login: {
         tagline: 'Tu espacio cálido, esperándote',
         title: 'Bienvenide de vuelta',
@@ -1570,6 +1586,7 @@ export const translations = {
       starting: 'Iniciando...',
       openHistory: 'Abrir historial de front',
       saveError: 'No se pudo guardar la sesión de front. Intenta otra vez.',
+      editConflict: 'El front cambió en otro dispositivo. Se cargó la versión más reciente; revísala e intenta otra vez.',
       endError: 'No se pudo terminar el front. Intenta otra vez.',
       noMemberSelected: 'Selecciona al menos un miembro.',
       endBeforeStart: 'La hora de fin debe ser posterior al inicio.',

@@ -8,15 +8,35 @@ import { mutate } from "swr";
 //   (the SW itself calls `clients.claim` on activation) and once the new
 //   controller is in charge we silently revalidate all SWR caches so the
 //   user sees fresh data without any manual refresh.
-// - Also revalidates when the document regains focus or visibility, so
-//   reopening the PWA after a deploy never shows stale UI.
+// - SWR owns focus/reconnect data refresh. This runtime only manages service
+//   worker updates, avoiding duplicate request bursts when Android resumes.
 export function ServiceWorkerRuntime() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (!("serviceWorker" in navigator)) return;
-    if (process.env.NODE_ENV !== "production" && !window.location.hostname) return;
+
+    // A production service worker controlling `next dev` can serve stale
+    // chunks and make the development UI appear randomly broken. Production
+    // builds still exercise the real registration path.
+    if (process.env.NODE_ENV !== "production") {
+      void navigator.serviceWorker
+        .getRegistrations()
+        .then((registrations) =>
+          Promise.all(
+            registrations
+              .filter((registration) => registration.scope.startsWith(window.location.origin))
+              .map((registration) => registration.unregister())
+          )
+        )
+        .catch(() => undefined);
+      return;
+    }
 
     let refreshing = false;
+    let disposed = false;
+    let registration: ServiceWorkerRegistration | null = null;
+    let installingWorker: ServiceWorker | null = null;
+    let updateInterval: number | null = null;
     const refreshAll = () => {
       void mutate(() => true, undefined, { revalidate: true });
     };
@@ -30,50 +50,62 @@ export function ServiceWorkerRuntime() {
 
     navigator.serviceWorker.addEventListener("controllerchange", onControllerChange);
 
+    const checkForUpdate = () => {
+      void registration?.update().catch(() => undefined);
+    };
+    const onVisible = () => {
+      if (document.visibilityState === "visible") checkForUpdate();
+    };
+    const onNativeResume = () => checkForUpdate();
+    const onInstallingStateChange = () => {
+      if (
+        installingWorker?.state === "installed" &&
+        navigator.serviceWorker.controller
+      ) {
+        installingWorker.postMessage({ type: "SKIP_WAITING" });
+      }
+    };
+    const onUpdateFound = () => {
+      installingWorker?.removeEventListener(
+        "statechange",
+        onInstallingStateChange
+      );
+      installingWorker = registration?.installing ?? null;
+      installingWorker?.addEventListener(
+        "statechange",
+        onInstallingStateChange
+      );
+    };
+
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("solara:native-resume", onNativeResume);
+
     void navigator.serviceWorker.register("/service-worker.js", { scope: "/" })
-      .then((registration) => {
+      .then((registered) => {
+        if (disposed) return;
+        registration = registered;
+
         // If there's already a waiting worker, activate it now.
         if (registration.waiting) {
           registration.waiting.postMessage({ type: "SKIP_WAITING" });
         }
-        registration.addEventListener("updatefound", () => {
-          const installing = registration.installing;
-          if (!installing) return;
-          installing.addEventListener("statechange", () => {
-            if (installing.state === "installed" && navigator.serviceWorker.controller) {
-              // A new SW is ready and an old SW is still in charge — switch over.
-              installing.postMessage({ type: "SKIP_WAITING" });
-            }
-          });
-        });
+        registration.addEventListener("updatefound", onUpdateFound);
+
         // Periodically check for new SW versions while the app stays open.
-        const checkForUpdate = () => { void registration.update().catch(() => undefined); };
-        const interval = window.setInterval(checkForUpdate, 60 * 60 * 1000);
-
-        const onVisible = () => {
-          if (document.visibilityState === "visible") {
-            checkForUpdate();
-            // Refresh data the user is about to look at.
-            refreshAll();
-          }
-        };
-        document.addEventListener("visibilitychange", onVisible);
-
-        const onNativeResume = () => {
-          checkForUpdate();
-          refreshAll();
-        };
-        window.addEventListener("solara:native-resume", onNativeResume);
-
-        return () => {
-          window.clearInterval(interval);
-          document.removeEventListener("visibilitychange", onVisible);
-          window.removeEventListener("solara:native-resume", onNativeResume);
-        };
+        updateInterval = window.setInterval(checkForUpdate, 60 * 60 * 1000);
       })
       .catch(() => undefined);
 
     return () => {
+      disposed = true;
+      if (updateInterval !== null) window.clearInterval(updateInterval);
+      installingWorker?.removeEventListener(
+        "statechange",
+        onInstallingStateChange
+      );
+      registration?.removeEventListener("updatefound", onUpdateFound);
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("solara:native-resume", onNativeResume);
       navigator.serviceWorker.removeEventListener("controllerchange", onControllerChange);
     };
   }, []);

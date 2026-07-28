@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Home,
@@ -21,8 +20,9 @@ import { useLanguage } from "@/components/providers/LanguageProvider";
 import { useHaptics } from "@/lib/haptics";
 import { stripLanguageFromPathname } from "@/lib/i18n";
 import { apiFetcher, swrKeys } from "@/lib/swr";
+import { LocalizedLink } from "@/components/navigation/LocalizedLink";
 
-const moreHrefList = ["/front", "/journal", "/friends", "/notes", "/notifications", "/settings"];
+const moreHrefList = ["/journal", "/friends", "/notes", "/notifications", "/settings"];
 
 export function TabBar() {
   // Localized routes are prefixed with the language (/en, /pt-BR, …) —
@@ -35,11 +35,11 @@ export function TabBar() {
   const tabs = [
     { href: "/", icon: Home, label: t("nav.home") },
     { href: "/members", icon: Users, label: t("nav.people") },
+    { href: "/front", icon: Hand, label: t("home.passLight") },
     { href: "/front/history", icon: Sun, label: t("nav.day") },
   ];
 
   const moreItems = [
-    { href: "/front", icon: Hand, label: t("home.passLight"), color: "#8B5CF6" },
     { href: "/journal", icon: BookOpen, label: t("journal.title"), color: "#AF52DE" },
     { href: "/friends", icon: Users, label: t("nav.friends"), color: "#32ADE6" },
     { href: "/notes", icon: FileText, label: t("notes.title"), color: "#FF9500" },
@@ -56,9 +56,7 @@ export function TabBar() {
   const unreadCount = notifData?.unreadCount ?? 0;
 
   const isDayActive = pathname.startsWith("/front/history");
-  const isMaisActive = moreHrefList.some((href) =>
-    href === "/front" ? pathname === href : pathname.startsWith(href)
-  );
+  const isMaisActive = moreHrefList.some((href) => pathname.startsWith(href));
 
   return (
     <>
@@ -80,11 +78,13 @@ export function TabBar() {
             const isActive =
               href === "/"
                 ? pathname === "/"
-                : href === "/front/history"
-                  ? isDayActive
-                  : pathname.startsWith(href);
+                : href === "/front"
+                  ? pathname === "/front"
+                  : href === "/front/history"
+                    ? isDayActive
+                    : pathname.startsWith(href);
             return (
-              <Link
+              <LocalizedLink
                 key={href}
                 href={href}
                 // Always-mounted nav → eagerly prefetch the primary routes so
@@ -118,7 +118,7 @@ export function TabBar() {
                 >
                   {label}
                 </span>
-              </Link>
+              </LocalizedLink>
             );
           })}
 
@@ -175,9 +175,10 @@ export function TabBar() {
           {moreItems.map(({ href, icon: Icon, label, color }) => {
             const showBadge = href === "/notifications" && unreadCount > 0;
             return (
-              <Link
+              <LocalizedLink
                 key={href}
                 href={href}
+                prefetch
                 onClick={() => setSheetOpen(false)}
                 className="solara-surface rounded-ios p-4 flex flex-col items-center gap-2.5 ios-press active:scale-95 ios-transition"
               >
@@ -197,7 +198,7 @@ export function TabBar() {
                 <span className="text-caption-1 font-semibold text-foreground text-center">
                   {label}
                 </span>
-              </Link>
+              </LocalizedLink>
             );
           })}
         </div>

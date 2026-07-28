@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState, useCallback } from "react";
-import Link from "next/link";
+import { LocalizedLink as Link } from "@/components/navigation/LocalizedLink";
 import {
   ArrowLeft,
   Sun,

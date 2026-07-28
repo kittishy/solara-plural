@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { LocalizedLink as Link } from "@/components/navigation/LocalizedLink";
 import { notFound } from "next/navigation";
 import { cookies } from "next/headers";
 import { ArrowLeft, Pencil, Clock, Hand } from "lucide-react";

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useLocalizedRouter } from "@/components/navigation/useLocalizedRouter";
 import { ArrowLeft, Save } from "lucide-react";
 import { GlassCard } from "@/components/glass/GlassCard";
 import { Button } from "@/components/ui/button";
@@ -15,7 +15,7 @@ import { useLanguage } from "@/components/providers/LanguageProvider";
 const EMOJI_OPTIONS = ["☀️", "🌙", "⭐", "✨", "🌸", "🌈", "🦋", "🌊", "🔥", "💎", "🌷", "🍃"];
 
 export default function ProfileSettingsPage() {
-  const router = useRouter();
+  const router = useLocalizedRouter();
   const { t } = useLanguage();
   const [loaded, setLoaded] = useState(false);
   const [saving, setSaving] = useState(false);

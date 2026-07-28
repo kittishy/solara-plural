@@ -3,7 +3,7 @@
 import useSWR, { mutate } from "swr";
 import { useState } from "react";
 import { ArrowLeft, Clock, Plus, Pencil, Trash2 } from "lucide-react";
-import Link from "next/link";
+import { LocalizedLink as Link } from "@/components/navigation/LocalizedLink";
 import { GlassCard } from "@/components/glass/GlassCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -64,7 +64,7 @@ export default function FrontHistoryPage() {
     swrKeys.frontHistory,
     apiFetcher
   );
-  const { data: membersData } = useSWR<{ data: Member[] }>("/api/members?limit=500", apiFetcher);
+  const { data: membersData } = useSWR<{ data: Member[] }>(swrKeys.members, apiFetcher);
   const members = membersData?.data ?? [];
 
   const memberById = new Map((members ?? []).map((m) => [m.id, m]));

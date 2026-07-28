@@ -60,7 +60,9 @@ describe('token-crypto', () => {
     const { encryptIntegrationToken, decryptIntegrationToken } = await import('../token-crypto');
 
     const payload = encryptIntegrationToken('pk-token');
-    const tampered = `${payload.slice(0, -1)}x`;
+    const [format, iv, tag, data] = payload.split('.');
+    const tamperedTag = `${tag[0] === 'A' ? 'B' : 'A'}${tag.slice(1)}`;
+    const tampered = [format, iv, tamperedTag, data].join('.');
 
     expect(() => decryptIntegrationToken('v2.bad')).toThrow('Invalid encrypted integration token format');
     expect(() => decryptIntegrationToken(tampered)).toThrow();

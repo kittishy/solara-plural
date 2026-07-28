@@ -1,7 +1,7 @@
 "use client";
 
 import useSWR, { mutate } from "swr";
-import Link from "next/link";
+import { LocalizedLink as Link } from "@/components/navigation/LocalizedLink";
 import { Plus, Search, Minus, Sun, X, Users } from "lucide-react";
 import { useState, useMemo, useCallback } from "react";
 import { LargeTitle } from "@/components/layout/NavBar";
@@ -17,7 +17,7 @@ import { useLanguage } from "@/components/providers/LanguageProvider";
 import { useToast } from "@/components/providers/ToastProvider";
 import { useViewTransitionRouter, HERO_AVATAR } from "@/lib/view-transition";
 import { useHaptics } from "@/lib/haptics";
-import type { FrontTier } from "@/lib/front";
+import { createFrontSnapshotSignature, type FrontTier } from "@/lib/front";
 import { cn } from "@/lib/utils";
 
 type Member = {
@@ -31,9 +31,11 @@ type Member = {
 };
 
 type FrontEntry = {
+  id: string;
   memberIds: string[];
   memberTiers?: Record<string, FrontTier>;
   note?: string | null;
+  startedAt: string | number | Date;
 };
 
 export default function MembersPage() {
@@ -54,7 +56,7 @@ export default function MembersPage() {
   );
 
   const { data, isLoading, error, mutate: mutateMembers, isValidating } = useSWR<{ data: Member[]; total: number }>(
-    "/api/members?limit=500",
+    swrKeys.members,
     apiFetcher,
     { revalidateOnFocus: false, dedupingInterval: 30_000 }
   );
@@ -75,6 +77,10 @@ export default function MembersPage() {
     () => currentFront?.memberIds ?? [],
     [currentFront]
   );
+  const currentFrontSignature = useMemo(
+    () => currentFront ? createFrontSnapshotSignature(currentFront) : null,
+    [currentFront]
+  );
   const selectedIsFronting = selectedMember ? frontingSet.has(selectedMember.id) : false;
 
   const frontContextFor = useCallback(
@@ -86,14 +92,24 @@ export default function MembersPage() {
         )
       ),
       note: currentFront?.note ?? undefined,
+      expectedFrontId: currentFront?.id ?? null,
+      expectedFrontSignature: currentFrontSignature,
     }),
-    [currentFront]
+    [currentFront, currentFrontSignature]
   );
 
   const revalidateAfterFrontChange = useCallback(() => {
     void mutate(swrKeys.front);
     void mutate(swrKeys.frontHistory);
   }, []);
+
+  function handleFrontConflict(response: Response) {
+    if (response.status !== 409) return false;
+    revalidateAfterFrontChange();
+    closeSheet();
+    showToast(t("front.editConflict"));
+    return true;
+  }
 
   const openSheet = useCallback((e: React.MouseEvent, member: Member) => {
     e.stopPropagation();
@@ -117,6 +133,7 @@ export default function MembersPage() {
           frontContextFor([...frontingIds, selectedMember.id])
         ),
       });
+      if (handleFrontConflict(response)) return;
       if (!response.ok) throw new Error("front_save_failed");
       revalidateAfterFrontChange();
       closeSheet();
@@ -136,7 +153,11 @@ export default function MembersPage() {
         const response = await fetch("/api/front", {
           method: "DELETE",
           credentials: "same-origin",
+          headers: currentFrontSignature
+            ? { "x-front-expected-signature": currentFrontSignature }
+            : undefined,
         });
+        if (handleFrontConflict(response)) return;
         if (!response.ok) throw new Error("front_delete_failed");
       } else {
         const response = await fetch("/api/front", {
@@ -145,6 +166,7 @@ export default function MembersPage() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(frontContextFor(newIds)),
         });
+        if (handleFrontConflict(response)) return;
         if (!response.ok) throw new Error("front_save_failed");
       }
       revalidateAfterFrontChange();
@@ -166,6 +188,7 @@ export default function MembersPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(frontContextFor([selectedMember.id])),
       });
+      if (handleFrontConflict(response)) return;
       if (!response.ok) throw new Error("front_save_failed");
       revalidateAfterFrontChange();
       closeSheet();
@@ -317,7 +340,7 @@ export default function MembersPage() {
               return (
                 <div
                   key={member.id}
-                  className="flex min-h-[68px] items-center overflow-hidden rounded-ios-lg border border-border bg-card shadow-ios dark:shadow-ios-dark"
+                  className="flex min-h-[68px] items-center overflow-hidden rounded-ios-lg border border-border bg-card shadow-ios dark:shadow-ios-dark [content-visibility:auto] [contain-intrinsic-size:68px]"
                 >
                   <Link
                     href={`/members/${member.id}`}

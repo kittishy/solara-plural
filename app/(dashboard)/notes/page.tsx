@@ -1,7 +1,7 @@
 "use client";
 
 import useSWR from "swr";
-import Link from "next/link";
+import { LocalizedLink as Link } from "@/components/navigation/LocalizedLink";
 import { Plus, FileText, Lock, Search } from "lucide-react";
 import { useMemo, useState } from "react";
 import { LargeTitle } from "@/components/layout/NavBar";

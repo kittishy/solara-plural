@@ -865,3 +865,38 @@ model, themes, localization, and accessibility contracts authoritative.
   pagination, creation, editing, and front actions.
 - Kept unsupported prototype concepts out of the production UI until their data
   and privacy contracts are defined.
+
+---
+
+## [2026-07-28] D046 - Android/PWA Navigation and Front Editing Favor Immediate Local Interaction
+
+**Decision:** Keep authenticated data authoritative on the server, but make
+navigation locale-aware from the first tap and collect front-member and role edits
+locally before committing them in one request.
+
+**Justification:**
+- Links without the active locale caused a middleware redirect and a second React
+  Server Components request on every affected navigation.
+- Hydrating SWR directly from browser storage made the initial client tree disagree
+  with server HTML, forcing React to discard and rebuild large screens.
+- Saving each member or role tap separately made a four-role edit require repeated
+  network round trips and screen switching.
+- Authenticated API responses are private, fast-changing state and must not be
+  served from the service worker's URL-only cache.
+
+**Implementation:**
+- Added localized Link/router wrappers and made the five primary mobile destinations
+  directly accessible from the Android bottom navigation.
+- Kept private SWR data in the session's in-memory cache, avoiding both hydration
+  mismatch and a post-hydration application remount, and standardized the members
+  cache key across the dashboard.
+- Rebuilt the front editor as a searchable local draft with all selected roles
+  editable in one bottom sheet and one atomic save.
+- Made authenticated API requests network-only in the service worker while retaining
+  static asset caching, a public offline shell, and update handling. Next.js Flight
+  and prefetch payloads are explicitly excluded from caching.
+- Disabled decorative document view transitions in installed PWA/TWA runtimes and
+  added a lightweight dashboard loading boundary.
+- Serialized each system's front writes inside one database transaction and added an
+  expected-front precondition with a fixed-size snapshot digest so concurrent devices
+  cannot silently overwrite drafts or leak notes through oversized request headers.

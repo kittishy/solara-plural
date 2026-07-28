@@ -43,9 +43,12 @@ export const viewport: Viewport = {
   ],
 };
 
-function getHtmlLang() {
+function getInitialLanguage() {
   const cookieLanguage = cookies().get(LANGUAGE_COOKIE_KEY)?.value;
-  const language = isLanguage(cookieLanguage) ? cookieLanguage : DEFAULT_LANGUAGE;
+  return isLanguage(cookieLanguage) ? cookieLanguage : DEFAULT_LANGUAGE;
+}
+
+function getHtmlLang(language: (typeof LANGUAGES)[number]["code"]) {
   return LANGUAGES.find((entry) => entry.code === language)?.htmlLang ?? "en";
 }
 
@@ -57,9 +60,10 @@ export default async function RootLayout({
   // JWT session (no DB hit) — seeds the client SessionProvider so useSession()
   // and the persistent SWR cache have the user id from the first render.
   const session = await getCachedSession();
+  const initialLanguage = getInitialLanguage();
 
   return (
-    <html lang={getHtmlLang()} suppressHydrationWarning className={nunito.variable}>
+    <html lang={getHtmlLang(initialLanguage)} suppressHydrationWarning className={nunito.variable}>
       <head>
         <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
       </head>
@@ -72,7 +76,7 @@ export default async function RootLayout({
         >
           <SessionProvider session={session}>
             <SWRProvider>
-              <LanguageProvider>
+              <LanguageProvider initialLanguage={initialLanguage}>
                 <ToastProvider>{children}</ToastProvider>
               </LanguageProvider>
             </SWRProvider>

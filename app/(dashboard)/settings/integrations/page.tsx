@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useLocalizedRouter } from "@/components/navigation/useLocalizedRouter";
 import {
   ArrowLeft,
   Key,
@@ -46,7 +46,7 @@ type SyncResult = {
 };
 
 export default function IntegrationsPage() {
-  const router = useRouter();
+  const router = useLocalizedRouter();
   const { t } = useLanguage();
 
   const [direction, setDirection] = useState<"import" | "export">("import");

@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { LocalizedLink as Link } from "@/components/navigation/LocalizedLink";
 import {
   BookOpen,
   Clock,
@@ -20,7 +20,7 @@ import { useLanguage } from "@/components/providers/LanguageProvider";
 import { useToast } from "@/components/providers/ToastProvider";
 import { useHaptics } from "@/lib/haptics";
 import { parseStoredTags } from "@/lib/members/fields";
-import { TIER_CONFIG, type FrontTier } from "@/lib/front";
+import { createFrontSnapshotSignature, TIER_CONFIG, type FrontTier } from "@/lib/front";
 import { apiFetcher, swrKeys } from "@/lib/swr";
 
 type FrontingMember = {
@@ -166,6 +166,10 @@ export function HomeContent({
   }, [currentFront, initialFrontingMembers, memberLookup]);
 
   const frontingIds = currentFront?.memberIds ?? [];
+  const currentFrontSignature = useMemo(
+    () => currentFront ? createFrontSnapshotSignature(currentFront) : null,
+    [currentFront]
+  );
   const frontNames = useMemo(
     () =>
       new Intl.ListFormat(language, {
@@ -256,6 +260,9 @@ export function HomeContent({
             const response = await fetch("/api/front", {
               method: "DELETE",
               credentials: "same-origin",
+              headers: currentFrontSignature
+                ? { "x-front-expected-signature": currentFrontSignature }
+                : undefined,
             });
             if (!response.ok) throw new Error("front_delete_failed");
             return null;
@@ -269,6 +276,8 @@ export function HomeContent({
               memberIds: newIds,
               memberTiers,
               note: currentFront.note ?? undefined,
+              expectedFrontId: currentFront.id,
+              expectedFrontSignature: currentFrontSignature,
             }),
           });
           if (!response.ok) throw new Error("front_save_failed");
@@ -299,6 +308,9 @@ export function HomeContent({
           const response = await fetch("/api/front", {
             method: "DELETE",
             credentials: "same-origin",
+            headers: currentFrontSignature
+              ? { "x-front-expected-signature": currentFrontSignature }
+              : undefined,
           });
           if (!response.ok) throw new Error("front_end_failed");
           return null;

@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { LocalizedLink as Link } from "@/components/navigation/LocalizedLink";
 import { ArrowLeft, Shield, Eye, UserCheck } from "lucide-react";
 import { GlassCard, GroupedSection, GroupedRow } from "@/components/glass/GlassCard";
 import { useLanguage } from "@/components/providers/LanguageProvider";

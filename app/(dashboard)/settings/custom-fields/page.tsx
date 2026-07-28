@@ -3,7 +3,7 @@
 import useSWR, { mutate } from "swr";
 import { useState } from "react";
 import { ArrowLeft, Plus, Trash2, GripVertical } from "lucide-react";
-import Link from "next/link";
+import { LocalizedLink as Link } from "@/components/navigation/LocalizedLink";
 import { GlassCard } from "@/components/glass/GlassCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

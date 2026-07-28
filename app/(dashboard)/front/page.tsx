@@ -1,24 +1,25 @@
 "use client";
 
 import useSWR, { mutate } from "swr";
-import { useState } from "react";
-import { Clock, Plus, Check, X } from "lucide-react";
-import Link from "next/link";
+import { useMemo, useState } from "react";
+import { Clock, Plus, Check, Search, X } from "lucide-react";
+import { LocalizedLink as Link } from "@/components/navigation/LocalizedLink";
 import { LargeTitle } from "@/components/layout/NavBar";
 import { GlassCard } from "@/components/glass/GlassCard";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { BottomSheet } from "@/components/glass/BottomSheet";
 import { RolePicker } from "@/components/front/RolePicker";
 import { ErrorState } from "@/components/ui/ErrorState";
-import { apiFetcher, swrKeys, revalidateMembersAndFront } from "@/lib/swr";
+import { apiFetcher, swrKeys } from "@/lib/swr";
 import DynamicAvatarImage from "@/components/ui/DynamicAvatarImage";
 import { cn } from "@/lib/utils";
 import { useHaptics } from "@/lib/haptics";
 import { useLanguage } from "@/components/providers/LanguageProvider";
 import { useToast } from "@/components/providers/ToastProvider";
-import { TIER_CONFIG, type FrontTier } from "@/lib/front";
+import { createFrontSnapshotSignature, TIER_CONFIG, TIER_ORDER, type FrontTier } from "@/lib/front";
 
 type Member = {
   id: string;
@@ -85,10 +86,9 @@ export default function FrontPage() {
     apiFetcher
   );
   const { data: membersData, isLoading: loadingMembers } = useSWR<{ data: Member[] }>(
-    "/api/members?limit=500",
+    swrKeys.members,
     apiFetcher
   );
-  const members = membersData?.data ?? [];
   const { data: historyData } = useSWR<FrontEntry[]>(
     swrKeys.frontHistory,
     apiFetcher
@@ -96,15 +96,44 @@ export default function FrontPage() {
 
   const [updating, setUpdating] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [draftMemberIds, setDraftMemberIds] = useState<string[]>([]);
+  const [draftTiers, setDraftTiers] = useState<Record<string, FrontTier>>({});
+  const [draftNote, setDraftNote] = useState("");
+  const [memberQuery, setMemberQuery] = useState("");
   // Which member's role picker is open (null = closed).
   const [rolePickerFor, setRolePickerFor] = useState<string | null>(null);
 
-  const memberList = members ?? [];
-  const memberById = new Map(memberList.map((m) => [m.id, m]));
-  const frontingIds = currentFront ? currentFront.memberIds : [];
-  const frontingSet = new Set(frontingIds);
+  const memberList = useMemo(() => membersData?.data ?? [], [membersData]);
+  const memberById = useMemo(
+    () => new Map(memberList.map((member) => [member.id, member])),
+    [memberList]
+  );
+  const frontingIds = useMemo(
+    () => currentFront?.memberIds ?? [],
+    [currentFront]
+  );
+  const frontingSet = useMemo(() => new Set(frontingIds), [frontingIds]);
   const currentTiers: Record<string, FrontTier> = currentFront?.memberTiers ?? {};
+  const currentFrontSignature = useMemo(
+    () => currentFront ? createFrontSnapshotSignature(currentFront) : null,
+    [currentFront]
+  );
   const history = historyData ?? [];
+  const draftMemberSet = useMemo(
+    () => new Set(draftMemberIds),
+    [draftMemberIds]
+  );
+  const filteredMemberList = useMemo(() => {
+    const query = memberQuery.trim().toLocaleLowerCase(language);
+    if (!query) return memberList;
+    return memberList.filter((member) =>
+      [member.name, member.pronouns]
+        .filter(Boolean)
+        .some((value) =>
+          value!.toLocaleLowerCase(language).includes(query)
+        )
+    );
+  }, [language, memberList, memberQuery]);
 
   /**
    * Keep only the roles for members still in the front. Roles are opt-in, so
@@ -116,6 +145,90 @@ export default function FrontPage() {
       if (existingTiers[id]) tiers[id] = existingTiers[id];
     });
     return tiers;
+  }
+
+  function openFrontEditor() {
+    selection();
+    setDraftMemberIds(frontingIds);
+    setDraftTiers(resolveTiers(frontingIds, currentTiers));
+    setDraftNote(currentFront?.note ?? "");
+    setMemberQuery("");
+    setSheetOpen(true);
+  }
+
+  function toggleDraftMember(memberId: string) {
+    selection();
+    setDraftMemberIds((ids) => {
+      if (ids.includes(memberId)) {
+        setDraftTiers((tiers) => {
+          const next = { ...tiers };
+          delete next[memberId];
+          return next;
+        });
+        return ids.filter((id) => id !== memberId);
+      }
+      return [...ids, memberId];
+    });
+  }
+
+  function setDraftRole(memberId: string, value: string) {
+    setDraftTiers((tiers) => {
+      const next = { ...tiers };
+      if (value === "") delete next[memberId];
+      else next[memberId] = value as FrontTier;
+      return next;
+    });
+  }
+
+  async function saveFrontDraft() {
+    if (updating) return;
+    if (draftMemberIds.length === 0) {
+      showToast(t("front.noMemberSelected"));
+      return;
+    }
+
+    setUpdating(true);
+    try {
+      const response = await fetch("/api/front", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          memberIds: draftMemberIds,
+          memberTiers: resolveTiers(draftMemberIds, draftTiers),
+          note: draftNote,
+          expectedFrontId: currentFront?.id ?? null,
+          expectedFrontSignature: currentFrontSignature,
+        }),
+      });
+      if (response.status === 409) {
+        await Promise.all([
+          mutate(swrKeys.front),
+          mutate(swrKeys.frontHistory),
+        ]);
+        setSheetOpen(false);
+        showToast(t("front.editConflict"));
+        return;
+      }
+      if (!response.ok) throw new Error("front_save_failed");
+
+      const json = await response.json().catch(() => null);
+      if (!json?.success || !json.data) throw new Error("front_save_failed");
+
+      void mutate(swrKeys.front, json.data, { revalidate: false });
+      void mutate(swrKeys.frontHistory);
+      success();
+      setSheetOpen(false);
+    } catch {
+      // A 409 means another device changed the front while this draft was
+      // open. Always refresh server truth instead of repainting the stale
+      // snapshot that the editor started with.
+      void mutate(swrKeys.front);
+      void mutate(swrKeys.frontHistory);
+      showToast(t("front.saveError"));
+    } finally {
+      setUpdating(false);
+    }
   }
 
   async function toggleMember(memberId: string) {
@@ -132,7 +245,19 @@ export default function FrontPage() {
         : [...frontingIds, memberId];
 
       if (newIds.length === 0) {
-        const res = await fetch("/api/front", { method: "DELETE", credentials: "same-origin" });
+        const res = await fetch("/api/front", {
+          method: "DELETE",
+          credentials: "same-origin",
+          headers: currentFrontSignature
+            ? { "x-front-expected-signature": currentFrontSignature }
+            : undefined,
+        });
+        if (res.status === 409) {
+          void mutate(swrKeys.front);
+          void mutate(swrKeys.frontHistory);
+          showToast(t("front.editConflict"));
+          return;
+        }
         if (!res.ok) showToast(t("front.endError"));
         else void mutate(swrKeys.front, null, { revalidate: false });
       } else {
@@ -141,8 +266,20 @@ export default function FrontPage() {
           method: "POST",
           credentials: "same-origin",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ memberIds: newIds, memberTiers: newTiers }),
+          body: JSON.stringify({
+            memberIds: newIds,
+            memberTiers: newTiers,
+            note: currentFront?.note ?? "",
+            expectedFrontId: currentFront?.id ?? null,
+            expectedFrontSignature: currentFrontSignature,
+          }),
         });
+        if (res.status === 409) {
+          void mutate(swrKeys.front);
+          void mutate(swrKeys.frontHistory);
+          showToast(t("front.editConflict"));
+          return;
+        }
         if (!res.ok) {
           showToast(t("front.saveError"));
         } else {
@@ -154,7 +291,6 @@ export default function FrontPage() {
           }
         }
       }
-      void mutate(swrKeys.members);
       void mutate(swrKeys.frontHistory);
     } catch {
       showToast(t("front.saveError"));
@@ -189,8 +325,20 @@ export default function FrontPage() {
         method: "POST",
         credentials: "same-origin",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ memberIds: frontingIds, memberTiers: newTiers }),
+        body: JSON.stringify({
+          memberIds: frontingIds,
+          memberTiers: newTiers,
+          note: currentFront.note ?? "",
+          expectedFrontId: currentFront.id,
+          expectedFrontSignature: currentFrontSignature,
+        }),
       });
+      if (res.status === 409) {
+        void mutate(swrKeys.front);
+        void mutate(swrKeys.frontHistory);
+        showToast(t("front.editConflict"));
+        return;
+      }
       if (!res.ok) {
         showToast(t("front.saveError"));
         void mutate(swrKeys.front, previous, { revalidate: false });
@@ -200,7 +348,6 @@ export default function FrontPage() {
       if (json?.success && json.data) {
         void mutate(swrKeys.front, json.data, { revalidate: false });
       }
-      void mutate(swrKeys.members);
     } catch {
       showToast(t("front.saveError"));
       void mutate(swrKeys.front, previous, { revalidate: false });
@@ -214,9 +361,21 @@ export default function FrontPage() {
     warning();
     setUpdating(true);
     try {
-      const res = await fetch("/api/front", { method: "DELETE", credentials: "same-origin" });
-      if (!res.ok) showToast(t("front.endError"));
-      revalidateMembersAndFront();
+      const res = await fetch("/api/front", {
+        method: "DELETE",
+        credentials: "same-origin",
+        headers: currentFrontSignature
+          ? { "x-front-expected-signature": currentFrontSignature }
+          : undefined,
+      });
+      if (res.status === 409) {
+        void mutate(swrKeys.front);
+        void mutate(swrKeys.frontHistory);
+        showToast(t("front.editConflict"));
+        return;
+      }
+      if (!res.ok) throw new Error("front_end_failed");
+      void mutate(swrKeys.front, null, { revalidate: false });
       void mutate(swrKeys.frontHistory);
       setSheetOpen(false);
     } catch {
@@ -232,7 +391,7 @@ export default function FrontPage() {
     <div className="animate-fade-in">
       <div className="px-4 pt-14 pb-2 flex items-end justify-between">
         <LargeTitle className="px-0">{t("front.title")}</LargeTitle>
-        <Button size="icon" className="mb-1" onClick={() => setSheetOpen(true)} aria-label={t("front.startFront")}>
+        <Button size="icon" className="mb-1" onClick={openFrontEditor} aria-label={t("front.startFront")}>
           <Plus size={20} />
         </Button>
       </div>
@@ -266,7 +425,7 @@ export default function FrontPage() {
             </div>
           ) : !isFronting ? (
             <button
-              onClick={() => setSheetOpen(true)}
+              onClick={openFrontEditor}
               className="w-full py-10 flex flex-col items-center gap-2 active:bg-muted/40 ios-transition"
             >
               <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center">
@@ -330,7 +489,7 @@ export default function FrontPage() {
                     <button
                       onClick={() => toggleMember(id)}
                       disabled={updating}
-                      className="w-7 h-7 rounded-full flex items-center justify-center text-muted-foreground hover:text-ios-red hover:bg-ios-red/10 ios-transition disabled:opacity-50"
+                      className="w-11 h-11 -my-2 rounded-full flex items-center justify-center text-muted-foreground hover:text-ios-red hover:bg-ios-red/10 ios-transition disabled:opacity-50"
                       title={t("front.removeMemberFront")}
                       aria-label={t("front.removeMemberFront")}
                     >
@@ -400,148 +559,212 @@ export default function FrontPage() {
         </GlassCard>
       </div>
 
-      {/* Member picker bottom sheet */}
+      {/* Front editor: choose everyone, edit every role and save once. */}
       <BottomSheet
         open={sheetOpen}
         onClose={() => setSheetOpen(false)}
         title={t("front.whoIsFronting")}
       >
-        <div className="flex flex-col gap-3">
-          {/* Selected count */}
-          {frontingIds.length > 0 && (
-            <p className="text-caption-1 text-ios-blue font-semibold text-center -mt-1">
-              {frontingIds.length === 1
-                ? t("front.selected", { n: frontingIds.length })
-                : t("front.selectedPlural", { n: frontingIds.length })}
-            </p>
+        <div className="flex flex-col gap-4">
+          {draftMemberIds.length > 0 && (
+            <section aria-labelledby="selected-front-members">
+              <div className="mb-2 flex items-center justify-between">
+                <h3
+                  id="selected-front-members"
+                  className="text-footnote font-bold uppercase tracking-wide text-muted-foreground"
+                >
+                  {t("front.selectedMembers")}
+                </h3>
+                <span className="text-caption-1 font-bold text-ios-blue">
+                  {draftMemberIds.length === 1
+                    ? t("front.selected", { n: draftMemberIds.length })
+                    : t("front.selectedPlural", { n: draftMemberIds.length })}
+                </span>
+              </div>
+
+              <div className="overflow-hidden rounded-ios border border-border/70">
+                {draftMemberIds.map((memberId) => {
+                  const member = memberById.get(memberId);
+                  if (!member) return null;
+                  const selectId = `front-role-${memberId}`;
+                  return (
+                    <div
+                      key={memberId}
+                      className="flex min-h-[64px] items-center gap-3 border-b border-border/60 px-3 py-2 last:border-0"
+                    >
+                      <MemberAvatar member={member} size={10} />
+                      <label
+                        htmlFor={selectId}
+                        className="min-w-0 flex-1 truncate text-subheadline font-bold text-foreground"
+                      >
+                        {member.name}
+                      </label>
+                      <select
+                        id={selectId}
+                        value={draftTiers[memberId] ?? ""}
+                        onChange={(event) =>
+                          setDraftRole(memberId, event.target.value)
+                        }
+                        className="h-11 max-w-[150px] rounded-ios-sm border border-border bg-[var(--ios-bg-secondary)] px-2 text-sm font-semibold text-foreground focus:ring-2 focus:ring-ios-blue/60"
+                        aria-label={t("front.roleFor", {
+                          name: member.name,
+                        })}
+                      >
+                        <option value="">{t("front.noRole")}</option>
+                        {TIER_ORDER.map((tier) => (
+                          <option key={tier} value={tier}>
+                            {t(
+                              TIER_CONFIG[tier]
+                                .labelKey as Parameters<typeof t>[0]
+                            )}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
           )}
 
-          {/* Member list */}
-          <div className="rounded-ios-lg overflow-hidden border border-border/50">
-            {loadingMembers ? (
-              <div className="p-4 flex flex-col gap-3">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="flex items-center gap-3">
-                    <Skeleton className="w-11 h-11 rounded-full" />
-                    <div className="flex-1 flex flex-col gap-1.5">
-                      <Skeleton className="h-4 w-28" />
-                      <Skeleton className="h-3 w-16" />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : memberList.length === 0 ? (
-              <div className="py-10 text-center flex flex-col items-center gap-2">
-                <p className="text-body text-muted-foreground">{t("members.noMembers")}</p>
-                <Link
-                  href="/members/new"
-                  onClick={() => setSheetOpen(false)}
-                  className="text-subheadline text-ios-blue font-semibold ios-press"
-                >
-                  {t("front.createMemberFirst")}
-                </Link>
-              </div>
-            ) : (
-              memberList.map((m, idx) => {
-                const isActive = frontingSet.has(m.id);
-                return (
-                  <button
-                    key={m.id}
-                    onClick={() => toggleMember(m.id)}
-                    disabled={updating}
-                    className={cn(
-                      "w-full flex items-center gap-3 px-4 py-3.5 text-left ios-transition disabled:opacity-60",
-                      idx < memberList.length - 1 && "border-b border-border/50",
-                      isActive ? "bg-ios-blue/8" : "active:bg-muted/50"
-                    )}
-                  >
-                    {/* Avatar */}
-                    <div
-                      className="w-11 h-11 rounded-full overflow-hidden flex items-center justify-center flex-shrink-0"
-                      style={{ background: m.color ? `${m.color}22` : "#8E8E9322" }}
-                    >
-                      {m.avatarUrl ? (
-                        <DynamicAvatarImage
-                          src={m.avatarUrl}
-                          alt={m.name}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <span
-                          className="text-subheadline font-semibold"
-                          style={{ color: m.color ?? "#8E8E93" }}
-                        >
-                          {m.name[0].toUpperCase()}
-                        </span>
-                      )}
-                    </div>
+          <section aria-labelledby="front-member-selection">
+            <h3 id="front-member-selection" className="sr-only">
+              {t("front.memberSelection")}
+            </h3>
+            <div className="relative mb-2">
+              <Search
+                size={17}
+                className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground"
+                aria-hidden
+              />
+              <Input
+                value={memberQuery}
+                onChange={(event) => setMemberQuery(event.target.value)}
+                placeholder={t("front.searchPlaceholder")}
+                aria-label={t("front.searchMembers")}
+                className="pl-11"
+              />
+            </div>
 
-                    {/* Info */}
-                    <div className="flex-1 min-w-0">
-                      <p className={cn("text-body font-semibold truncate", isActive ? "text-ios-blue" : "text-foreground")}>
-                        {m.name}
-                      </p>
-                      {m.pronouns && (
-                        <p className="text-caption-1 text-muted-foreground truncate">{m.pronouns}</p>
-                      )}
-                    </div>
-
-                    {/* Role indicator + check. Tapping the role chip opens the
-                        picker modal; roles remain optional. */}
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      {isActive && (
-                        currentTiers[m.id] ? (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setRolePickerFor(m.id);
-                            }}
-                            disabled={updating}
-                            className="text-caption-2 font-semibold px-1.5 py-0.5 rounded-full ios-press disabled:opacity-50"
-                            style={{
-                              background: `${TIER_CONFIG[currentTiers[m.id]].color}22`,
-                              color: TIER_CONFIG[currentTiers[m.id]].color,
-                            }}
-                            title={t("front.chooseRole")}
-                          >
-                            {TIER_CONFIG[currentTiers[m.id]].shortLabel}
-                          </button>
-                        ) : (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setRolePickerFor(m.id);
-                            }}
-                            disabled={updating}
-                            className="text-caption-2 font-semibold px-2 py-0.5 rounded-full ios-press disabled:opacity-50 bg-muted text-muted-foreground"
-                            title={t("front.chooseRole")}
-                          >
-                            {t("front.setRole")}
-                          </button>
-                        )
-                      )}
-                      <div
-                        className={cn(
-                          "w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ios-transition",
-                          isActive
-                            ? "bg-ios-blue"
-                            : "border-2 border-border"
-                        )}
-                      >
-                        {isActive && <Check size={14} className="text-white" strokeWidth={3} />}
+            <div className="max-h-[42dvh] overflow-y-auto rounded-ios border border-border/70 overscroll-contain">
+              {loadingMembers ? (
+                <div className="flex flex-col gap-3 p-4">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="flex items-center gap-3">
+                      <Skeleton className="h-11 w-11 rounded-full" />
+                      <div className="flex flex-1 flex-col gap-1.5">
+                        <Skeleton className="h-4 w-28" />
+                        <Skeleton className="h-3 w-16" />
                       </div>
                     </div>
-                  </button>
-                );
-              })
-            )}
+                  ))}
+                </div>
+              ) : memberList.length === 0 ? (
+                <div className="flex flex-col items-center gap-2 py-10 text-center">
+                  <p className="text-body text-muted-foreground">
+                    {t("members.noMembers")}
+                  </p>
+                  <Link
+                    href="/members/new"
+                    onClick={() => setSheetOpen(false)}
+                    className="text-subheadline font-semibold text-ios-blue ios-press"
+                  >
+                    {t("front.createMemberFirst")}
+                  </Link>
+                </div>
+              ) : filteredMemberList.length === 0 ? (
+                <p className="px-4 py-8 text-center text-subheadline text-muted-foreground">
+                  {t("members.noMembersFound")}
+                </p>
+              ) : (
+                filteredMemberList.map((member, index) => {
+                  const selected = draftMemberSet.has(member.id);
+                  return (
+                    <button
+                      key={member.id}
+                      type="button"
+                      onClick={() => toggleDraftMember(member.id)}
+                      className={cn(
+                        "flex min-h-[64px] w-full items-center gap-3 px-3 py-2 text-left ios-transition [content-visibility:auto] [contain-intrinsic-size:64px]",
+                        index < filteredMemberList.length - 1 &&
+                          "border-b border-border/60",
+                        selected
+                          ? "bg-ios-blue/10"
+                          : "active:bg-muted/50"
+                      )}
+                      aria-pressed={selected}
+                      aria-label={t("front.toggleMember", {
+                        name: member.name,
+                      })}
+                    >
+                      <MemberAvatar member={member} size={10} />
+                      <span className="min-w-0 flex-1">
+                        <span
+                          className={cn(
+                            "block truncate text-subheadline font-bold",
+                            selected ? "text-ios-blue" : "text-foreground"
+                          )}
+                        >
+                          {member.name}
+                        </span>
+                        {member.pronouns && (
+                          <span className="block truncate text-caption-1 text-muted-foreground">
+                            {member.pronouns}
+                          </span>
+                        )}
+                      </span>
+                      <span
+                        className={cn(
+                          "flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full",
+                          selected
+                            ? "bg-ios-blue text-white"
+                            : "border-2 border-border"
+                        )}
+                        aria-hidden
+                      >
+                        {selected && <Check size={15} strokeWidth={3} />}
+                      </span>
+                    </button>
+                  );
+                })
+              )}
+            </div>
+          </section>
+
+          <div>
+            <label
+              htmlFor="front-note"
+              className="mb-2 block text-footnote font-bold uppercase tracking-wide text-muted-foreground"
+            >
+              {t("front.note")}
+            </label>
+            <textarea
+              id="front-note"
+              value={draftNote}
+              onChange={(event) => setDraftNote(event.target.value)}
+              maxLength={2000}
+              rows={3}
+              placeholder={t("front.notePlaceholder")}
+              className="w-full resize-none rounded-ios border border-border bg-[var(--ios-bg-secondary)] px-4 py-3 text-body text-foreground placeholder:text-muted-foreground/70 focus:outline-none focus:ring-2 focus:ring-ios-blue/60"
+            />
           </div>
 
-          {/* End front button */}
+          <Button
+            className="min-h-12 w-full"
+            onClick={saveFrontDraft}
+            disabled={updating || draftMemberIds.length === 0}
+          >
+            {updating
+              ? currentFront
+                ? t("front.switching")
+                : t("front.starting")
+              : t("home.passLight")}
+          </Button>
+
           {isFronting && (
             <Button
               variant="outline"
-              className="w-full text-ios-red border-ios-red/30 hover:bg-ios-red/5 mt-1"
+              className="min-h-12 w-full border-ios-red/30 text-ios-red hover:bg-ios-red/5"
               onClick={endFront}
               disabled={updating}
             >

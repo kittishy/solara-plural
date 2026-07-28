@@ -87,6 +87,35 @@ export function serializeMemberIds(memberIds: string[]): string {
   return JSON.stringify(memberIds);
 }
 
+export function createFrontSnapshotSignature(front: {
+  id: string;
+  memberIds: string[];
+  memberTiers?: Record<string, FrontTier> | null;
+  note?: string | null;
+  startedAt: string | number | Date;
+}): string {
+  const canonical = JSON.stringify([
+    front.id,
+    front.memberIds,
+    Object.entries(front.memberTiers ?? {}).sort(([a], [b]) => a.localeCompare(b)),
+    front.note?.trim() || null,
+    new Date(front.startedAt).toISOString(),
+  ]);
+  // Fixed-size compare-and-swap token. This is not an authentication secret;
+  // four independently seeded FNV-1a lanes keep the request header compact
+  // even for hundreds of members while making accidental collisions negligible.
+  const lanes = [0x811c9dc5, 0x9e3779b9, 0x85ebca6b, 0xc2b2ae35];
+  for (let index = 0; index < canonical.length; index += 1) {
+    const code = canonical.charCodeAt(index);
+    for (let lane = 0; lane < lanes.length; lane += 1) {
+      lanes[lane] = Math.imul(lanes[lane] ^ code, 0x01000193);
+    }
+  }
+  return `v1-${lanes
+    .map((value) => (value >>> 0).toString(16).padStart(8, '0'))
+    .join('')}`;
+}
+
 /** Combine memberIds and memberTiers into a validated entry shape for API responses. */
 export function formatFrontEntry(entry: FrontEntry): FrontEntryWithMemberIds {
   const memberIds = parseMemberIds(entry.memberIds);

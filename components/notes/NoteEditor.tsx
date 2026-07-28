@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useLocalizedRouter } from "@/components/navigation/useLocalizedRouter";
 import { ArrowLeft, Trash2, Save, Lock, Unlock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,7 +17,7 @@ interface NoteEditorProps {
 }
 
 export function NoteEditor({ noteId }: NoteEditorProps) {
-  const router = useRouter();
+  const router = useLocalizedRouter();
   const { t } = useLanguage();
   const isNew = !noteId;
   const [loaded, setLoaded] = useState(isNew);

@@ -4,30 +4,27 @@
 // - /_next/static/* (hashed JS/CSS): cache-first, immutable. Bumping the build
 //   bumps the hashes, so a new deploy = new URLs = automatic refresh.
 // - /icons/*, /manifest.json, /favicon.ico: stale-while-revalidate.
-// - HTML navigations: network-first with a cache fallback (so a flaky network
-//   never gives a blank screen — last good HTML is served and revalidated).
-// - /api/* GET: stale-while-revalidate unless the page explicitly requests
-//   no-store/no-cache (used by the Android wrapper for live server truth).
-//   POST/PUT/DELETE/PATCH
-//   are never cached.
+// - HTML navigations and /api/*: always network. Both can contain authenticated
+//   system data and must never be shared through a URL-only service-worker
+//   cache. SWR provides the user-scoped instant-data layer inside the app.
+// - POST/PUT/DELETE/PATCH are never cached.
 //
 // Updates: on `install` we skipWaiting(); on `activate` we clients.claim()
 // and clear old cache buckets. The client-side runtime listens for
 // `controllerchange` and revalidates SWR. Net effect: no F5, no close/open,
 // no clearing cache. New deploys land seamlessly.
 
-const VERSION = 'solara-v10';
+const VERSION = 'solara-v12';
 const STATIC_CACHE = `${VERSION}-static`;
-const RUNTIME_CACHE = `${VERSION}-runtime`;
-const API_CACHE = `${VERSION}-api`;
 
 const PRECACHE_URLS = [
   '/manifest.json',
   '/icons/icon-192.png',
   '/icons/icon-512.png',
+  '/offline.html',
 ];
 
-const CACHE_BUCKETS = [STATIC_CACHE, RUNTIME_CACHE, API_CACHE];
+const CACHE_BUCKETS = [STATIC_CACHE];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -140,6 +137,13 @@ function isNavigationRequest(request) {
     || (request.method === 'GET' && (request.headers.get('accept') || '').includes('text/html'));
 }
 
+function isNextFlightRequest(request, url) {
+  return url.searchParams.has('_rsc')
+    || request.headers.get('rsc') === '1'
+    || request.headers.has('next-router-prefetch')
+    || request.headers.has('next-router-segment-prefetch');
+}
+
 // Don't cache auth/session/push/stream endpoints — they MUST be live.
 const NEVER_CACHE_PATHS = [
   '/api/auth',
@@ -187,6 +191,10 @@ self.addEventListener('fetch', (event) => {
   // Never-cache endpoints (auth/session): always go to network.
   if (isNeverCache(url)) return;
 
+  // App Router navigation/prefetch payloads may contain authenticated server
+  // component data even though they are not normal HTML navigations.
+  if (isNextFlightRequest(request, url)) return;
+
   // Native APK fetches critical API data with `cache: "no-store"` so the
   // WebView can't paint stale records while the user expects app-like live
   // behavior. Let those requests bypass the service worker cache entirely.
@@ -205,19 +213,27 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // API GETs — stale-while-revalidate so the UI paints instantly.
+  // API GETs can contain authenticated system data. Never cache them in the
+  // service worker: cache keys are URL-only and a shared device can switch
+  // accounts. The user-scoped SWR cache is the safe fast-data layer.
   if (isApiGet(request, url)) {
-    event.respondWith(staleWhileRevalidate(request, API_CACHE));
     return;
   }
 
-  // HTML navigations: pass through to the network. We deliberately don't
-  // cache full HTML because the dashboard is SSR with the user's session
+  // HTML navigations use the network and fall back only to a public offline
+  // shell. We never cache dashboard HTML with the user's session
   // data — caching it could leak one user's view to another on a shared
   // device. Next.js Link prefetch + the API/static caches above already
   // make navigations feel instant.
-  if (isNavigationRequest(request)) return;
+  if (isNavigationRequest(request)) {
+    event.respondWith(
+      fetch(request).catch(async () =>
+        (await caches.match('/offline.html')) || Response.error()
+      )
+    );
+    return;
+  }
 
-  // Everything else (fonts, images served from /public): stale-while-revalidate.
-  event.respondWith(staleWhileRevalidate(request, RUNTIME_CACHE));
+  // No generic runtime cache: unclassified Next.js responses may be private.
+  return;
 });

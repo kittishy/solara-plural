@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useLocalizedRouter } from "@/components/navigation/useLocalizedRouter";
 import { Bell } from "lucide-react";
 import { mutate } from "swr";
 import { swrKeys } from "@/lib/swr";
@@ -24,7 +24,7 @@ const TOAST_TTL_MS = 5_000;
 const MAX_VISIBLE = 3;
 
 export function NotificationToast() {
-  const router = useRouter();
+  const router = useLocalizedRouter();
   const [toasts, setToasts] = useState<ToastItem[]>([]);
 
   useEffect(() => {

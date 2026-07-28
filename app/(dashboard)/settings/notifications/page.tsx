@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
+import { LocalizedLink as Link } from "@/components/navigation/LocalizedLink";
 import { ArrowLeft, Bell, BellRing, BellOff } from "lucide-react";
 import { GlassCard, GroupedSection, GroupedRow } from "@/components/glass/GlassCard";
 import { Button } from "@/components/ui/button";

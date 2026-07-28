@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useLocalizedRouter } from "@/components/navigation/useLocalizedRouter";
 import { ArrowLeft, Trash2, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,7 +36,7 @@ type Member = {
 const DEFAULT_COLOR = "#8B5CF6";
 
 export function MemberEditor({ memberId }: MemberEditorProps) {
-  const router = useRouter();
+  const router = useLocalizedRouter();
   const { t } = useLanguage();
   const isNew = !memberId;
 

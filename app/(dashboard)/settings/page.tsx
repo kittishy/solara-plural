@@ -3,7 +3,7 @@
 import { useSession, signOut } from "next-auth/react";
 import { clearPersistentSwrCache } from "@/lib/swr-cache-provider";
 import { useState } from "react";
-import Link from "next/link";
+import { LocalizedLink as Link } from "@/components/navigation/LocalizedLink";
 import {
   User,
   Bell,

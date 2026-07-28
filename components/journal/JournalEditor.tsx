@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useLocalizedRouter } from "@/components/navigation/useLocalizedRouter";
 import { ArrowLeft, Trash2, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,7 +17,7 @@ interface JournalEditorProps {
 }
 
 export function JournalEditor({ entryId }: JournalEditorProps) {
-  const router = useRouter();
+  const router = useLocalizedRouter();
   const { t } = useLanguage();
   const isNew = !entryId;
   const [loaded, setLoaded] = useState(isNew);

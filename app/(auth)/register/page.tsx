@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { LocalizedLink as Link } from "@/components/navigation/LocalizedLink";
+import { useLocalizedRouter } from "@/components/navigation/useLocalizedRouter";
 import { Eye, EyeOff, Users, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,7 +12,7 @@ import { useLanguage } from "@/components/providers/LanguageProvider";
 import { cn } from "@/lib/utils";
 
 export default function RegisterPage() {
-  const router = useRouter();
+  const router = useLocalizedRouter();
   const { t } = useLanguage();
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -153,7 +153,9 @@ export default function RegisterPage() {
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground ios-transition p-1"
+                className="absolute right-1 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground hover:text-foreground ios-transition"
+                aria-label={t(showPassword ? "auth.hidePassword" : "auth.showPassword")}
+                aria-pressed={showPassword}
               >
                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>

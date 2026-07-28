@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useLocalizedRouter } from "@/components/navigation/useLocalizedRouter";
+import { isAppRuntime } from "@/lib/swr";
 
 /**
  * Shared-element & cross-screen transitions via the View Transitions API —
@@ -41,7 +42,14 @@ function prefersReducedMotion(): boolean {
  * are the building blocks (capability + preference).
  */
 function shouldUseViewTransitions(): boolean {
-  return supportsViewTransitions() && !prefersReducedMotion();
+  // Installed PWAs/TWAs already have native window continuity. Holding a
+  // navigation open for a DOM snapshot makes Android feel sticky, especially
+  // on large member lists. Keep the decorative morph for regular web only.
+  return (
+    supportsViewTransitions() &&
+    !prefersReducedMotion() &&
+    !isAppRuntime()
+  );
 }
 
 /** Run a DOM-mutating callback inside a view transition when available. */
@@ -86,7 +94,7 @@ export function tagHero(el: HTMLElement | null, name: string = HERO_AVATAR) {
  * Pass the originating element to also tag it as the shared hero.
  */
 export function useViewTransitionRouter() {
-  const router = useRouter();
+  const router = useLocalizedRouter();
 
   const push = useCallback(
     (href: string, opts?: { hero?: HTMLElement | null; heroName?: string }) => {

@@ -1,10 +1,10 @@
 import { db } from '@/lib/db';
 import { frontEntries, memberExternalLinks, members, systemIntegrations } from '@/lib/db/schema';
-import { eq, and, isNull, inArray } from 'drizzle-orm';
+import { eq, and, isNull, inArray, sql } from 'drizzle-orm';
 import { requireAuth, ok, err, parseJsonRecord } from '@/lib/api/helpers';
 import { CACHE_FRESH_SHORT } from '@/lib/api/cache-headers';
 import { createId } from '@paralleldrive/cuid2';
-import { parseMemberIds, safeParseMemberTiers, serializeMemberIds, serializeMemberTiers, isFrontTier, FRONT_TIERS } from '@/lib/front';
+import { createFrontSnapshotSignature, parseMemberIds, safeParseMemberTiers, serializeMemberIds, serializeMemberTiers, isFrontTier, FRONT_TIERS } from '@/lib/front';
 import { CAPS } from '@/lib/api/validate';
 import type { FrontTier } from '@/lib/front';
 import { revalidatePath } from 'next/cache';
@@ -224,6 +224,30 @@ export async function POST(request: Request) {
   if (typeof body.note === 'string' && body.note.trim().length > CAPS.frontNote) {
     return err(`Note is too long (max ${CAPS.frontNote} characters)`);
   }
+  const requestedNote =
+    typeof body.note === 'string' ? body.note.trim() || null : undefined;
+  const hasExpectedFrontId = Object.prototype.hasOwnProperty.call(body, 'expectedFrontId');
+  if (
+    hasExpectedFrontId &&
+    body.expectedFrontId !== null &&
+    typeof body.expectedFrontId !== 'string'
+  ) {
+    return err('expectedFrontId must be a string or null');
+  }
+  const expectedFrontId = hasExpectedFrontId
+    ? body.expectedFrontId as string | null
+    : undefined;
+  const hasExpectedSignature = Object.prototype.hasOwnProperty.call(body, 'expectedFrontSignature');
+  if (
+    hasExpectedSignature &&
+    body.expectedFrontSignature !== null &&
+    typeof body.expectedFrontSignature !== 'string'
+  ) {
+    return err('expectedFrontSignature must be a string or null');
+  }
+  const expectedFrontSignature = hasExpectedSignature
+    ? body.expectedFrontSignature as string | null
+    : undefined;
   const memberIds = body.memberIds;
   if (!Array.isArray(memberIds) || memberIds.length === 0) {
     return err('memberIds must be a non-empty array');
@@ -264,43 +288,77 @@ export async function POST(request: Request) {
     return err('One or more memberIds are invalid');
   }
 
+  const writeResult = await db.transaction(async (tx) => {
+  // Serialize front writes per system so ending the previous entry and
+  // inserting the next one either commit together or roll back together.
+  await tx.execute(
+    sql`select pg_advisory_xact_lock(hashtextextended(${auth.systemId}, 0))`
+  );
+
   const now = new Date();
-  const activeFront = await db.query.frontEntries.findFirst({
+  const activeFront = await tx.query.frontEntries.findFirst({
     where: and(
       eq(frontEntries.systemId, auth.systemId),
       isNull(frontEntries.endedAt)
     ),
   });
 
+  if (
+    expectedFrontId !== undefined &&
+    (activeFront?.id ?? null) !== expectedFrontId
+  ) {
+    return err('Front changed while it was being edited. Refresh and try again.', 409);
+  }
+  const activeSignature = activeFront
+    ? createFrontSnapshotSignature({
+        id: activeFront.id,
+        memberIds: parseMemberIds(activeFront.memberIds),
+        memberTiers: safeParseMemberTiers(activeFront.memberTiers),
+        note: activeFront.note,
+        startedAt: activeFront.startedAt,
+      })
+    : null;
+  if (
+    expectedFrontSignature !== undefined &&
+    activeSignature !== expectedFrontSignature
+  ) {
+    return err('Front changed while it was being edited. Refresh and try again.', 409);
+  }
+
   if (activeFront) {
     try {
       const activeMemberIds = parseMemberIds(activeFront.memberIds);
       if (sameMemberList(activeMemberIds, uniqueMemberIds)) {
         const activeTiers = safeParseMemberTiers(activeFront.memberTiers);
+        const tiersChanged =
+          memberTiers !== null && !sameTierMap(activeTiers, memberTiers);
+        const noteChanged =
+          requestedNote !== undefined && requestedNote !== activeFront.note;
 
-        // Same members but the caller wants different roles: update the roles
-        // in place so we keep the current session (startedAt) intact. The
-        // front membership is unchanged, so there's no need to re-sync.
-        if (memberTiers !== null && !sameTierMap(activeTiers, memberTiers)) {
-          const [updated] = await db.update(frontEntries)
-            .set({ memberTiers: serializeMemberTiers(memberTiers) })
+        // Same members but changed session details: update roles and/or note
+        // together in place. This keeps startedAt intact and lets the Android
+        // front editor save every role plus the handoff note in one request.
+        if (tiersChanged || noteChanged) {
+          const resolvedTiers = memberTiers ?? activeTiers;
+          const [updated] = await tx.update(frontEntries)
+            .set({
+              ...(tiersChanged
+                ? { memberTiers: serializeMemberTiers(resolvedTiers) }
+                : {}),
+              ...(noteChanged ? { note: requestedNote } : {}),
+            })
             .where(eq(frontEntries.id, activeFront.id))
             .returning();
-
-          revalidatePath('/');
-          revalidatePath('/front');
-          revalidatePath('/members');
-          revalidatePath('/front/history');
 
           return ok({
             ...updated,
             memberIds: activeMemberIds,
-            memberTiers,
+            memberTiers: resolvedTiers,
             pluralKitSync: {
               requestId,
               status: 'skipped',
               providerStatus: 'skipped',
-              reasonCode: 'roles_updated',
+              reasonCode: 'session_details_updated',
               httpStatus: null,
               mappedCount: 0,
               unmappedIds: [],
@@ -331,7 +389,7 @@ export async function POST(request: Request) {
   }
 
   // End any currently active front entry
-  await db.update(frontEntries)
+  await tx.update(frontEntries)
     .set({ endedAt: now })
     .where(and(
       eq(frontEntries.systemId, auth.systemId),
@@ -356,21 +414,29 @@ export async function POST(request: Request) {
   }
 
   // Create new front entry
-  const newEntry = await db.insert(frontEntries).values({
+  const newEntry = await tx.insert(frontEntries).values({
     id:          createId(),
     systemId:    auth.systemId,
     memberIds:   serializeMemberIds(uniqueMemberIds),
     memberTiers: serializeMemberTiers(resolvedTiers),
     startedAt:   now,
     endedAt:     null,
-    note:        typeof body.note === 'string' ? body.note : null,
+    note:        requestedNote ?? null,
     createdAt:   now,
   }).returning();
+
+  return {
+    entry: newEntry[0],
+    memberTiers: resolvedTiers,
+  };
+  });
 
   revalidatePath('/');
   revalidatePath('/front');
   revalidatePath('/members');
   revalidatePath('/front/history');
+
+  if (writeResult instanceof Response) return writeResult;
 
   const pluralKitSync = deferPluralKitFrontSync(
     auth.systemId,
@@ -392,24 +458,58 @@ export async function POST(request: Request) {
     });
   }));
 
-  return ok({ ...newEntry[0], memberIds: uniqueMemberIds, memberTiers: resolvedTiers, pluralKitSync }, 201);
+  return ok({
+    ...writeResult.entry,
+    memberIds: uniqueMemberIds,
+    memberTiers: writeResult.memberTiers,
+    pluralKitSync,
+  }, 201);
 }
 
 // DELETE /api/front — end the current front entry
-export async function DELETE() {
+export async function DELETE(request: Request) {
   const auth = await requireAuth();
   if (auth.error) return auth.error;
   const requestId = `front_${createId()}`;
+  const expectedSignature = request.headers.get('x-front-expected-signature');
 
-  const updated = await db.update(frontEntries)
-    .set({ endedAt: new Date() })
-    .where(and(
-      eq(frontEntries.systemId, auth.systemId),
-      isNull(frontEntries.endedAt)
-    ))
-    .returning();
+  const result = await db.transaction(async (tx) => {
+    await tx.execute(
+      sql`select pg_advisory_xact_lock(hashtextextended(${auth.systemId}, 0))`
+    );
+    const activeFront = await tx.query.frontEntries.findFirst({
+      where: and(
+        eq(frontEntries.systemId, auth.systemId),
+        isNull(frontEntries.endedAt)
+      ),
+    });
+    if (!activeFront) return { kind: 'missing' as const };
 
-  if (!updated.length) return err('No active front entry', 404);
+    if (expectedSignature) {
+      const activeSignature = createFrontSnapshotSignature({
+        id: activeFront.id,
+        memberIds: parseMemberIds(activeFront.memberIds),
+        memberTiers: safeParseMemberTiers(activeFront.memberTiers),
+        note: activeFront.note,
+        startedAt: activeFront.startedAt,
+      });
+      if (activeSignature !== expectedSignature) {
+        return { kind: 'conflict' as const };
+      }
+    }
+
+    const updated = await tx.update(frontEntries)
+      .set({ endedAt: new Date() })
+      .where(eq(frontEntries.id, activeFront.id))
+      .returning();
+    return { kind: 'updated' as const, entries: updated };
+  });
+
+  if (result.kind === 'missing') return err('No active front entry', 404);
+  if (result.kind === 'conflict') {
+    return err('Front changed before it could be ended. Refresh and try again.', 409);
+  }
+  const updated = result.entries;
   revalidatePath('/');
   revalidatePath('/front');
   revalidatePath('/members');

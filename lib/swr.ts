@@ -4,7 +4,7 @@ type ApiSuccess<T> = { success: true; data: T };
 type ApiFailure = { success: false; error?: string };
 
 export const swrKeys = {
-  members: '/api/members',
+  members: '/api/members?limit=500',
   front: '/api/front',
   notes: '/api/notes',
   journal: '/api/journal',
@@ -43,12 +43,14 @@ export function isStandaloneApp() {
 
   // iOS Safari home-screen webapp.
   const iosStandalone =
-    (window.navigator as Navigator & { standalone?: boolean }).standalone === true;
+    (window.navigator as (Navigator & { standalone?: boolean }) | undefined)
+      ?.standalone === true;
 
   // PWABuilder/Bubblewrap TWA: Chrome launches the page with an
   // `android-app://<package>` referrer on the initial document load.
   const twaReferrer =
-    typeof document !== 'undefined' && document.referrer.startsWith('android-app://');
+    typeof document !== 'undefined' &&
+    document.referrer?.startsWith('android-app://') === true;
 
   return displayModeStandalone || iosStandalone || twaReferrer;
 }

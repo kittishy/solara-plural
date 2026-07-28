@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
+import { useLocalizedRouter } from "@/components/navigation/useLocalizedRouter";
+import { LocalizedLink as Link } from "@/components/navigation/LocalizedLink";
 import { ArrowLeft, AlertTriangle } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
 import { clearPersistentSwrCache } from "@/lib/swr-cache-provider";
@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 export default function DeleteAccountPage() {
-  const router = useRouter();
+  const router = useLocalizedRouter();
   const { data: session } = useSession();
   const { t, language } = useLanguage();
   const [confirmation, setConfirmation] = useState("");

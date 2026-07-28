@@ -2,7 +2,7 @@
 
 import useSWR from "swr";
 import { ArrowLeft, Layers } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useLocalizedRouter } from "@/components/navigation/useLocalizedRouter";
 import { GlassCard } from "@/components/glass/GlassCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/ui/ErrorState";
@@ -32,7 +32,7 @@ export default function ExternalSystemPage({
 }: {
   params: { systemId: string };
 }) {
-  const router = useRouter();
+  const router = useLocalizedRouter();
   const { t } = useLanguage();
   const { data, isLoading, error, mutate, isValidating } = useSWR<FriendSystemData>(
     `/api/friends/${params.systemId}`,
