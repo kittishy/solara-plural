@@ -1,7 +1,7 @@
 import { LocalizedLink as Link } from "@/components/navigation/LocalizedLink";
 import { notFound } from "next/navigation";
 import { cookies } from "next/headers";
-import { ArrowLeft, Pencil, Clock, Hand } from "lucide-react";
+import { ArrowLeft, Pencil, Clock } from "lucide-react";
 import { db } from "@/lib/db";
 import {
   members,
@@ -221,14 +221,6 @@ export default async function MemberDetailPage({
             ))}
           </div>
         )}
-
-        <Link
-          href="/front"
-          className="mt-2 flex min-h-12 w-full max-w-sm items-center justify-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-5 text-sm font-extrabold text-primary transition-colors hover:bg-primary/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-        >
-          <Hand size={18} aria-hidden />
-          {isFronting ? t("front.switchFront") : t("front.startFront")}
-        </Link>
       </div>
 
       {/* Description */}

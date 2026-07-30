@@ -1,14 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import { LocalizedLink as Link } from "@/components/navigation/LocalizedLink";
 import { usePathname } from "next/navigation";
 import {
   Home,
   Users,
-  Sun,
-  Hand,
+  Layers,
   BookOpen,
-  Ellipsis,
+  Grid3X3,
   FileText,
   Bell,
   Settings,
@@ -20,7 +20,6 @@ import { useLanguage } from "@/components/providers/LanguageProvider";
 import { useHaptics } from "@/lib/haptics";
 import { stripLanguageFromPathname } from "@/lib/i18n";
 import { apiFetcher, swrKeys } from "@/lib/swr";
-import { LocalizedLink } from "@/components/navigation/LocalizedLink";
 
 const moreHrefList = ["/journal", "/friends", "/notes", "/notifications", "/settings"];
 
@@ -34,9 +33,8 @@ export function TabBar() {
 
   const tabs = [
     { href: "/", icon: Home, label: t("nav.home") },
-    { href: "/members", icon: Users, label: t("nav.people") },
-    { href: "/front", icon: Hand, label: t("home.passLight") },
-    { href: "/front/history", icon: Sun, label: t("nav.day") },
+    { href: "/members", icon: Users, label: t("nav.members") },
+    { href: "/front", icon: Layers, label: t("front.title") },
   ];
 
   const moreItems = [
@@ -55,70 +53,57 @@ export function TabBar() {
   );
   const unreadCount = notifData?.unreadCount ?? 0;
 
-  const isDayActive = pathname.startsWith("/front/history");
   const isMaisActive = moreHrefList.some((href) => pathname.startsWith(href));
 
   return (
     <>
       <div
-        className="fixed inset-x-0 bottom-0 z-50"
+        className="fixed left-1/2 -translate-x-1/2 z-50"
         style={{
-          paddingBottom: "max(env(safe-area-inset-bottom, 0px), 8px)",
-          paddingLeft: "max(env(safe-area-inset-left, 0px), 8px)",
-          paddingRight: "max(env(safe-area-inset-right, 0px), 8px)",
-          background: "var(--tabbar-bg)",
-          borderTop: "1px solid var(--tabbar-border)",
+          bottom: "calc(max(env(safe-area-inset-bottom, 0px), 12px) + 16px)",
         }}
       >
         <nav
           aria-label={t("nav.mobilePrimary")}
-          className="mx-auto flex h-[62px] w-full max-w-xl items-stretch px-2"
+          className="glass-bar flex items-center gap-0.5 px-2 py-2 rounded-full shadow-ios-md dark:shadow-ios-dark"
+          style={{
+            border: "1px solid var(--tabbar-border)",
+          }}
         >
           {tabs.map(({ href, icon: Icon, label }) => {
             const isActive =
-              href === "/"
-                ? pathname === "/"
-                : href === "/front"
-                  ? pathname === "/front"
-                  : href === "/front/history"
-                    ? isDayActive
-                    : pathname.startsWith(href);
+              href === "/" ? pathname === "/" : pathname.startsWith(href);
             return (
-              <LocalizedLink
+              <Link
                 key={href}
                 href={href}
                 // Always-mounted nav → eagerly prefetch the primary routes so
                 // tapping a tab paints instantly (bundle + RSC already warm).
                 prefetch
+                aria-current={isActive ? "page" : undefined}
                 onPointerDown={() => { if (!isActive) selection(); }}
                 className={cn(
-                  "relative flex min-w-0 flex-1 flex-col items-center justify-center gap-1 px-1 ios-transition solara-pressable",
+                  "flex flex-col items-center gap-0.5 px-3.5 py-1.5 rounded-full ios-transition solara-pressable min-w-[58px]",
                   isActive
-                    ? "text-ios-blue"
+                    ? "text-ios-blue bg-ios-blue/12"
                     : "text-muted-foreground hover:text-foreground"
                 )}
                 style={{ ["--press-scale" as string]: "0.92" }}
               >
-                {isActive && (
-                  <span
-                    className="absolute inset-x-3 top-0 h-0.5 rounded-full bg-ios-blue"
-                    aria-hidden
-                  />
-                )}
                 <Icon
-                  size={22}
+                  size={23}
                   strokeWidth={isActive ? 2.4 : 1.8}
-                  className="ios-transition"
+                  className={cn("ios-transition", isActive && "scale-110")}
                 />
                 <span
                   className={cn(
-                    "max-w-full truncate text-xs font-semibold leading-4 tracking-[0.01em] ios-transition",
+                    "text-xs font-medium ios-transition",
                     isActive && "font-bold"
                   )}
                 >
                   {label}
                 </span>
-              </LocalizedLink>
+              </Link>
             );
           })}
 
@@ -127,26 +112,21 @@ export function TabBar() {
             type="button"
             onClick={() => setSheetOpen(true)}
             onPointerDown={() => selection()}
+            aria-label={t("nav.moreOptions")}
+            aria-pressed={isMaisActive}
             className={cn(
-              "relative flex min-w-0 flex-1 flex-col items-center justify-center gap-1 px-1 ios-transition solara-pressable",
+              "flex flex-col items-center gap-0.5 px-3.5 py-1.5 rounded-full ios-transition solara-pressable min-w-[58px]",
               isMaisActive
-                ? "text-ios-blue"
+                ? "text-ios-blue bg-ios-blue/12"
                 : "text-muted-foreground hover:text-foreground"
             )}
             style={{ ["--press-scale" as string]: "0.92" }}
-            aria-label={t("nav.moreOptions")}
           >
-            {isMaisActive && (
-              <span
-                className="absolute inset-x-3 top-0 h-0.5 rounded-full bg-ios-blue"
-                aria-hidden
-              />
-            )}
             <div className="relative">
-              <Ellipsis
-                size={22}
+              <Grid3X3
+                size={23}
                 strokeWidth={isMaisActive ? 2.4 : 1.8}
-                className="ios-transition"
+                className={cn("ios-transition", isMaisActive && "scale-110")}
               />
               {unreadCount > 0 && (
                 <span className="absolute -top-1 -right-1 min-w-[14px] h-[14px] bg-ios-red rounded-full flex items-center justify-center text-[9px] font-bold text-white px-0.5">
@@ -156,7 +136,7 @@ export function TabBar() {
             </div>
             <span
               className={cn(
-                "max-w-full truncate text-xs font-semibold leading-4 tracking-[0.01em] ios-transition",
+                "text-xs font-medium ios-transition",
                 isMaisActive && "font-bold"
               )}
             >
@@ -175,12 +155,12 @@ export function TabBar() {
           {moreItems.map(({ href, icon: Icon, label, color }) => {
             const showBadge = href === "/notifications" && unreadCount > 0;
             return (
-              <LocalizedLink
+              <Link
                 key={href}
                 href={href}
                 prefetch
                 onClick={() => setSheetOpen(false)}
-                className="solara-surface rounded-ios p-4 flex flex-col items-center gap-2.5 ios-press active:scale-95 ios-transition"
+                className="glass rounded-ios-xl p-4 flex flex-col items-center gap-2.5 ios-press active:scale-95 ios-transition"
               >
                 <div className="relative">
                   <div
@@ -198,7 +178,7 @@ export function TabBar() {
                 <span className="text-caption-1 font-semibold text-foreground text-center">
                   {label}
                 </span>
-              </LocalizedLink>
+              </Link>
             );
           })}
         </div>

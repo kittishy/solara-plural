@@ -900,3 +900,56 @@ locally before committing them in one request.
 - Serialized each system's front writes inside one database transaction and added an
   expected-front precondition with a fixed-size snapshot digest so concurrent devices
   cannot silently overwrite drafts or leak notes through oversized request headers.
+
+---
+
+## [2026-07-30] D047 — Restore the Direct Interface Without Reverting Reliability Work
+
+**Decision:** Supersede the visual and navigation direction from D045 and the
+five-destination navigation detail from D046. Restore the established compact
+dashboard, warm glass styling, and four direct mobile destinations: Home, Members,
+Front, and More.
+
+**Justification:**
+- The light-beacon vocabulary and the split between "Who we are", "Pass the light",
+  and "The day" made familiar tasks less self-explanatory and required extra screens.
+- Members and Front are frequent Android actions and need stable, literal labels in
+  the primary dock.
+- The internal work delivered after the redesign solves independent reliability and
+  performance problems and must remain intact.
+
+**Implementation:**
+- Restored the pre-redesign Home, member list/profile presentation, floating dock,
+  glass cards, sheets, radii, shadows, and ambient backgrounds.
+- Kept locale-aware links, prefetching, safe areas, haptics, 44px controls, focus
+  management, loading/error/empty states, and large-list rendering containment.
+- Kept the atomic Front draft editor, tiers and notes, SWR behavior, network-only
+  authenticated service-worker policy, transactional writes, and stale-edit
+  conflict protection.
+
+---
+
+## [2026-07-30] D048 — Publish Front Server Truth Before Accepting Another Action
+
+**Decision:** Treat the successful `POST /api/front` response as the immediate
+authoritative client snapshot, and do not complete a Front interaction until that
+snapshot has been published to the shared SWR cache. Front drafts keep the id and
+signature captured when the editor opens.
+
+**Justification:**
+- Closing an action and starting a second one before a background GET completed
+  allowed the second mutation to reuse stale member ids.
+- A draft that combined old member selections with a newly revalidated signature
+  could overwrite a more recent Front state while appearing conflict-safe.
+- A direct member action should require one tap and give visible success, failure,
+  or conflict feedback without requiring navigation to refresh the screen.
+
+**Implementation:**
+- Member rows now add or remove someone from Front in one touch, optimistically
+  paint the result, await the server snapshot, and roll back on failure.
+- The full editor selects multiple members, roles, and the note in one compact
+  draft and saves them atomically.
+- Start/edit controls remain disabled until the initial Front snapshot exists;
+  duplicate submissions are blocked before React can rerender the button.
+- Android route entrance animation and large backdrop blur are disabled while
+  touch feedback and sheet transitions remain.

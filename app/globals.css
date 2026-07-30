@@ -27,7 +27,7 @@
     --border: 280 10% 88%;
     --input: 280 10% 88%;
     --ring: 262 83% 58%;
-    --radius: 10px;
+    --radius: 14px;
 
     /* App accent — Solara violet (name kept for compatibility: every
        text-ios-blue / bg-ios-blue in the tree reads these variables). */
@@ -44,23 +44,20 @@
     --ios-gray: #8e8e93;
 
     /* App backgrounds — warm-neutral canvas; white stays for raised surfaces */
-    --ios-bg: #f6f1f6;
-    --ios-bg-secondary: #fffaff;
-    --ios-bg-tertiary: #eee6f0;
-    --ios-grouped-bg: #f6f1f6;
+    --ios-bg: #f5f2ef;
+    --ios-bg-secondary: #ffffff;
+    --ios-bg-tertiary: #f5f2ef;
+    --ios-grouped-bg: #f5f2ef;
 
     /* Glass effect — tint warmed a touch so it sits with the canvas, and a
        slightly richer saturation for that liquid-glass pop. */
-    --glass-bg: #fffaff;
-    --glass-border: rgba(70, 48, 78, 0.14);
-    --glass-blur: none;
+    --glass-bg: rgba(255, 253, 250, 0.72);
+    --glass-border: rgba(255, 255, 255, 0.65);
+    --glass-blur: blur(40px) saturate(190%);
 
     /* Tab bar */
-    --tabbar-bg: #fffaff;
-    --tabbar-border: rgba(70, 48, 78, 0.16);
-    --solara-surface: #fffaff;
-    --solara-surface-raised: #f3ebf4;
-    --solara-plum-deep: #26192d;
+    --tabbar-bg: rgba(250, 248, 245, 0.9);
+    --tabbar-border: rgba(0, 0, 0, 0.06);
 
     /* Separators */
     --separator: rgba(60, 60, 67, 0.12);
@@ -110,21 +107,18 @@
     --ios-blue-rgb: 139 92 246;
 
     /* Dark backgrounds — purple-black canvas, lifted plum surfaces */
-    --ios-bg: #0c0913;
-    --ios-bg-secondary: #171222;
-    --ios-bg-tertiary: #21192f;
-    --ios-grouped-bg: #0c0913;
+    --ios-bg: #0e0b16;
+    --ios-bg-secondary: #191426;
+    --ios-bg-tertiary: #241d35;
+    --ios-grouped-bg: #0e0b16;
 
     /* Glass effect dark */
-    --glass-bg: #171222;
-    --glass-border: rgba(200, 180, 255, 0.12);
+    --glass-bg: rgba(25, 20, 38, 0.72);
+    --glass-border: rgba(200, 180, 255, 0.09);
 
     /* Tab bar dark */
-    --tabbar-bg: #15101f;
-    --tabbar-border: rgba(200, 180, 255, 0.14);
-    --solara-surface: #171222;
-    --solara-surface-raised: #21192f;
-    --solara-plum-deep: #efe8f5;
+    --tabbar-bg: rgba(22, 17, 34, 0.88);
+    --tabbar-border: rgba(200, 180, 255, 0.1);
 
     /* Separators dark */
     --separator: rgba(160, 148, 194, 0.22);
@@ -218,12 +212,16 @@
   /* Liquid Glass effect */
   .glass {
     background: var(--glass-bg);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
     border: 1px solid var(--glass-border);
   }
 
   .glass-subtle {
-    background: var(--ios-bg-tertiary);
-    border: 1px solid var(--glass-border);
+    background: rgba(255, 255, 255, 0.5);
+    backdrop-filter: blur(20px) saturate(150%);
+    -webkit-backdrop-filter: blur(20px) saturate(150%);
+    border: 1px solid rgba(255, 255, 255, 0.4);
   }
 
   /* Translucent top/bottom bar (NavBar, TabBar) — same blur as glass but
@@ -232,26 +230,13 @@
      This is what fixes the stray white line around the nav bar. */
   .glass-bar {
     background: var(--tabbar-bg);
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
   }
 
   .dark .glass-subtle {
-    background: var(--ios-bg-tertiary);
-    border: 1px solid var(--glass-border);
-  }
-
-  .solara-surface {
-    background: var(--ios-bg-secondary);
-    border: 1px solid hsl(var(--border) / 0.72);
-  }
-
-  .solara-beacon {
-    background: var(--ios-bg-secondary);
-    border: 1px solid hsl(var(--border) / 0.72);
-    box-shadow: 0 18px 46px rgba(39, 24, 50, 0.08);
-  }
-
-  .dark .solara-beacon {
-    box-shadow: 0 20px 52px rgba(0, 0, 0, 0.3);
+    background: rgba(25, 20, 38, 0.5);
+    border: 1px solid rgba(200, 180, 255, 0.07);
   }
 
   /* iOS-style fill */
@@ -281,7 +266,7 @@
     /* Explicit property list — `all` also animated layout properties
        (width/padding), forcing reflow-driven jank on weak devices. */
     transition-property: transform, opacity, background-color, border-color, color, box-shadow;
-    transition-duration: 0.3s;
+    transition-duration: 0.18s;
     transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
   }
 
@@ -423,11 +408,16 @@ body::after {
   inset: 0;
   z-index: -1;
   pointer-events: none;
-  background: transparent;
+  background:
+    radial-gradient(118% 72% at 12% -8%, rgba(255, 176, 107, 0.13), transparent 56%),
+    radial-gradient(122% 78% at 108% 2%, rgba(150, 112, 255, 0.10), transparent 56%);
 }
 
 .dark body::after {
-  background: transparent;
+  background:
+    radial-gradient(118% 72% at 12% -8%, rgba(255, 150, 80, 0.07), transparent 56%),
+    radial-gradient(122% 78% at 108% 2%, rgba(140, 104, 255, 0.14), transparent 58%),
+    radial-gradient(140% 60% at 50% 112%, rgba(120, 80, 220, 0.08), transparent 60%);
 }
 
 /* Reduce texture option */
@@ -445,8 +435,8 @@ body::after {
   --border: 280 8% 62%;
   --input: 280 8% 62%;
   --separator: rgba(60, 55, 70, 0.4);
-  --glass-bg: #fffaff;
-  --tabbar-bg: #fffaff;
+  --glass-bg: rgba(255, 253, 250, 0.96);
+  --tabbar-bg: rgba(250, 248, 245, 0.98);
   --tabbar-border: rgba(0, 0, 0, 0.22);
 }
 
@@ -455,8 +445,8 @@ body::after {
   --border: 258 14% 38%;
   --input: 258 14% 38%;
   --separator: rgba(170, 160, 200, 0.55);
-  --glass-bg: #120e1c;
-  --tabbar-bg: #120e1c;
+  --glass-bg: rgba(18, 14, 28, 0.97);
+  --tabbar-bg: rgba(18, 14, 28, 0.98);
   --tabbar-border: rgba(255, 255, 255, 0.25);
 }
 
@@ -480,5 +470,23 @@ body::after {
 @media all and (display-mode: standalone), all and (display-mode: fullscreen), all and (display-mode: minimal-ui) {
   :root {
     --safe-top: max(env(safe-area-inset-top, 0px), 32px);
+  }
+}
+
+/* Keep the restored glass language without making Android repaint large blur
+   layers during scrolling and sheet animations. */
+@media (max-width: 767px), (display-mode: standalone), (display-mode: fullscreen), (display-mode: minimal-ui) {
+  .glass,
+  .glass-subtle,
+  .glass-bar,
+  .solara-sheet-backdrop {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
+  /* Full-page entrance movement reads as input lag on Android. State changes,
+     sheets and press feedback still animate; route content paints immediately. */
+  .animate-fade-in {
+    animation: none !important;
   }
 }

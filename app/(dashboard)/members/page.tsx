@@ -2,22 +2,26 @@
 
 import useSWR, { mutate } from "swr";
 import { LocalizedLink as Link } from "@/components/navigation/LocalizedLink";
-import { Plus, Search, Minus, Sun, X, Users } from "lucide-react";
+import { LoaderCircle, Plus, Search, Minus, Users } from "lucide-react";
 import { useState, useMemo, useCallback } from "react";
 import { LargeTitle } from "@/components/layout/NavBar";
+import { GlassCard } from "@/components/glass/GlassCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorState } from "@/components/ui/ErrorState";
-import { BottomSheet } from "@/components/glass/BottomSheet";
 import { apiFetcher, swrKeys } from "@/lib/swr";
 import DynamicAvatarImage from "@/components/ui/DynamicAvatarImage";
 import { useLanguage } from "@/components/providers/LanguageProvider";
 import { useToast } from "@/components/providers/ToastProvider";
 import { useViewTransitionRouter, HERO_AVATAR } from "@/lib/view-transition";
 import { useHaptics } from "@/lib/haptics";
-import { createFrontSnapshotSignature, type FrontTier } from "@/lib/front";
+import {
+  createFrontSnapshotSignature,
+  type FrontTier,
+} from "@/lib/front";
+import { commitFrontMutationToCache } from "@/lib/front-mutation-cache";
 import { cn } from "@/lib/utils";
 
 type Member = {
@@ -42,7 +46,11 @@ export default function MembersPage() {
   const { t } = useLanguage();
   const { showToast } = useToast();
   const { push } = useViewTransitionRouter();
-  const { selection } = useHaptics();
+  const {
+    selection,
+    success,
+    error: errorHaptic,
+  } = useHaptics();
 
   // Navigate to a member with a shared-avatar morph: the tapped avatar grows
   // into the profile header. Falls back to instant nav on unsupported browsers.
@@ -60,12 +68,14 @@ export default function MembersPage() {
     apiFetcher,
     { revalidateOnFocus: false, dedupingInterval: 30_000 }
   );
-  const { data: currentFront } = useSWR<FrontEntry | null>(swrKeys.front, apiFetcher);
+  const { data: currentFront, mutate: mutateFront } = useSWR<FrontEntry | null>(
+    swrKeys.front,
+    apiFetcher
+  );
 
   const [search, setSearch] = useState("");
-  const [frontFilter, setFrontFilter] = useState<"all" | "front">("all");
-  const [selectedMember, setSelectedMember] = useState<Member | null>(null);
   const [updating, setUpdating] = useState(false);
+  const [updatingMemberId, setUpdatingMemberId] = useState<string | null>(null);
 
   const allMembers = useMemo(() => data?.data ?? [], [data]);
 
@@ -78,11 +88,9 @@ export default function MembersPage() {
     [currentFront]
   );
   const currentFrontSignature = useMemo(
-    () => currentFront ? createFrontSnapshotSignature(currentFront) : null,
+    () => (currentFront ? createFrontSnapshotSignature(currentFront) : null),
     [currentFront]
   );
-  const selectedIsFronting = selectedMember ? frontingSet.has(selectedMember.id) : false;
-
   const frontContextFor = useCallback(
     (memberIds: string[]) => ({
       memberIds,
@@ -99,57 +107,59 @@ export default function MembersPage() {
   );
 
   const revalidateAfterFrontChange = useCallback(() => {
-    void mutate(swrKeys.front);
     void mutate(swrKeys.frontHistory);
   }, []);
 
-  function handleFrontConflict(response: Response) {
+  async function handleFrontConflict(response: Response) {
     if (response.status !== 409) return false;
-    revalidateAfterFrontChange();
-    closeSheet();
+    await mutateFront();
+    void mutate(swrKeys.frontHistory);
+    errorHaptic();
     showToast(t("front.editConflict"));
     return true;
   }
 
-  const openSheet = useCallback((e: React.MouseEvent, member: Member) => {
-    e.stopPropagation();
+  async function toggleFrontMember(
+    event: React.MouseEvent<HTMLButtonElement>,
+    member: Member
+  ) {
+    event.stopPropagation();
+    if (updating) return;
     selection();
-    setSelectedMember(member);
-  }, [selection]);
 
-  const closeSheet = useCallback(() => {
-    setSelectedMember(null);
-  }, []);
+    const wasFronting = frontingSet.has(member.id);
+    const previousFront = currentFront ?? null;
+    const nextMemberIds = wasFronting
+      ? frontingIds.filter((id) => id !== member.id)
+      : [...frontingIds, member.id];
+    const nextTiers = Object.fromEntries(
+      Object.entries(currentFront?.memberTiers ?? {}).filter(([id]) =>
+        nextMemberIds.includes(id)
+      )
+    );
+    const optimisticFront: FrontEntry | null =
+      nextMemberIds.length === 0
+        ? null
+        : currentFront
+          ? {
+              ...currentFront,
+              memberIds: nextMemberIds,
+              memberTiers: nextTiers,
+            }
+          : {
+              id: `optimistic-${member.id}`,
+              memberIds: nextMemberIds,
+              memberTiers: nextTiers,
+              note: null,
+              startedAt: new Date().toISOString(),
+            };
 
-  async function addToFront() {
-    if (!selectedMember || updating) return;
     setUpdating(true);
-    try {
-      const response = await fetch("/api/front", {
-        method: "POST",
-        credentials: "same-origin",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(
-          frontContextFor([...frontingIds, selectedMember.id])
-        ),
-      });
-      if (handleFrontConflict(response)) return;
-      if (!response.ok) throw new Error("front_save_failed");
-      revalidateAfterFrontChange();
-      closeSheet();
-    } catch {
-      showToast(t("front.saveError"));
-    } finally {
-      setUpdating(false);
-    }
-  }
+    setUpdatingMemberId(member.id);
+    await mutateFront(optimisticFront, { revalidate: false });
 
-  async function removeFromFront() {
-    if (!selectedMember || updating) return;
-    setUpdating(true);
     try {
-      const newIds = frontingIds.filter((id) => id !== selectedMember.id);
-      if (newIds.length === 0) {
+      if (nextMemberIds.length === 0) {
         const response = await fetch("/api/front", {
           method: "DELETE",
           credentials: "same-origin",
@@ -157,72 +167,57 @@ export default function MembersPage() {
             ? { "x-front-expected-signature": currentFrontSignature }
             : undefined,
         });
-        if (handleFrontConflict(response)) return;
+        if (await handleFrontConflict(response)) return;
         if (!response.ok) throw new Error("front_delete_failed");
+        await mutateFront(null, { revalidate: false });
       } else {
         const response = await fetch("/api/front", {
           method: "POST",
           credentials: "same-origin",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(frontContextFor(newIds)),
+          body: JSON.stringify(frontContextFor(nextMemberIds)),
         });
-        if (handleFrontConflict(response)) return;
-        if (!response.ok) throw new Error("front_save_failed");
+        if (await handleFrontConflict(response)) return;
+        await commitFrontMutationToCache<FrontEntry>(
+          response,
+          (snapshot) => mutateFront(snapshot, { revalidate: false })
+        );
       }
       revalidateAfterFrontChange();
-      closeSheet();
+      success();
+      showToast(
+        t(
+          wasFronting ? "front.removedMember" : "front.addedMember",
+          { name: member.name }
+        ),
+        "success"
+      );
     } catch {
+      await mutateFront(previousFront, { revalidate: false });
+      errorHaptic();
       showToast(t("front.saveError"));
     } finally {
       setUpdating(false);
-    }
-  }
-
-  async function setAsOnly() {
-    if (!selectedMember || updating) return;
-    setUpdating(true);
-    try {
-      const response = await fetch("/api/front", {
-        method: "POST",
-        credentials: "same-origin",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(frontContextFor([selectedMember.id])),
-      });
-      if (handleFrontConflict(response)) return;
-      if (!response.ok) throw new Error("front_save_failed");
-      revalidateAfterFrontChange();
-      closeSheet();
-    } catch {
-      showToast(t("front.saveError"));
-    } finally {
-      setUpdating(false);
+      setUpdatingMemberId(null);
     }
   }
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
+    if (!q) return allMembers;
     return allMembers.filter(
       (m) =>
-        (frontFilter === "all" || frontingSet.has(m.id)) &&
-        (!q ||
         m.name?.toLowerCase().includes(q) ||
         m.pronouns?.toLowerCase().includes(q) ||
         m.role?.toLowerCase().includes(q) ||
-        m.tags.some((tag) => tag.toLowerCase().includes(q)))
+        m.tags.some((tag) => tag.toLowerCase().includes(q))
     );
-  }, [allMembers, frontFilter, frontingSet, search]);
+  }, [allMembers, search]);
 
   return (
     <div className="animate-fade-in">
-      <div className="px-4 pt-14 pb-3 flex items-end justify-between">
-        <div>
-          <LargeTitle className="px-0 pb-1">{t("members.title")}</LargeTitle>
-          <p className="text-sm text-muted-foreground">
-            {data?.total ?? allMembers.length} {t("home.statMembers")}
-            {" · "}
-            {frontingIds.length} {t("home.statFronting")}
-          </p>
-        </div>
+      <div className="px-4 pt-14 pb-2 flex items-end justify-between">
+        <LargeTitle className="px-0">{t("members.title")}</LargeTitle>
         <Button asChild size="icon" className="mb-1">
           <Link href="/members/new" aria-label={t("members.addMember")}>
             <Plus size={20} />
@@ -244,52 +239,17 @@ export default function MembersPage() {
         />
       </div>
 
-      <div
-        className="mx-4 mb-4 grid grid-cols-2 gap-1 rounded-full border border-border bg-secondary/50 p-1"
-        aria-label={t("members.title")}
-        role="group"
-      >
-        <button
-          type="button"
-          onClick={() => setFrontFilter("all")}
-          aria-pressed={frontFilter === "all"}
-          className={cn(
-            "min-h-11 rounded-full px-4 text-sm font-bold transition-colors",
-            frontFilter === "all"
-              ? "bg-primary/15 text-primary"
-              : "text-muted-foreground hover:text-foreground"
-          )}
-        >
-          {t("common.all")}
-        </button>
-        <button
-          type="button"
-          onClick={() => setFrontFilter("front")}
-          aria-pressed={frontFilter === "front"}
-          className={cn(
-            "min-h-11 rounded-full px-4 text-sm font-bold transition-colors",
-            frontFilter === "front"
-              ? "bg-primary/15 text-primary"
-              : "text-muted-foreground hover:text-foreground"
-          )}
-        >
-          {t("front.currentlyFronting")}
-        </button>
-      </div>
-
       {/* List */}
       <div className="px-4">
-        <div className="flex flex-col gap-2.5">
+        <GlassCard padding="none" className="overflow-hidden">
           {error && !data ? (
-            <div className="rounded-ios-lg border border-border bg-card">
-              <ErrorState onRetry={() => mutateMembers()} retrying={isValidating} />
-            </div>
+            <ErrorState onRetry={() => mutateMembers()} retrying={isValidating} />
           ) : isLoading ? (
-            <div className="flex flex-col gap-2.5">
+            <div className="p-4 flex flex-col gap-0">
               {[1, 2, 3, 4, 5].map((i) => (
                 <div
                   key={i}
-                  className="flex items-center gap-3 rounded-ios-lg border border-border bg-card px-4 py-3"
+                  className="flex items-center gap-3 py-3 border-b border-border/50 last:border-0"
                 >
                   <Skeleton className="w-11 h-11 rounded-full flex-shrink-0" />
                   <div className="flex-1 flex flex-col gap-2">
@@ -300,47 +260,28 @@ export default function MembersPage() {
               ))}
             </div>
           ) : filtered.length === 0 ? (
-            <div className="rounded-ios-lg border border-border bg-card">
-              <EmptyState
-                icon={Users}
-                title={
-                  search
-                    ? t("members.noMembersFound")
-                    : frontFilter === "front"
-                      ? t("members.noFronting")
-                      : t("members.noMembers")
-                }
-                description={
-                  search || frontFilter === "front"
-                    ? undefined
-                    : t("members.emptyDescription")
-                }
-                action={
-                  !search && frontFilter === "front" ? (
-                    <Button asChild variant="outline" size="sm">
-                      <Link href="/front">
-                        <Sun size={16} />
-                        {t("home.passLight")}
-                      </Link>
-                    </Button>
-                  ) : !search ? (
-                    <Button asChild variant="outline" size="sm">
-                      <Link href="/members/new">
-                        <Plus size={16} />
-                        {t("members.addMember")}
-                      </Link>
-                    </Button>
-                  ) : undefined
-                }
-              />
-            </div>
+            <EmptyState
+              icon={Users}
+              title={search ? t("members.noMembersFound") : t("members.noMembers")}
+              description={search ? undefined : t("members.emptyDescription")}
+              action={
+                !search ? (
+                  <Button asChild variant="outline" size="sm">
+                    <Link href="/members/new">
+                      <Plus size={16} />
+                      {t("members.addMember")}
+                    </Link>
+                  </Button>
+                ) : undefined
+              }
+            />
           ) : (
             filtered.map((member) => {
               const isFronting = frontingSet.has(member.id);
               return (
                 <div
                   key={member.id}
-                  className="flex min-h-[68px] items-center overflow-hidden rounded-ios-lg border border-border bg-card shadow-ios dark:shadow-ios-dark [content-visibility:auto] [contain-intrinsic-size:68px]"
+                  className="flex items-center border-b border-border/50 last:border-0 [content-visibility:auto] [contain-intrinsic-size:68px]"
                 >
                   <Link
                     href={`/members/${member.id}`}
@@ -372,127 +313,50 @@ export default function MembersPage() {
                       <p className="text-body font-semibold text-foreground truncate">
                         {member.name}
                       </p>
-                      {(member.pronouns || member.role) && (
+                      {member.pronouns && (
                         <p className="text-caption-1 text-muted-foreground truncate">
-                          {[member.pronouns, member.role].filter(Boolean).join(" · ")}
+                          {member.pronouns}
                         </p>
                       )}
-                      {member.tags.length > 0 && (
-                        <div className="mt-1.5 flex gap-1.5 overflow-hidden">
-                          {member.tags.slice(0, 3).map((tag) => (
-                            <span
-                              key={tag}
-                              className="max-w-28 truncate rounded-full border px-2 py-0.5 text-xs font-semibold text-foreground"
-                              style={{
-                                borderColor: member.color ? `${member.color}4d` : "hsl(var(--border))",
-                                background: member.color ? `${member.color}1f` : "hsl(var(--secondary))",
-                              }}
-                            >
-                              {tag}
-                            </span>
-                          ))}
-                        </div>
-                      )}
                     </div>
-                    {isFronting && (
+                    {member.color && (
                       <div
-                        className="rounded-full border px-2 py-1 text-xs font-bold text-foreground"
-                        style={{
-                          borderColor: member.color ? `${member.color}4d` : "hsl(var(--border))",
-                          background: member.color ? `${member.color}1f` : "hsl(var(--secondary))",
-                        }}
-                      >
-                        {t("front.title")}
-                      </div>
+                        className="w-3 h-3 rounded-full flex-shrink-0"
+                        style={{ background: member.color }}
+                      />
                     )}
                   </Link>
 
                   {/* Front action button */}
                   <button
-                    onClick={(e) => openSheet(e, member)}
-                    aria-label={t("front.addToFront")}
+                    onClick={(event) => toggleFrontMember(event, member)}
+                    disabled={updating}
+                    aria-label={t(
+                      isFronting ? "front.removeFromFront" : "front.addToFront"
+                    )}
                     className={cn(
-                      "flex-shrink-0 mr-2 w-11 h-11 rounded-full flex items-center justify-center ios-transition",
+                      "flex-shrink-0 mr-3 w-11 h-11 rounded-full flex items-center justify-center ios-transition",
                       isFronting
                         ? "bg-ios-green/20 text-ios-green"
-                        : "bg-secondary text-muted-foreground"
+                        : "bg-secondary text-muted-foreground",
+                      updating && "disabled:opacity-50"
                     )}
                   >
-                    {isFronting
-                      ? <Minus size={15} strokeWidth={2.5} />
-                      : <Plus size={15} strokeWidth={2.5} />}
+                    {updatingMemberId === member.id ? (
+                      <LoaderCircle size={17} className="animate-spin" />
+                    ) : isFronting ? (
+                      <Minus size={15} strokeWidth={2.5} />
+                    ) : (
+                      <Plus size={15} strokeWidth={2.5} />
+                    )}
                   </button>
                 </div>
               );
             })
           )}
-        </div>
+        </GlassCard>
       </div>
 
-      {/* Per-member front action sheet */}
-      <BottomSheet
-        open={selectedMember !== null}
-        onClose={closeSheet}
-        title={selectedMember?.name ?? ""}
-      >
-        <div className="flex flex-col divide-y divide-border/50 rounded-ios-lg overflow-hidden border border-border/50">
-          {/* Add / Remove from front */}
-          {selectedIsFronting ? (
-            <button
-              onClick={removeFromFront}
-              disabled={updating}
-              className="flex items-center gap-4 px-4 py-4 text-left active:bg-muted/40 ios-transition disabled:opacity-50"
-            >
-              <div className="w-9 h-9 rounded-full bg-ios-red/15 flex items-center justify-center flex-shrink-0">
-                <Minus size={18} className="text-ios-red" />
-              </div>
-              <span className="text-body font-medium text-ios-red">
-                {t("front.removeFromFront")}
-              </span>
-            </button>
-          ) : (
-            <button
-              onClick={addToFront}
-              disabled={updating}
-              className="flex items-center gap-4 px-4 py-4 text-left active:bg-muted/40 ios-transition disabled:opacity-50"
-            >
-              <div className="w-9 h-9 rounded-full bg-ios-blue/15 flex items-center justify-center flex-shrink-0">
-                <Plus size={18} className="text-ios-blue" />
-              </div>
-              <span className="text-body font-medium text-ios-blue">
-                {t("front.addToFront")}
-              </span>
-            </button>
-          )}
-
-          {/* Set as only front */}
-          <button
-            onClick={setAsOnly}
-            disabled={updating}
-            className="flex items-center gap-4 px-4 py-4 text-left active:bg-muted/40 ios-transition disabled:opacity-50"
-          >
-            <div className="w-9 h-9 rounded-full bg-secondary flex items-center justify-center flex-shrink-0">
-              <Sun size={18} className="text-foreground" />
-            </div>
-            <span className="text-body font-medium text-foreground">
-              {t("front.setAsOnly")}
-            </span>
-          </button>
-
-          {/* No action */}
-          <button
-            onClick={closeSheet}
-            className="flex items-center gap-4 px-4 py-4 text-left active:bg-muted/40 ios-transition"
-          >
-            <div className="w-9 h-9 rounded-full bg-secondary flex items-center justify-center flex-shrink-0">
-              <X size={18} className="text-muted-foreground" />
-            </div>
-            <span className="text-body font-medium text-muted-foreground">
-              {t("front.noAction")}
-            </span>
-          </button>
-        </div>
-      </BottomSheet>
     </div>
   );
 }

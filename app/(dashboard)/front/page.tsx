@@ -1,8 +1,8 @@
 "use client";
 
 import useSWR, { mutate } from "swr";
-import { useMemo, useState } from "react";
-import { Clock, Plus, Check, Search, X } from "lucide-react";
+import { useMemo, useRef, useState } from "react";
+import { Clock, Plus, LoaderCircle, Pencil, Search, X } from "lucide-react";
 import { LocalizedLink as Link } from "@/components/navigation/LocalizedLink";
 import { LargeTitle } from "@/components/layout/NavBar";
 import { GlassCard } from "@/components/glass/GlassCard";
@@ -20,6 +20,12 @@ import { useHaptics } from "@/lib/haptics";
 import { useLanguage } from "@/components/providers/LanguageProvider";
 import { useToast } from "@/components/providers/ToastProvider";
 import { createFrontSnapshotSignature, TIER_CONFIG, TIER_ORDER, type FrontTier } from "@/lib/front";
+import {
+  captureFrontDraftBase,
+  createFrontDraftMutationPayload,
+  type FrontDraftBase,
+} from "@/lib/front-draft-base";
+import { commitFrontMutationToCache } from "@/lib/front-mutation-cache";
 
 type Member = {
   id: string;
@@ -79,7 +85,12 @@ function MemberAvatar({ member, size = 12 }: { member: Member; size?: number }) 
 
 export default function FrontPage() {
   const { t, language } = useLanguage();
-  const { success, selection, warning } = useHaptics();
+  const {
+    success,
+    selection,
+    warning,
+    error: errorHaptic,
+  } = useHaptics();
   const { showToast } = useToast();
   const { data: currentFront, isLoading: loadingFront, error: frontError, mutate: mutateFront, isValidating: frontValidating } = useSWR<FrontEntry | null>(
     swrKeys.front,
@@ -99,9 +110,11 @@ export default function FrontPage() {
   const [draftMemberIds, setDraftMemberIds] = useState<string[]>([]);
   const [draftTiers, setDraftTiers] = useState<Record<string, FrontTier>>({});
   const [draftNote, setDraftNote] = useState("");
+  const [draftBase, setDraftBase] = useState<FrontDraftBase | null>(null);
   const [memberQuery, setMemberQuery] = useState("");
   // Which member's role picker is open (null = closed).
   const [rolePickerFor, setRolePickerFor] = useState<string | null>(null);
+  const submittingRef = useRef(false);
 
   const memberList = useMemo(() => membersData?.data ?? [], [membersData]);
   const memberById = useMemo(
@@ -148,12 +161,20 @@ export default function FrontPage() {
   }
 
   function openFrontEditor() {
+    if (currentFront === undefined) return;
     selection();
+    setDraftBase(captureFrontDraftBase(currentFront));
     setDraftMemberIds(frontingIds);
     setDraftTiers(resolveTiers(frontingIds, currentTiers));
     setDraftNote(currentFront?.note ?? "");
     setMemberQuery("");
     setSheetOpen(true);
+  }
+
+  function closeFrontEditor() {
+    if (updating) return;
+    setSheetOpen(false);
+    setDraftBase(null);
   }
 
   function toggleDraftMember(memberId: string) {
@@ -181,25 +202,26 @@ export default function FrontPage() {
   }
 
   async function saveFrontDraft() {
-    if (updating) return;
+    if (updating || submittingRef.current || !draftBase) return;
     if (draftMemberIds.length === 0) {
       showToast(t("front.noMemberSelected"));
       return;
     }
 
+    submittingRef.current = true;
     setUpdating(true);
     try {
       const response = await fetch("/api/front", {
         method: "POST",
         credentials: "same-origin",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          memberIds: draftMemberIds,
-          memberTiers: resolveTiers(draftMemberIds, draftTiers),
-          note: draftNote,
-          expectedFrontId: currentFront?.id ?? null,
-          expectedFrontSignature: currentFrontSignature,
-        }),
+        body: JSON.stringify(
+          createFrontDraftMutationPayload(draftBase, {
+            memberIds: draftMemberIds,
+            memberTiers: resolveTiers(draftMemberIds, draftTiers),
+            note: draftNote,
+          })
+        ),
       });
       if (response.status === 409) {
         await Promise.all([
@@ -207,26 +229,34 @@ export default function FrontPage() {
           mutate(swrKeys.frontHistory),
         ]);
         setSheetOpen(false);
+        setDraftBase(null);
         showToast(t("front.editConflict"));
         return;
       }
-      if (!response.ok) throw new Error("front_save_failed");
-
-      const json = await response.json().catch(() => null);
-      if (!json?.success || !json.data) throw new Error("front_save_failed");
-
-      void mutate(swrKeys.front, json.data, { revalidate: false });
+      await commitFrontMutationToCache<FrontEntry>(
+        response,
+        (snapshot) => mutateFront(snapshot, { revalidate: false })
+      );
       void mutate(swrKeys.frontHistory);
       success();
       setSheetOpen(false);
+      setDraftBase(null);
+      showToast(
+        t(currentFront ? "front.updated" : "front.started"),
+        "success"
+      );
     } catch {
       // A 409 means another device changed the front while this draft was
       // open. Always refresh server truth instead of repainting the stale
       // snapshot that the editor started with.
-      void mutate(swrKeys.front);
-      void mutate(swrKeys.frontHistory);
+      await Promise.all([
+        mutateFront(),
+        mutate(swrKeys.frontHistory),
+      ]);
+      errorHaptic();
       showToast(t("front.saveError"));
     } finally {
+      submittingRef.current = false;
       setUpdating(false);
     }
   }
@@ -253,13 +283,16 @@ export default function FrontPage() {
             : undefined,
         });
         if (res.status === 409) {
-          void mutate(swrKeys.front);
-          void mutate(swrKeys.frontHistory);
+          await Promise.all([
+            mutateFront(),
+            mutate(swrKeys.frontHistory),
+          ]);
+          errorHaptic();
           showToast(t("front.editConflict"));
           return;
         }
-        if (!res.ok) showToast(t("front.endError"));
-        else void mutate(swrKeys.front, null, { revalidate: false });
+        if (!res.ok) throw new Error("front_end_failed");
+        await mutateFront(null, { revalidate: false });
       } else {
         const newTiers = resolveTiers(newIds, currentTiers);
         const res = await fetch("/api/front", {
@@ -275,24 +308,24 @@ export default function FrontPage() {
           }),
         });
         if (res.status === 409) {
-          void mutate(swrKeys.front);
-          void mutate(swrKeys.frontHistory);
+          await Promise.all([
+            mutateFront(),
+            mutate(swrKeys.frontHistory),
+          ]);
+          errorHaptic();
           showToast(t("front.editConflict"));
           return;
         }
-        if (!res.ok) {
-          showToast(t("front.saveError"));
-        } else {
-          // Write server truth into the cache (see applyTiers) so the short
-          // browser cache on GET /api/front can't resurrect stale state.
-          const json = await res.json().catch(() => null);
-          if (json?.success && json.data) {
-            void mutate(swrKeys.front, json.data, { revalidate: false });
-          }
-        }
+        await commitFrontMutationToCache<FrontEntry>(
+          res,
+          (snapshot) => mutateFront(snapshot, { revalidate: false })
+        );
       }
       void mutate(swrKeys.frontHistory);
+      success();
+      showToast(t("front.updated"), "success");
     } catch {
+      errorHaptic();
       showToast(t("front.saveError"));
     } finally {
       setUpdating(false);
@@ -301,25 +334,28 @@ export default function FrontPage() {
 
   /** Set (or clear, when tier is null) a member's role from the picker modal. */
   function setRole(memberId: string, tier: FrontTier | null) {
-    if (!frontingSet.has(memberId)) return;
+    if (updating || !frontingSet.has(memberId)) return;
     const newTiers = { ...currentTiers };
     if (tier === null) {
       delete newTiers[memberId];
     } else {
       newTiers[memberId] = tier;
     }
-    applyTiers(newTiers);
+    void applyTiers(newTiers);
   }
 
   async function applyTiers(newTiers: Record<string, FrontTier>) {
-    if (!currentFront) return;
+    if (updating || !currentFront) return;
     setUpdating(true);
     const previous = currentFront;
     // Reflect the new roles immediately in the SWR cache. The GET /api/front
     // response is browser-cached for a few seconds, so a plain revalidation can
     // return the *old* roles — writing the truth into the cache directly keeps
     // successive edits building on fresh state instead of clobbering each other.
-    void mutate(swrKeys.front, { ...currentFront, memberTiers: newTiers }, { revalidate: false });
+    await mutateFront(
+      { ...currentFront, memberTiers: newTiers },
+      { revalidate: false }
+    );
     try {
       const res = await fetch("/api/front", {
         method: "POST",
@@ -334,23 +370,25 @@ export default function FrontPage() {
         }),
       });
       if (res.status === 409) {
-        void mutate(swrKeys.front);
-        void mutate(swrKeys.frontHistory);
+        await Promise.all([
+          mutateFront(),
+          mutate(swrKeys.frontHistory),
+        ]);
+        errorHaptic();
         showToast(t("front.editConflict"));
         return;
       }
-      if (!res.ok) {
-        showToast(t("front.saveError"));
-        void mutate(swrKeys.front, previous, { revalidate: false });
-        return;
-      }
-      const json = await res.json().catch(() => null);
-      if (json?.success && json.data) {
-        void mutate(swrKeys.front, json.data, { revalidate: false });
-      }
+      await commitFrontMutationToCache<FrontEntry>(
+        res,
+        (snapshot) => mutateFront(snapshot, { revalidate: false })
+      );
+      void mutate(swrKeys.frontHistory);
+      success();
+      showToast(t("front.updated"), "success");
     } catch {
+      await mutateFront(previous, { revalidate: false });
+      errorHaptic();
       showToast(t("front.saveError"));
-      void mutate(swrKeys.front, previous, { revalidate: false });
     } finally {
       setUpdating(false);
     }
@@ -369,16 +407,23 @@ export default function FrontPage() {
           : undefined,
       });
       if (res.status === 409) {
-        void mutate(swrKeys.front);
-        void mutate(swrKeys.frontHistory);
+        await Promise.all([
+          mutate(swrKeys.front),
+          mutate(swrKeys.frontHistory),
+        ]);
+        errorHaptic();
         showToast(t("front.editConflict"));
         return;
       }
       if (!res.ok) throw new Error("front_end_failed");
-      void mutate(swrKeys.front, null, { revalidate: false });
+      await mutateFront(null, { revalidate: false });
       void mutate(swrKeys.frontHistory);
+      success();
       setSheetOpen(false);
+      setDraftBase(null);
+      showToast(t("front.ended"), "success");
     } catch {
+      errorHaptic();
       showToast(t("front.endError"));
     } finally {
       setUpdating(false);
@@ -391,8 +436,20 @@ export default function FrontPage() {
     <div className="animate-fade-in">
       <div className="px-4 pt-14 pb-2 flex items-end justify-between">
         <LargeTitle className="px-0">{t("front.title")}</LargeTitle>
-        <Button size="icon" className="mb-1" onClick={openFrontEditor} aria-label={t("front.startFront")}>
-          <Plus size={20} />
+        <Button
+          className="mb-1 min-h-11 px-4"
+          onClick={openFrontEditor}
+          disabled={currentFront === undefined}
+          aria-label={t(currentFront ? "front.editFront" : "front.startFront")}
+        >
+          {currentFront === undefined ? (
+            <LoaderCircle size={18} className="animate-spin" />
+          ) : currentFront ? (
+            <Pencil size={17} />
+          ) : (
+            <Plus size={18} />
+          )}
+          {t(currentFront ? "front.editFront" : "front.startFront")}
         </Button>
       </div>
 
@@ -406,7 +463,7 @@ export default function FrontPage() {
             <button
               onClick={endFront}
               disabled={updating}
-              className="text-subheadline text-ios-red font-semibold ios-press disabled:opacity-50"
+              className="min-h-11 px-2 text-subheadline text-ios-red font-semibold ios-press disabled:opacity-50"
             >
               {t("front.endAll")}
             </button>
@@ -463,7 +520,7 @@ export default function FrontPage() {
                         <button
                           onClick={() => setRolePickerFor(id)}
                           disabled={updating}
-                          className="text-caption-1 font-semibold mt-1 inline-flex items-center gap-1 ios-press disabled:opacity-50"
+                          className="min-h-11 -my-2 pr-2 text-caption-1 font-semibold mt-1 inline-flex items-center gap-1 ios-press disabled:opacity-50"
                           style={{ color: TIER_CONFIG[currentTiers[id]].color }}
                           title={t("front.chooseRole")}
                         >
@@ -477,7 +534,7 @@ export default function FrontPage() {
                         <button
                           onClick={() => setRolePickerFor(id)}
                           disabled={updating}
-                          className="text-caption-1 font-semibold mt-1 inline-flex items-center gap-1 text-muted-foreground ios-press disabled:opacity-50"
+                          className="min-h-11 -my-2 pr-2 text-caption-1 font-semibold mt-1 inline-flex items-center gap-1 text-muted-foreground ios-press disabled:opacity-50"
                           title={t("front.chooseRole")}
                         >
                           <Plus size={11} strokeWidth={2.5} />
@@ -562,88 +619,37 @@ export default function FrontPage() {
       {/* Front editor: choose everyone, edit every role and save once. */}
       <BottomSheet
         open={sheetOpen}
-        onClose={() => setSheetOpen(false)}
-        title={t("front.whoIsFronting")}
+        onClose={closeFrontEditor}
+        title={t(currentFront ? "front.editFront" : "front.startFront")}
       >
         <div className="flex flex-col gap-4">
-          {draftMemberIds.length > 0 && (
-            <section aria-labelledby="selected-front-members">
-              <div className="mb-2 flex items-center justify-between">
-                <h3
-                  id="selected-front-members"
-                  className="text-footnote font-bold uppercase tracking-wide text-muted-foreground"
-                >
-                  {t("front.selectedMembers")}
-                </h3>
-                <span className="text-caption-1 font-bold text-ios-blue">
-                  {draftMemberIds.length === 1
-                    ? t("front.selected", { n: draftMemberIds.length })
-                    : t("front.selectedPlural", { n: draftMemberIds.length })}
-                </span>
-              </div>
-
-              <div className="overflow-hidden rounded-ios border border-border/70">
-                {draftMemberIds.map((memberId) => {
-                  const member = memberById.get(memberId);
-                  if (!member) return null;
-                  const selectId = `front-role-${memberId}`;
-                  return (
-                    <div
-                      key={memberId}
-                      className="flex min-h-[64px] items-center gap-3 border-b border-border/60 px-3 py-2 last:border-0"
-                    >
-                      <MemberAvatar member={member} size={10} />
-                      <label
-                        htmlFor={selectId}
-                        className="min-w-0 flex-1 truncate text-subheadline font-bold text-foreground"
-                      >
-                        {member.name}
-                      </label>
-                      <select
-                        id={selectId}
-                        value={draftTiers[memberId] ?? ""}
-                        onChange={(event) =>
-                          setDraftRole(memberId, event.target.value)
-                        }
-                        className="h-11 max-w-[150px] rounded-ios-sm border border-border bg-[var(--ios-bg-secondary)] px-2 text-sm font-semibold text-foreground focus:ring-2 focus:ring-ios-blue/60"
-                        aria-label={t("front.roleFor", {
-                          name: member.name,
-                        })}
-                      >
-                        <option value="">{t("front.noRole")}</option>
-                        {TIER_ORDER.map((tier) => (
-                          <option key={tier} value={tier}>
-                            {t(
-                              TIER_CONFIG[tier]
-                                .labelKey as Parameters<typeof t>[0]
-                            )}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  );
-                })}
-              </div>
-            </section>
-          )}
-
           <section aria-labelledby="front-member-selection">
-            <h3 id="front-member-selection" className="sr-only">
-              {t("front.memberSelection")}
-            </h3>
+            <div className="mb-2 flex items-center justify-between">
+              <h3
+                id="front-member-selection"
+                className="text-footnote font-bold uppercase tracking-wide text-muted-foreground"
+              >
+                {t("front.members")}
+              </h3>
+              <span className="text-caption-1 font-bold text-ios-blue">
+                {draftMemberIds.length === 1
+                  ? t("front.selected", { n: draftMemberIds.length })
+                  : t("front.selectedPlural", { n: draftMemberIds.length })}
+              </span>
+            </div>
             <div className="relative mb-2">
-              <Search
-                size={17}
-                className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground"
-                aria-hidden
-              />
-              <Input
-                value={memberQuery}
-                onChange={(event) => setMemberQuery(event.target.value)}
-                placeholder={t("front.searchPlaceholder")}
-                aria-label={t("front.searchMembers")}
-                className="pl-11"
-              />
+                <Search
+                  size={17}
+                  className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground"
+                  aria-hidden
+                />
+                <Input
+                  value={memberQuery}
+                  onChange={(event) => setMemberQuery(event.target.value)}
+                  placeholder={t("front.searchPlaceholder")}
+                  aria-label={t("front.searchMembers")}
+                  className="pl-11"
+                />
             </div>
 
             <div className="max-h-[42dvh] overflow-y-auto rounded-ios border border-border/70 overscroll-contain">
@@ -679,52 +685,79 @@ export default function FrontPage() {
               ) : (
                 filteredMemberList.map((member, index) => {
                   const selected = draftMemberSet.has(member.id);
+                  const selectId = `front-role-${member.id}`;
                   return (
-                    <button
+                    <div
                       key={member.id}
-                      type="button"
-                      onClick={() => toggleDraftMember(member.id)}
                       className={cn(
-                        "flex min-h-[64px] w-full items-center gap-3 px-3 py-2 text-left ios-transition [content-visibility:auto] [contain-intrinsic-size:64px]",
+                        "flex min-h-[64px] w-full items-center ios-transition [content-visibility:auto] [contain-intrinsic-size:64px]",
                         index < filteredMemberList.length - 1 &&
                           "border-b border-border/60",
                         selected
                           ? "bg-ios-blue/10"
-                          : "active:bg-muted/50"
+                          : "bg-transparent"
                       )}
-                      aria-pressed={selected}
-                      aria-label={t("front.toggleMember", {
-                        name: member.name,
-                      })}
                     >
-                      <MemberAvatar member={member} size={10} />
-                      <span className="min-w-0 flex-1">
-                        <span
-                          className={cn(
-                            "block truncate text-subheadline font-bold",
-                            selected ? "text-ios-blue" : "text-foreground"
-                          )}
-                        >
-                          {member.name}
-                        </span>
-                        {member.pronouns && (
-                          <span className="block truncate text-caption-1 text-muted-foreground">
-                            {member.pronouns}
-                          </span>
-                        )}
-                      </span>
-                      <span
-                        className={cn(
-                          "flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full",
-                          selected
-                            ? "bg-ios-blue text-white"
-                            : "border-2 border-border"
-                        )}
-                        aria-hidden
+                      <button
+                        type="button"
+                        onClick={() => toggleDraftMember(member.id)}
+                        className="flex min-h-[64px] min-w-0 flex-1 items-center gap-3 px-3 py-2 text-left active:bg-muted/50"
+                        aria-pressed={selected}
+                        aria-label={t("front.toggleMember", {
+                          name: member.name,
+                        })}
                       >
-                        {selected && <Check size={15} strokeWidth={3} />}
-                      </span>
-                    </button>
+                        <MemberAvatar member={member} size={10} />
+                        <span className="min-w-0 flex-1">
+                          <span
+                            className={cn(
+                              "block truncate text-subheadline font-bold",
+                              selected ? "text-ios-blue" : "text-foreground"
+                            )}
+                          >
+                            {member.name}
+                          </span>
+                          {member.pronouns && (
+                            <span className="block truncate text-caption-1 text-muted-foreground">
+                              {member.pronouns}
+                            </span>
+                          )}
+                        </span>
+                        {!selected && (
+                          <span
+                            className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full border-2 border-border"
+                            aria-hidden
+                          />
+                        )}
+                      </button>
+                      {selected && (
+                        <select
+                          id={selectId}
+                          value={draftTiers[member.id] ?? ""}
+                          onChange={(event) =>
+                            setDraftRole(member.id, event.target.value)
+                          }
+                          className={cn(
+                            "mr-3 h-11 w-[126px] flex-shrink-0 rounded-ios-sm border border-border",
+                            "bg-[var(--ios-bg-secondary)] px-2 text-sm font-semibold text-foreground",
+                            "focus:ring-2 focus:ring-ios-blue/60"
+                          )}
+                          aria-label={t("front.roleFor", {
+                            name: member.name,
+                          })}
+                        >
+                          <option value="">{t("front.noRole")}</option>
+                          {TIER_ORDER.map((tier) => (
+                            <option key={tier} value={tier}>
+                              {t(
+                                TIER_CONFIG[tier]
+                                  .labelKey as Parameters<typeof t>[0]
+                              )}
+                            </option>
+                          ))}
+                        </select>
+                      )}
+                    </div>
                   );
                 })
               )}
@@ -755,10 +788,8 @@ export default function FrontPage() {
             disabled={updating || draftMemberIds.length === 0}
           >
             {updating
-              ? currentFront
-                ? t("front.switching")
-                : t("front.starting")
-              : t("home.passLight")}
+              ? t("common.saving")
+              : t(currentFront ? "front.saveChanges" : "front.startFront")}
           </Button>
 
           {isFronting && (

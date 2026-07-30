@@ -5,6 +5,20 @@
 
 ---
 
+## [change] - 2026-07-30 - Direct dashboard and navigation restored
+
+### Changed
+- Restored the familiar compact Home, grouped member list, warm glass surfaces,
+  floating mobile dock, and direct Home / Members / Front / More navigation.
+- Removed the extra conceptual navigation layer introduced by the light-beacon
+  redesign while keeping its accessibility improvements.
+
+### Preserved
+- Locale-aware navigation, Android/PWA safe-area behavior, prefetching, haptics,
+  offline safety, and private-data cache rules.
+- Atomic Front editing with multiple roles, notes, one-save workflow, transactional
+  writes, optimistic recovery, and stale-edit conflict protection.
+
 ## [fix] - 2026-07-28 - Fluid Android/PWA navigation and front workflow
 
 ### Fixed
@@ -338,6 +352,23 @@
 - Blocking now removes friendship, pending requests, and sharing settings for that pair
 - Friends UI now supports unfriend, block/unblock, and per-member sharing controls
 - Export JSON now includes social blocks/member-sharing and bumped to `version: 3`
+
+## [fix] - 2026-07-30 (Front interaction consistency)
+
+### Fixed
+- Consecutive member additions no longer start from a stale Front snapshot.
+- The Front editor now validates against the exact id and signature captured when
+  the draft opened.
+- Duplicate save taps are ignored before the loading state can rerender.
+
+### Changed
+- Adding or removing a member from the Members list is now a one-touch action.
+- Multiple Front members, roles, and the note can be reviewed and saved together
+  in one compact editor.
+- Successful, conflicting, and failed Front actions provide immediate visual and
+  haptic feedback.
+- Installed/mobile Android views skip expensive route entrance animation and
+  large backdrop-filter repaints.
 
 ### Verified
 - Migration applied successfully with `npm run db:migrate`

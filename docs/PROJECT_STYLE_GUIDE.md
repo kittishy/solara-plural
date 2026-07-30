@@ -272,20 +272,23 @@ module.exports = {
 
 ---
 
-## 2026 Minimal Redesign — The System's Light
+## July 2026 Minimal Redesign — Superseded
 
-The July 2026 redesign evolves the interface from a dense dashboard into a calm,
-identity-led home without changing the product's data contracts.
+> This presentation direction was reverted on 2026-07-30 because it increased
+> navigation depth and made frequent actions less self-explanatory. Its concepts
+> remain historical context, not the active interface contract.
 
-- The primary home metaphor is **the system's light**. Current front members are
-  presented in a central beacon, with member colors limited to identity accents.
-- The main front action is named **Pass the light** and always routes through the
-  existing front tracker, preserving tiers, notes, history, integrations, and
-  optimistic error recovery.
-- Core mobile navigation is Home, Who we are, The day, and More. The day maps to
-  the complete front history; all existing secondary routes remain available.
-- App surfaces are quiet, solid plum or warm-plum cards. Blur and texture are
-  decorative only and must never be required for hierarchy or legibility.
+The active interface returns to the prior warm, compact dashboard while retaining
+the redesign's accessibility and internal reliability improvements.
+
+- Core mobile navigation is **Home, Members, Front, and More**. Frequent actions
+  use their established product names and remain directly accessible.
+- Home uses a compact current-front card, summary metrics, and recent members
+  instead of a dominant beacon or additional conceptual navigation layer.
+- The Front editor preserves tiers, notes, history, integrations, atomic saving,
+  conflict detection, and optimistic error recovery.
+- Warm glass surfaces and the established Solara radii are active again. Blur and
+  texture remain decorative and must never be required for hierarchy or legibility.
 - Functional text remains at least 14px outside compact navigation, where 12px is
   the minimum. Touch targets remain at least 44x44px.
 - Light, dark, system, high-contrast, reduced-motion, reduced-texture, wallpaper,

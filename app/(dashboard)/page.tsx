@@ -9,7 +9,11 @@ import {
 } from "@/lib/db/schema";
 import { and, count, desc, eq, inArray, isNull, or } from "drizzle-orm";
 import { requireSystemId } from "@/lib/auth/session";
-import { parseMemberIds, safeParseMemberIds, safeParseMemberTiers } from "@/lib/front";
+import {
+  parseMemberIds,
+  safeParseMemberIds,
+  safeParseMemberTiers,
+} from "@/lib/front";
 import { HomeContent } from "./HomeContent";
 
 export default async function DashboardPage() {
@@ -128,8 +132,8 @@ export default async function DashboardPage() {
     ).orderBy(desc(members.createdAt)).limit(5);
   }
 
-  // Preserve the order chosen in the front tracker. Database IN queries do not
-  // guarantee row order, while the first person in the list leads the beacon.
+  // Preserve the order selected in the front editor; SQL IN queries do not
+  // guarantee it.
   frontingMembers = frontingIds
     .map((id) => frontingMembers.find((member) => member.id === id))
     .filter(Boolean) as FrontingMemberRow[];
@@ -140,8 +144,8 @@ export default async function DashboardPage() {
         id: activeFront.id,
         memberIds: frontingIds,
         memberTiers: safeParseMemberTiers(activeFront.memberTiers),
-        startedAt: (activeFront.startedAt as Date).toISOString(),
         note: activeFront.note,
+        startedAt: (activeFront.startedAt as Date).toISOString(),
       }
     : null;
 
