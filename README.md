@@ -15,8 +15,8 @@ The project is inspired by Simply Plural and informed by open projects like Shea
 - Plain Rack handlers (no framework)
 
 **Legacy (being gradually reduced):**
-- Next.js 14 App Router
-- React 18 (interactive pages only)
+- Next.js 15 App Router
+- React 19 (interactive pages only)
 - TypeScript
 - Tailwind CSS v3
 - Auth.js / NextAuth v5 beta
