@@ -22,7 +22,7 @@ interface AccountDetail {
   deletionScheduledFor: string | null;
   createdAt: string;
   updatedAt: string;
-  counts: { members: number; notes: number; journal: number; fronts: number };
+  counts: { members: number; notes: number; fronts: number };
 }
 
 function fmt(d: string | null) {
@@ -180,7 +180,6 @@ export default function AdminUserDetailPage() {
           <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <Count label="Members" value={account.counts.members} />
             <Count label="Notes" value={account.counts.notes} />
-            <Count label="Journal" value={account.counts.journal} />
             <Count label="Fronts" value={account.counts.fronts} />
           </section>
 

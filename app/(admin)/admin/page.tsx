@@ -39,7 +39,6 @@ export default async function AdminDashboardPage() {
         <StatCard label="Members (alters)" value={metrics.totalMembers} />
         <StatCard label="Active fronts" value={metrics.activeFronts} accent="green" />
         <StatCard label="Notes" value={metrics.totalNotes} />
-        <StatCard label="Journal entries" value={metrics.totalJournalEntries} />
         <StatCard label="Friendships" value={metrics.totalFriendships} />
         <StatCard label="Pending requests" value={metrics.pendingFriendRequests} accent={metrics.pendingFriendRequests > 0 ? "amber" : undefined} />
       </section>

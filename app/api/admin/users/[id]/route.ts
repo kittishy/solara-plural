@@ -3,7 +3,6 @@ import {
   systems,
   members,
   systemNotes,
-  systemJournal,
   frontEntries,
 } from '@/lib/db/schema';
 import { count, eq } from 'drizzle-orm';
@@ -39,10 +38,9 @@ export async function GET(
   });
   if (!account) return err('Account not found', 404);
 
-  const [memberCount, noteCount, journalCount, frontCount] = await Promise.all([
+  const [memberCount, noteCount, frontCount] = await Promise.all([
     db.select({ value: count() }).from(members).where(eq(members.systemId, id)),
     db.select({ value: count() }).from(systemNotes).where(eq(systemNotes.systemId, id)),
-    db.select({ value: count() }).from(systemJournal).where(eq(systemJournal.systemId, id)),
     db.select({ value: count() }).from(frontEntries).where(eq(frontEntries.systemId, id)),
   ]);
 
@@ -51,7 +49,6 @@ export async function GET(
     counts: {
       members: memberCount[0]?.value ?? 0,
       notes: noteCount[0]?.value ?? 0,
-      journal: journalCount[0]?.value ?? 0,
       fronts: frontCount[0]?.value ?? 0,
     },
   });

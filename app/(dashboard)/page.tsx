@@ -2,7 +2,6 @@ import { db } from "@/lib/db";
 import {
   members,
   frontEntries,
-  systemJournal,
   systemNotes,
   systems,
   systemFriendships,
@@ -24,7 +23,6 @@ export default async function DashboardPage() {
     [system],
     [memberCountRow],
     [activeFront],
-    [journalCountRow],
     [noteCountRow],
     [friendCountRow],
     recentHistory,
@@ -37,9 +35,6 @@ export default async function DashboardPage() {
     db.select().from(frontEntries).where(
       and(eq(frontEntries.systemId, systemId), isNull(frontEntries.endedAt))
     ).limit(1),
-    db.select({ value: count() }).from(systemJournal).where(
-      eq(systemJournal.systemId, systemId)
-    ),
     db.select({ value: count() }).from(systemNotes).where(
       eq(systemNotes.systemId, systemId)
     ),
@@ -153,7 +148,6 @@ export default async function DashboardPage() {
     <HomeContent
       systemName={system?.name}
       memberCount={memberCountRow?.value ?? 0}
-      journalCount={journalCountRow?.value ?? 0}
       noteCount={noteCountRow?.value ?? 0}
       friendCount={friendCountRow?.value ?? 0}
       frontingMembers={frontingMembers}

@@ -20,8 +20,6 @@ export const CAPS = {
   noteTitle: 200,
   noteContent: 20_000,
   noteCategory: 50,
-  journalTitle: 200,
-  journalContent: 50_000,
   frontNote: 2_000,
   avatarHttpsUrl: 2_048,
 } as const;
