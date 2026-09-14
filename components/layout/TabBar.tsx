@@ -38,11 +38,11 @@ export function TabBar() {
   ];
 
   const moreItems = [
-    { href: "/journal", icon: BookOpen, label: t("journal.title"), color: "#AF52DE" },
-    { href: "/friends", icon: Users, label: t("nav.friends"), color: "#32ADE6" },
-    { href: "/notes", icon: FileText, label: t("notes.title"), color: "#FF9500" },
-    { href: "/notifications", icon: Bell, label: t("nav.notifications"), color: "#34C759" },
-    { href: "/settings", icon: Settings, label: t("nav.settings"), color: "#8E8E93" },
+    { href: "/journal", icon: BookOpen, label: t("journal.title") },
+    { href: "/friends", icon: Users, label: t("nav.friends") },
+    { href: "/notes", icon: FileText, label: t("notes.title") },
+    { href: "/notifications", icon: Bell, label: t("nav.notifications") },
+    { href: "/settings", icon: Settings, label: t("nav.settings") },
   ];
 
   // NotificationRuntime (in the dashboard layout) drives realtime updates
@@ -152,7 +152,7 @@ export function TabBar() {
         title={t("nav.more")}
       >
         <div className="grid grid-cols-2 gap-3">
-          {moreItems.map(({ href, icon: Icon, label, color }) => {
+          {moreItems.map(({ href, icon: Icon, label }) => {
             const showBadge = href === "/notifications" && unreadCount > 0;
             return (
               <Link
@@ -160,14 +160,11 @@ export function TabBar() {
                 href={href}
                 prefetch
                 onClick={() => setSheetOpen(false)}
-                className="glass rounded-ios-xl p-4 flex flex-col items-center gap-2.5 ios-press active:scale-95 ios-transition"
+                className="rounded-ios-xl border border-border/50 bg-[var(--ios-bg-secondary)]/75 p-4 flex flex-col items-center gap-2.5 ios-press active:scale-95 ios-transition"
               >
                 <div className="relative">
-                  <div
-                    className="w-12 h-12 rounded-ios flex items-center justify-center"
-                    style={{ background: `${color}1f` }}
-                  >
-                    <Icon size={24} strokeWidth={2} style={{ color }} />
+                  <div className="w-12 h-12 rounded-ios flex items-center justify-center bg-ios-blue/10 text-ios-blue">
+                    <Icon size={24} strokeWidth={2} />
                   </div>
                   {showBadge && (
                     <span className="absolute -top-1 -right-1 min-w-[16px] h-4 bg-ios-red rounded-full flex items-center justify-center text-[10px] font-bold text-white px-1">
