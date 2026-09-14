@@ -7,7 +7,7 @@
     "build": "node scripts/assert-production-schema.mjs && next build",
     "start": "next start",
     "lint": "next lint",
-    "test": "vitest run",
+    "test": "vitest run && node --test scripts/pluralkit-front-sync.test.cjs",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "validate:friends-flow": "node scripts/validate-friends-flow.cjs",
