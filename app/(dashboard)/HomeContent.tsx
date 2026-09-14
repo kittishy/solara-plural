@@ -1,7 +1,7 @@
 "use client";
 
 import { LocalizedLink as Link } from "@/components/navigation/LocalizedLink";
-import { Layers, BookOpen, FileText, UserPlus, X } from "lucide-react";
+import { Layers, FileText, UserPlus, X } from "lucide-react";
 import useSWR, { mutate } from "swr";
 import { useState, useEffect, useMemo } from "react";
 import { GlassCard } from "@/components/glass/GlassCard";
@@ -47,7 +47,6 @@ type CurrentFrontSnapshot = {
 type Props = {
   systemName: string | undefined;
   memberCount: number;
-  journalCount: number;
   noteCount: number;
   friendCount: number;
   frontingMembers: FrontingMember[];
@@ -101,7 +100,6 @@ function QuickActionItem({
 export function HomeContent({
   systemName,
   memberCount: _memberCount,
-  journalCount: _journalCount,
   noteCount: _noteCount,
   friendCount: _friendCount,
   frontingMembers: initialFrontingMembers,
@@ -440,15 +438,10 @@ export function HomeContent({
               className="border-b border-border/50"
             />
             <QuickActionItem
-              icon={BookOpen}
-              label={t("nav.journal")}
-              href="/journal"
-              className="border-r border-border/50"
-            />
-            <QuickActionItem
               icon={UserPlus}
               label={t("members.addMember")}
               href="/members/new"
+              className="col-span-2"
             />
           </div>
         </GlassCard>
