@@ -143,3 +143,25 @@ test('sync reports timeout when pluralKit does not answer quickly', async () => 
   assert.equal(result.httpStatus, null);
   assert.equal(result.details.timeoutMs, 1);
 });
+
+test('sync treats an identical remote fronter list as idempotent success', async () => {
+  const sync = createPluralKitFrontSync({
+    readPersistedToken: async () => 'pk-token',
+    resolveExternalIds: async () => ({
+      externalMemberIds: ['pk-member-a'],
+      resolvedLocalMemberIds: ['member-a'],
+    }),
+    fetchImpl: async () => ({
+      ok: false,
+      status: 400,
+      text: async () => JSON.stringify({ message: 'Member list identical to current fronter list.' }),
+    }),
+    logger: { info() {}, warn() {}, error() {} },
+  });
+
+  const result = await sync('system-1', ['member-a']);
+  assert.equal(result.status, 'synced');
+  assert.equal(result.reasonCode, 'already_in_sync');
+  assert.equal(result.providerStatus, 'ok');
+  assert.equal(result.httpStatus, 400);
+});
