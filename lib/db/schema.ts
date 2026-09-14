@@ -1,4 +1,4 @@
-import { text, integer, timestamp, pgTable, index, uniqueIndex } from 'drizzle-orm/pg-core';
+import { text, integer, timestamp, pgTable, index, uniqueIndex, primaryKey } from 'drizzle-orm/pg-core';
 
 // Systems
 export const systems = pgTable('systems', {
@@ -124,6 +124,7 @@ export const partnershipNotes = pgTable('partnership_notes', {
   updatedAt:      timestamp('updated_at', { mode: 'date' }).notNull().defaultNow(),
 }, (t) => ({
   partnershipIdx: index('idx_partnership_notes_partnership_id').on(t.partnershipId),
+  authorSystemIdx: index('idx_partnership_notes_author_system_id').on(t.authorSystemId),
   createdIdx: index('idx_partnership_notes_created_at').on(t.createdAt),
 }));
 
@@ -166,6 +167,7 @@ export const partnershipBucketItems = pgTable('partnership_bucket_items', {
   updatedAt:         timestamp('updated_at', { mode: 'date' }).notNull().defaultNow(),
 }, (t) => ({
   partnershipIdx: index('idx_bucket_items_partnership_id').on(t.partnershipId),
+  createdBySystemIdx: index('idx_bucket_items_created_by_system_id').on(t.createdBySystemId),
   completedIdx: index('idx_bucket_items_completed_at').on(t.completedAt),
 }));
 
@@ -296,6 +298,7 @@ export const notifications = pgTable('notifications', {
 }, (t) => ({
   recipientCreatedIdx: index('idx_notifications_recipient_created').on(t.recipientSystemId, t.createdAt),
   recipientReadIdx: index('idx_notifications_recipient_read').on(t.recipientSystemId, t.readAt),
+  actorSystemIdx: index('idx_notifications_actor_system_id').on(t.actorSystemId),
 }));
 
 // Per-token delivery attempts for optional FCM push fanout.
@@ -327,6 +330,7 @@ export const systemFriendMemberShares = pgTable('system_friend_member_shares', {
   updatedAt:      timestamp('updated_at', { mode: 'date' }).notNull().defaultNow(),
 }, (t) => ({
   ownerFriendIdx: index('idx_friend_member_shares_owner_friend').on(t.ownerSystemId, t.friendSystemId),
+  friendSystemIdx: index('idx_friend_member_shares_friend_system_id').on(t.friendSystemId),
   memberIdx: index('idx_friend_member_shares_member_id').on(t.memberId),
   ownerFriendMemberUnique: uniqueIndex('ux_friend_member_shares_owner_friend_member').on(t.ownerSystemId, t.friendSystemId, t.memberId),
 }));
@@ -412,7 +416,8 @@ export const chatChannelReads = pgTable('chat_channel_reads', {
   channelId:  text('channel_id').notNull().references(() => systemChatChannels.id, { onDelete: 'cascade' }),
   lastReadAt: timestamp('last_read_at', { mode: 'date' }).notNull().defaultNow(),
 }, (t) => ({
-  pk: uniqueIndex('ux_chat_channel_reads').on(t.systemId, t.channelId),
+  pk: primaryKey({ columns: [t.systemId, t.channelId], name: 'pk_chat_channel_reads' }),
+  channelIdx: index('idx_chat_channel_reads_channel_id').on(t.channelId),
 }));
 
 // ---------------------------------------------------------------------------
@@ -427,7 +432,9 @@ export const appSettings = pgTable('app_settings', {
   value:        text('value'),
   updatedBySystemId: text('updated_by_system_id').references(() => systems.id, { onDelete: 'set null' }),
   updatedAt:    timestamp('updated_at', { mode: 'date' }).notNull().defaultNow(),
-});
+}, (t) => ({
+  updatedBySystemIdx: index('idx_app_settings_updated_by_system_id').on(t.updatedBySystemId),
+}));
 
 // Broadcast announcements authored by an admin. When `active` is set these can
 // be surfaced in-app and (optionally) fanned out as push notifications.
@@ -443,6 +450,7 @@ export const adminAnnouncements = pgTable('admin_announcements', {
   updatedAt:       timestamp('updated_at', { mode: 'date' }).notNull().defaultNow(),
 }, (t) => ({
   activeIdx:  index('idx_admin_announcements_active').on(t.active),
+  authorSystemIdx: index('idx_admin_announcements_author_system_id').on(t.authorSystemId),
   createdIdx: index('idx_admin_announcements_created_at').on(t.createdAt),
 }));
 
