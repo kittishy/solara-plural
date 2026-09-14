@@ -53,7 +53,7 @@
        slightly richer saturation for that liquid-glass pop. */
     --glass-bg: rgba(255, 253, 250, 0.72);
     --glass-border: rgba(255, 255, 255, 0.65);
-    --glass-blur: blur(40px) saturate(190%);
+    --glass-blur: blur(28px) saturate(165%);
 
     /* Tab bar */
     --tabbar-bg: rgba(250, 248, 245, 0.9);

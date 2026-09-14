@@ -49,7 +49,7 @@ export default function LoginPage() {
 
       {/* Logo */}
       <div className="flex flex-col items-center gap-3">
-        <div className="w-20 h-20 rounded-ios-2xl bg-gradient-to-br from-[#8b5cf6] to-[#ec4899] flex items-center justify-center shadow-xl shadow-ios-blue/30">
+        <div className="w-20 h-20 rounded-ios-2xl bg-gradient-to-br from-[#8b5cf6] to-[#ec4899] flex items-center justify-center shadow-md shadow-ios-blue/15">
           <span className="text-4xl font-extrabold text-white select-none">S</span>
         </div>
         <div className="text-center">
