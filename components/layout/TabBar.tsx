@@ -48,6 +48,10 @@ export function TabBar() {
   const unreadCount = notifData?.unreadCount ?? 0;
 
   const isMaisActive = moreHrefList.some((href) => pathname.startsWith(href));
+  const isMemberEditor =
+    pathname === "/members/new" || /^\/members\/[^/]+\/edit$/.test(pathname);
+
+  if (isMemberEditor) return null;
 
   return (
     <>
