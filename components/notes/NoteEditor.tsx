@@ -234,7 +234,7 @@ export function NoteEditor({ noteId }: NoteEditorProps) {
           disabled={saving || !content.trim()}
         >
           <Save size={16} />
-          {saving ? t("common.saving") : isNew ? t("notes.save") : t("journal.saveChanges")}
+          {saving ? t("common.saving") : isNew ? t("notes.save") : t("common.save")}
         </Button>
       </form>
 
