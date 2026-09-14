@@ -7,7 +7,6 @@ import {
   Home,
   Users,
   Layers,
-  BookOpen,
   Grid3X3,
   FileText,
   Bell,
@@ -21,11 +20,9 @@ import { useHaptics } from "@/lib/haptics";
 import { stripLanguageFromPathname } from "@/lib/i18n";
 import { apiFetcher, swrKeys } from "@/lib/swr";
 
-const moreHrefList = ["/journal", "/friends", "/notes", "/notifications", "/settings"];
+const moreHrefList = ["/friends", "/notes", "/notifications", "/settings"];
 
 export function TabBar() {
-  // Localized routes are prefixed with the language (/en, /pt-BR, …) —
-  // strip it so the active-tab checks match the canonical hrefs.
   const pathname = stripLanguageFromPathname(usePathname() ?? "/");
   const [sheetOpen, setSheetOpen] = useState(false);
   const { t } = useLanguage();
@@ -38,15 +35,12 @@ export function TabBar() {
   ];
 
   const moreItems = [
-    { href: "/journal", icon: BookOpen, label: t("journal.title") },
     { href: "/friends", icon: Users, label: t("nav.friends") },
     { href: "/notes", icon: FileText, label: t("notes.title") },
     { href: "/notifications", icon: Bell, label: t("nav.notifications") },
     { href: "/settings", icon: Settings, label: t("nav.settings") },
   ];
 
-  // NotificationRuntime (in the dashboard layout) drives realtime updates
-  // via SSE + visibility change, so this cache stays fresh without polling.
   const { data: notifData } = useSWR<{ notifications: unknown[]; unreadCount: number }>(
     swrKeys.notifications,
     apiFetcher
@@ -66,19 +60,14 @@ export function TabBar() {
         <nav
           aria-label={t("nav.mobilePrimary")}
           className="glass-bar flex items-center gap-0.5 px-2 py-2 rounded-full shadow-ios-md dark:shadow-ios-dark"
-          style={{
-            border: "1px solid var(--tabbar-border)",
-          }}
+          style={{ border: "1px solid var(--tabbar-border)" }}
         >
           {tabs.map(({ href, icon: Icon, label }) => {
-            const isActive =
-              href === "/" ? pathname === "/" : pathname.startsWith(href);
+            const isActive = href === "/" ? pathname === "/" : pathname.startsWith(href);
             return (
               <Link
                 key={href}
                 href={href}
-                // Always-mounted nav → eagerly prefetch the primary routes so
-                // tapping a tab paints instantly (bundle + RSC already warm).
                 prefetch
                 aria-current={isActive ? "page" : undefined}
                 onPointerDown={() => { if (!isActive) selection(); }}
@@ -107,7 +96,6 @@ export function TabBar() {
             );
           })}
 
-          {/* More tab */}
           <button
             type="button"
             onClick={() => setSheetOpen(true)}
