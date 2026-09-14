@@ -138,6 +138,8 @@ export const alterPartnerPairings = pgTable('alter_partner_pairings', {
   createdAt:     timestamp('created_at', { mode: 'date' }).notNull().defaultNow(),
 }, (t) => ({
   partnershipIdx: index('idx_alter_pairings_partnership_id').on(t.partnershipId),
+  memberAIdx: index('idx_alter_pairings_member_a_id').on(t.memberAId),
+  memberBIdx: index('idx_alter_pairings_member_b_id').on(t.memberBId),
   pairUnique: uniqueIndex('ux_alter_pairings_pair').on(t.partnershipId, t.memberAId, t.memberBId),
 }));
 
