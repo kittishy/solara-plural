@@ -74,23 +74,26 @@ function MemberAvatar({ member, size = 40 }: { member: { name: string; color: st
   );
 }
 
-function QuickActionCard({
+function QuickActionItem({
   icon: Icon,
   label,
   href,
+  className = "",
 }: {
   icon: React.ElementType;
   label: string;
   href: string;
+  className?: string;
 }) {
   return (
-    <Link href={href} className="block">
-      <GlassCard padding="md" className="flex min-h-20 items-center gap-3 ios-press ios-transition">
-        <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-ios bg-ios-blue/10 text-ios-blue">
-          <Icon size={20} />
-        </div>
-        <p className="text-subheadline font-bold text-foreground">{label}</p>
-      </GlassCard>
+    <Link
+      href={href}
+      className={`flex min-h-[76px] items-center gap-3 px-4 py-3 ios-press ios-transition ${className}`}
+    >
+      <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-ios bg-ios-blue/10 text-ios-blue">
+        <Icon size={20} />
+      </div>
+      <p className="text-subheadline font-semibold text-foreground">{label}</p>
     </Link>
   );
 }
@@ -294,7 +297,7 @@ export function HomeContent({
   return (
     <div className="animate-fade-in">
       <div className="px-4 pt-14 pb-2">
-        <p className="text-footnote font-semibold text-muted-foreground uppercase tracking-wide mb-1">
+        <p className="text-subheadline font-semibold text-muted-foreground mb-1">
           {t("home.greeting", { name: systemName ?? t("home.defaultName") })}
         </p>
         <LargeTitle className="px-0">{t("nav.home")}</LargeTitle>
@@ -315,38 +318,23 @@ export function HomeContent({
           <div className="relative">
             <div className="flex items-center justify-between px-4 pt-3.5 pb-2">
               <div className="flex items-center gap-2 min-w-0">
-                <span className="relative flex h-2 w-2 flex-shrink-0" aria-hidden>
-                  {frontingMembers.length > 0 && (
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-ios-blue opacity-60" />
-                  )}
-                  <span
-                    className={`relative inline-flex rounded-full h-2 w-2 ${
-                      frontingMembers.length > 0 ? "bg-ios-blue" : "bg-muted-foreground/40"
-                    }`}
-                  />
-                </span>
-                <p className="text-footnote font-bold text-muted-foreground uppercase tracking-wide truncate">
+                <span
+                  className={`inline-flex h-2 w-2 flex-shrink-0 rounded-full ${
+                    frontingMembers.length > 0 ? "bg-ios-blue" : "bg-muted-foreground/40"
+                  }`}
+                  aria-hidden
+                />
+                <p className="text-subheadline font-semibold text-muted-foreground truncate">
                   {t("home.nowFronting")}
                 </p>
               </div>
-              <div className="flex items-center gap-3 flex-shrink-0">
-                {currentFront?.startedAt && frontingMembers.length > 0 && (
-                  <p className="text-caption-1 text-muted-foreground">
-                    {formatStartTime(currentFront.startedAt)}
-                    {" · "}
-                    {formatFrontDuration(currentFront.startedAt)}
-                  </p>
-                )}
-                {frontingMembers.length > 0 && (
-                  <button
-                    onClick={endFront}
-                    disabled={updating}
-                    className="min-h-11 px-2 text-footnote text-ios-red font-bold ios-press disabled:opacity-50"
-                  >
-                    {t("front.endAll")}
-                  </button>
-                )}
-              </div>
+              {currentFront?.startedAt && frontingMembers.length > 0 && (
+                <p className="flex-shrink-0 text-caption-1 text-muted-foreground">
+                  {formatStartTime(currentFront.startedAt)}
+                  {" · "}
+                  {formatFrontDuration(currentFront.startedAt)}
+                </p>
+              )}
             </div>
             {frontingMembers.length === 0 ? (
               <Link
@@ -393,7 +381,7 @@ export function HomeContent({
                   <button
                     onClick={() => toggleMember(m.id)}
                     disabled={updating}
-                    className="w-11 h-11 rounded-full flex items-center justify-center text-muted-foreground hover:text-ios-red hover:bg-ios-red/10 ios-transition disabled:opacity-50"
+                    className="w-11 h-11 rounded-full flex items-center justify-center text-muted-foreground/60 hover:text-ios-red hover:bg-ios-red/10 ios-transition disabled:opacity-50"
                     title={t("front.removeMemberFront")}
                     aria-label={t("front.removeMemberFront")}
                   >
@@ -414,32 +402,62 @@ export function HomeContent({
                 ) : (
                   <span className="flex-1" />
                 )}
-                <Link
-                  href="/front"
-                  className="flex min-h-11 flex-shrink-0 items-center px-2 text-subheadline font-bold text-ios-blue ios-press"
-                >
-                  {t("front.editFront")}
-                </Link>
+                <div className="flex flex-shrink-0 items-center gap-1">
+                  <button
+                    onClick={endFront}
+                    disabled={updating}
+                    className="flex min-h-11 items-center px-2 text-caption-1 font-semibold text-muted-foreground hover:text-ios-red ios-press disabled:opacity-50"
+                  >
+                    {t("front.endAll")}
+                  </button>
+                  <Link
+                    href="/front"
+                    className="flex min-h-11 items-center px-2 text-subheadline font-bold text-ios-blue ios-press"
+                  >
+                    {t("front.editFront")}
+                  </Link>
+                </div>
               </div>
             )}
           </div>
         </GlassCard>
       </div>
 
-      {/* Quick actions — prioritize what someone can do now over dashboard metrics. */}
+      {/* Quick actions — one calm group, not four competing dashboard cards. */}
       <div className="px-4 mb-5">
-        <div className="grid grid-cols-2 gap-3">
-          <QuickActionCard icon={Layers} label={t("nav.front")} href="/front" />
-          <QuickActionCard icon={FileText} label={t("nav.notes")} href="/notes" />
-          <QuickActionCard icon={BookOpen} label={t("nav.journal")} href="/journal" />
-          <QuickActionCard icon={UserPlus} label={t("members.addMember")} href="/members/new" />
-        </div>
+        <GlassCard padding="none" className="overflow-hidden">
+          <div className="grid grid-cols-2">
+            <QuickActionItem
+              icon={Layers}
+              label={t("nav.front")}
+              href="/front"
+              className="border-b border-r border-border/50"
+            />
+            <QuickActionItem
+              icon={FileText}
+              label={t("nav.notes")}
+              href="/notes"
+              className="border-b border-border/50"
+            />
+            <QuickActionItem
+              icon={BookOpen}
+              label={t("nav.journal")}
+              href="/journal"
+              className="border-r border-border/50"
+            />
+            <QuickActionItem
+              icon={UserPlus}
+              label={t("members.addMember")}
+              href="/members/new"
+            />
+          </div>
+        </GlassCard>
       </div>
 
       {/* Recent members */}
       <div className="px-4 mb-6">
         <div className="flex items-center justify-between mb-2 px-1">
-          <p className="text-footnote font-semibold text-muted-foreground uppercase tracking-wide">
+          <p className="text-subheadline font-semibold text-muted-foreground">
             {hasFrontHistory ? t("home.recentlyFronted") : t("home.recentMembers")}
           </p>
           <Link href="/members" className="text-subheadline text-ios-blue ios-press">
