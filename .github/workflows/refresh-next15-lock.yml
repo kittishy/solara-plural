@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   refresh:
-    if: ${{ !contains(github.event.head_commit.message, 'chore(deps): refresh Next 15 lockfile') }}
+    if: "${{ !contains(github.event.head_commit.message, 'chore(deps): refresh Next 15 lockfile') }}"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
