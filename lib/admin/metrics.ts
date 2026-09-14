@@ -6,7 +6,6 @@ import {
   systems,
   members,
   systemNotes,
-  systemJournal,
   frontEntries,
   systemFriendRequests,
   systemBlocks,
@@ -23,7 +22,6 @@ export interface AdminMetrics {
   newAccounts30d: number;
   totalMembers: number;
   totalNotes: number;
-  totalJournalEntries: number;
   activeFronts: number;
   pendingFriendRequests: number;
   totalFriendships: number;
@@ -57,7 +55,6 @@ export async function getAdminMetrics(): Promise<AdminMetrics> {
     newAccounts30d,
     totalMembers,
     totalNotes,
-    totalJournalEntries,
     activeFronts,
     pendingFriendRequests,
     totalFriendships,
@@ -73,7 +70,6 @@ export async function getAdminMetrics(): Promise<AdminMetrics> {
     countWhere(systems, gte(systems.createdAt, since30)),
     countWhere(members),
     countWhere(systemNotes),
-    countWhere(systemJournal),
     countWhere(frontEntries, isNull(frontEntries.endedAt)),
     countWhere(systemFriendRequests, sql`${systemFriendRequests.status} = 'pending'`),
     countWhere(systemFriendships),
@@ -99,7 +95,6 @@ export async function getAdminMetrics(): Promise<AdminMetrics> {
     newAccounts30d,
     totalMembers,
     totalNotes,
-    totalJournalEntries,
     activeFronts,
     pendingFriendRequests,
     totalFriendships,
