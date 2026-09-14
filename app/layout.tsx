@@ -43,8 +43,9 @@ export const viewport: Viewport = {
   ],
 };
 
-function getInitialLanguage() {
-  const cookieLanguage = cookies().get(LANGUAGE_COOKIE_KEY)?.value;
+async function getInitialLanguage() {
+  const cookieStore = await cookies();
+  const cookieLanguage = cookieStore.get(LANGUAGE_COOKIE_KEY)?.value;
   return isLanguage(cookieLanguage) ? cookieLanguage : DEFAULT_LANGUAGE;
 }
 
@@ -60,7 +61,7 @@ export default async function RootLayout({
   // JWT session (no DB hit) — seeds the client SessionProvider so useSession()
   // and the persistent SWR cache have the user id from the first render.
   const session = await getCachedSession();
-  const initialLanguage = getInitialLanguage();
+  const initialLanguage = await getInitialLanguage();
 
   return (
     <html lang={getHtmlLang(initialLanguage)} suppressHydrationWarning className={nunito.variable}>
