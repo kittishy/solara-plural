@@ -21,7 +21,7 @@ export function GlassCard({
   return (
     <div
       className={cn(
-        "glass rounded-ios-xl shadow-ios dark:shadow-ios-dark",
+        "glass rounded-ios-xl",
         paddingMap[padding],
         className
       )}
@@ -41,7 +41,7 @@ export function GroupedSection({
   return (
     <div
       className={cn(
-        "rounded-ios-xl bg-[var(--ios-bg-secondary)] border border-border/40 shadow-ios dark:shadow-ios-dark overflow-hidden divide-y divide-border/50",
+        "rounded-ios-xl bg-[var(--ios-bg-secondary)] border border-border/40 overflow-hidden divide-y divide-border/50",
         className
       )}
       {...props}
