@@ -70,14 +70,14 @@ export function AvatarUpload({
   }
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-2.5 sm:gap-3">
       {/* Preview circle */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-3 sm:gap-4">
         <button
           type="button"
           onClick={() => fileInputRef.current?.click()}
           disabled={loading}
-          className="relative group w-24 h-24 rounded-full overflow-hidden ios-press ios-transition shadow-ios-md disabled:opacity-60"
+          className="relative group w-20 h-20 sm:w-24 sm:h-24 shrink-0 rounded-full overflow-hidden ios-press ios-transition shadow-ios-md disabled:opacity-60"
           style={{
             background: currentUrl
               ? "transparent"
@@ -128,7 +128,7 @@ export function AvatarUpload({
               type="button"
               onClick={() => setMode("upload")}
               className={cn(
-                "px-3 py-1 text-caption-1 font-semibold rounded-ios-xs ios-transition",
+                "px-2.5 sm:px-3 py-1 text-caption-1 font-semibold rounded-ios-xs ios-transition",
                 mode === "upload"
                   ? "bg-white dark:bg-ios-gray-3/30 text-foreground shadow-sm"
                   : "text-muted-foreground"
@@ -141,7 +141,7 @@ export function AvatarUpload({
               type="button"
               onClick={() => setMode("url")}
               className={cn(
-                "px-3 py-1 text-caption-1 font-semibold rounded-ios-xs ios-transition",
+                "px-2.5 sm:px-3 py-1 text-caption-1 font-semibold rounded-ios-xs ios-transition",
                 mode === "url"
                   ? "bg-white dark:bg-ios-gray-3/30 text-foreground shadow-sm"
                   : "text-muted-foreground"
