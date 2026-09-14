@@ -12,6 +12,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-node@v4
         with:
@@ -21,6 +23,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Migration gate
+        run: npm run db:check-migration-diff
+
       - name: Type-check
         run: npx tsc --noEmit
 
@@ -29,3 +34,6 @@ jobs:
 
       - name: Test
         run: npm test
+
+      - name: Build
+        run: npm run build
