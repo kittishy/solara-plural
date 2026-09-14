@@ -27,11 +27,11 @@ export function MemberColorPicker({ value, onChange }: MemberColorPickerProps) {
   const [hexInput, setHexInput] = useState(initial);
 
   useEffect(() => {
-    if (isValidHex(value) && value !== hex) {
-      setHex(value);
-      setHexInput(value);
-    }
-  }, [value, hex]);
+    if (!isValidHex(value)) return;
+    const normalized = value.toUpperCase();
+    setHex(normalized);
+    setHexInput(normalized);
+  }, [value]);
 
   function commit(color: string) {
     const normalized = color.toUpperCase();
