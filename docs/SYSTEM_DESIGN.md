@@ -5,13 +5,13 @@
 > `ARCHITECTURE.md` (which predates the Supabase migration). Read this before
 > any structural, security, or infrastructure change.
 
-Last updated: 2026-07 (system-design overhaul).
+Last updated: 2026-09 (hardening + Next 15 upgrade).
 
 ---
 
 ## 1. Architecture overview
 
-Solara Plural is a Next.js 14 (App Router) PWA deployed on **Vercel Hobby**
+Solara Plural is a Next.js 15 (App Router) PWA deployed on **Vercel Hobby**
 (region `gru1`, São Paulo), backed by **Supabase Postgres free tier**
 (`sa-east-1`, accessed through the transaction pooler on port 6543 with
 `prepare: false`). Push delivery uses **FCM** (Android/Capacitor) and
@@ -249,8 +249,7 @@ Removed (do not re-add): `CATBOX_USERHASH`, `SSE_URL`, `DATABASE_URL`/
 - Manual run: `curl -H "Authorization: Bearer $CRON_SECRET" https://<host>/api/cron/maintenance`.
 
 ### Deploy & release
-- Push to `master` → Vercel deploy. CI (GitHub Actions) runs
-  `tsc --noEmit`, lint, vitest, build — replicate locally before pushing.
+- Push to `master` → Vercel deploy. CI (GitHub Actions) runs the schema/migration diff gate, `tsc --noEmit`, lint, vitest, and a production build. Production builds also verify `app_settings.schema_version` before Next.js compiles, so code that expects a newer schema cannot deploy ahead of its migration.
 - **Service worker version**: bump `VERSION` in `public/service-worker.js`
   whenever caching behavior or asset expectations change. Clients pick it up
   via `SKIP_WAITING` + `controllerchange` (which revalidates all SWR keys).
@@ -270,8 +269,7 @@ Removed (do not re-add): `CATBOX_USERHASH`, `SSE_URL`, `DATABASE_URL`/
    unavailable) — one tab must never cost a continuous function.
 6. **Every append-only table has a retention rule in the maintenance cron**,
    or a documented exemption (user content: notes, journal, chat).
-7. **Avatars live in the DB as bounded data URLs** (512 px / capped base64) —
-   no external image hosts for user content. The size is a deliberate
+7. **Avatars currently live in the DB as bounded data URLs** (512 px / capped base64). Migration to private object storage is planned, but must preserve existing avatars and use a server-owned upload contract before this invariant is removed. The size is a deliberate
    quality-over-thrift choice at current usage (§5); if the system ever grows
    past a handful of active systems, revisit against the DB-size budget math
    before defaulting back to a smaller encode.
