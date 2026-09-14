@@ -4,6 +4,12 @@
 ALTER TABLE public.chat_channel_reads
   ADD CONSTRAINT pk_chat_channel_reads PRIMARY KEY USING INDEX ux_chat_channel_reads;
 
+CREATE INDEX IF NOT EXISTS idx_alter_pairings_member_a_id
+  ON public.alter_partner_pairings (member_a_id);
+
+CREATE INDEX IF NOT EXISTS idx_alter_pairings_member_b_id
+  ON public.alter_partner_pairings (member_b_id);
+
 CREATE INDEX IF NOT EXISTS idx_chat_channel_reads_channel_id
   ON public.chat_channel_reads (channel_id);
 
