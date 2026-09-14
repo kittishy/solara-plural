@@ -1,12 +1,13 @@
 import { JournalEditor } from "@/components/journal/JournalEditor";
 
-export default function JournalEntryPage({
+export default async function JournalEntryPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
-  if (params.id === "new") {
+  const { id } = await params;
+  if (id === "new") {
     return <JournalEditor />;
   }
-  return <JournalEditor entryId={params.id} />;
+  return <JournalEditor entryId={id} />;
 }
