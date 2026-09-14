@@ -185,9 +185,9 @@ export function MemberEditor({ memberId }: MemberEditorProps) {
   }
 
   return (
-    <div className="animate-fade-in pb-8">
-      <div className="sticky top-0 z-40 glass border-b border-border/40">
-        <div className="flex items-center justify-between px-4 h-11">
+    <div className="animate-fade-in pb-[max(var(--safe-bottom),24px)]">
+      <div className="sticky top-0 z-40 glass border-b border-border/40 pt-[var(--safe-top)]">
+        <div className="flex items-center justify-between px-3 sm:px-4 h-10 sm:h-11">
           <button
             type="button"
             onClick={() => router.back()}
@@ -210,8 +210,8 @@ export function MemberEditor({ memberId }: MemberEditorProps) {
         </div>
       </div>
 
-      <form onSubmit={handleSave} className="flex flex-col gap-4 px-4 pt-4">
-        <GlassCard padding="lg" className="flex flex-col gap-5">
+      <form onSubmit={handleSave} className="flex flex-col gap-3 sm:gap-4 px-3 sm:px-4 pt-3 sm:pt-4">
+        <GlassCard padding="none" className="flex flex-col gap-4 p-4 sm:p-6 sm:gap-5">
           <AvatarUpload
             currentUrl={avatarUrl}
             memberColor={color}
@@ -220,14 +220,14 @@ export function MemberEditor({ memberId }: MemberEditorProps) {
           />
 
           <div>
-            <p className="text-footnote font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+            <p className="text-caption-1 sm:text-footnote font-semibold text-muted-foreground uppercase tracking-wide mb-2">
               {t("members.color")}
             </p>
             <MemberColorPicker value={color} onChange={setColor} />
           </div>
         </GlassCard>
 
-        <GlassCard padding="lg" className="flex flex-col gap-4">
+        <GlassCard padding="none" className="flex flex-col gap-3.5 p-4 sm:p-6 sm:gap-4">
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="name">{t("members.name")} *</Label>
             <Input
@@ -269,7 +269,7 @@ export function MemberEditor({ memberId }: MemberEditorProps) {
               onChange={(e) => setDescription(e.target.value)}
               rows={4}
               maxLength={2000}
-              className="min-h-[112px] px-4 py-3 rounded-ios-sm bg-[var(--ios-bg-secondary)] text-body resize-y focus:outline-none focus:ring-2 focus:ring-ios-blue"
+              className="min-h-[96px] sm:min-h-[112px] px-3 sm:px-4 py-2.5 sm:py-3 rounded-ios-sm bg-[var(--ios-bg-secondary)] text-body resize-y focus:outline-none focus:ring-2 focus:ring-ios-blue"
             />
           </div>
 
@@ -317,7 +317,7 @@ export function MemberEditor({ memberId }: MemberEditorProps) {
         </GlassCard>
 
         {customFields.length > 0 && (
-          <GlassCard padding="lg">
+          <GlassCard padding="none" className="p-4 sm:p-6">
             <p className="text-footnote font-semibold text-muted-foreground uppercase tracking-wide mb-3">
               {t("members.customFields")}
             </p>
