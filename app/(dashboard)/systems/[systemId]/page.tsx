@@ -1,5 +1,6 @@
 "use client";
 
+import { use } from "react";
 import useSWR from "swr";
 import { ArrowLeft, Layers } from "lucide-react";
 import { useLocalizedRouter } from "@/components/navigation/useLocalizedRouter";
@@ -30,12 +31,13 @@ type FriendSystemData = {
 export default function ExternalSystemPage({
   params,
 }: {
-  params: { systemId: string };
+  params: Promise<{ systemId: string }>;
 }) {
+  const { systemId } = use(params);
   const router = useLocalizedRouter();
   const { t } = useLanguage();
   const { data, isLoading, error, mutate, isValidating } = useSWR<FriendSystemData>(
-    `/api/friends/${params.systemId}`,
+    `/api/friends/${systemId}`,
     apiFetcher
   );
 

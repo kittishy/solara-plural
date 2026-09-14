@@ -142,36 +142,53 @@ function sameTierMap(a: Record<string, FrontTier>, b: Record<string, FrontTier>)
 }
 
 function deferPluralKitFrontSync(systemId: string, memberIds: string[], requestId: string, reasonCode: string): PluralKitSyncMeta {
-  void syncFrontToPluralKit(systemId, memberIds, { requestId })
-    .then((providerSync) => {
-      const result = toPluralKitSyncMeta(providerSync, requestId);
-      if (result.status === 'failed') {
-        console.error('[front-sync] deferred pluralKit sync failed', {
-          event: 'pluralkit_front_sync_deferred_failed',
-          requestId,
-          systemId,
-          reasonCode: result.reasonCode,
-          httpStatus: result.httpStatus,
-        });
-        return;
-      }
+  waitUntil((async () => {
+    let result = toPluralKitSyncMeta(
+      await syncFrontToPluralKit(systemId, memberIds, { requestId }),
+      requestId,
+    );
 
-      console.info('[front-sync] deferred pluralKit sync completed', {
-        event: 'pluralkit_front_sync_deferred_completed',
+    // One bounded retry is enough to absorb transient provider/network stalls
+    // without making the local front write depend on PluralKit availability.
+    if (result.status === 'failed' && result.reasonCode === 'provider_timeout') {
+      await new Promise((resolve) => setTimeout(resolve, 750));
+      console.warn('[front-sync] retrying pluralKit after timeout', {
+        event: 'pluralkit_front_sync_retry',
         requestId,
         systemId,
-        status: result.status,
+      });
+      result = toPluralKitSyncMeta(
+        await syncFrontToPluralKit(systemId, memberIds, { requestId }),
+        requestId,
+      );
+    }
+
+    if (result.status === 'failed') {
+      console.error('[front-sync] deferred pluralKit sync failed', {
+        event: 'pluralkit_front_sync_deferred_failed',
+        requestId,
+        systemId,
         reasonCode: result.reasonCode,
+        httpStatus: result.httpStatus,
       });
-    })
-    .catch((error) => {
-      console.error('[front-sync] deferred pluralKit sync crashed unexpectedly', {
-        event: 'pluralkit_front_sync_deferred_unexpected_error',
-        requestId,
-        systemId,
-        error: error instanceof Error ? error.message : 'unknown_error',
-      });
+      return;
+    }
+
+    console.info('[front-sync] deferred pluralKit sync completed', {
+      event: 'pluralkit_front_sync_deferred_completed',
+      requestId,
+      systemId,
+      status: result.status,
+      reasonCode: result.reasonCode,
     });
+  })().catch((error) => {
+    console.error('[front-sync] deferred pluralKit sync crashed unexpectedly', {
+      event: 'pluralkit_front_sync_deferred_unexpected_error',
+      requestId,
+      systemId,
+      error: error instanceof Error ? error.message : 'unknown_error',
+    });
+  }));
 
   return {
     requestId,
@@ -183,6 +200,7 @@ function deferPluralKitFrontSync(systemId: string, memberIds: string[], requestI
     unmappedIds: [],
     details: {
       queuedAt: new Date().toISOString(),
+      retryPolicy: 'one_retry_on_timeout',
     },
   };
 }

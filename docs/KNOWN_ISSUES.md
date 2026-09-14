@@ -82,7 +82,7 @@ Production PWA install should use real PNG icons, at least 192x192 and 512x512, 
 
 ### [ISSUE-009] npm audit reports Next.js 14 production vulnerabilities
 
-**Status:** Open
+**Status:** Resolved
 **Priority:** High
 **Area:** Security | Dependencies | Deploy
 
@@ -92,8 +92,7 @@ Production PWA install should use real PNG icons, at least 192x192 and 512x512, 
 **Expected Behavior:**
 Plan and test a framework upgrade separately, or choose a patched compatible version if one becomes available.
 
-**Notes / Workaround:**
-2026-06-10: non-breaking fixes applied (`npm audit fix` + `ws` override to `^8.21.0`). Remaining: Next 14 advisories (need Next 15/16), nodemailer 7→8, firebase-admin transitives. Plan the Next 15 upgrade in a dedicated branch.
+**Resolved in:** 2026-09-13 — upgraded the application to Next.js 15.5.25 + React 19.3 with a regenerated lockfile and preview-build validation. Remaining dependency advisories, if any, are tracked independently rather than keeping the framework on Next 14.
 
 ### [ISSUE-013] Drizzle migration journal and snapshots need reconciliation
 
@@ -123,7 +122,7 @@ Password reset endpoints now have an in-memory limiter, which helps local/runtim
 
 ### [ISSUE-016] Drizzle migrations are not applied automatically on deploy
 
-**Status:** Open (process guardrail)
+**Status:** Resolved
 **Priority:** High
 **Area:** Database | Deploy | Process
 
@@ -133,8 +132,7 @@ The 2026-06-06 admin-panel merge deployed code referencing `systems.is_admin` an
 **Expected Behavior:**
 Every schema-touching merge must apply its migration to production Supabase before (or together with) the deploy. Options to automate: a Vercel build step running `drizzle-kit migrate`, or applying via Supabase MCP/CLI as part of the release checklist.
 
-**Notes / Workaround:**
-`0001_admin_panel` and `0002_rate_limits_chat_reads` were applied manually via Supabase on 2026-06-10.
+**Resolved in:** 2026-09-13 — CI now fails when `lib/db/schema.ts` changes without a SQL migration, and production builds verify the expected `app_settings.schema_version` before running `next build`. `0003_solara_db_hardening.sql` establishes the first release marker.
 
 ## Resolved Issues
 
@@ -248,3 +246,18 @@ Middleware imported full Auth.js config, including bcrypt credential verificatio
 **Resolved in:** 2026-05-01 external integration hardening pass
 
 ---
+
+### [ISSUE-017] Move member avatars from Postgres data URLs to private object storage
+
+**Status:** Open
+**Priority:** Medium
+**Area:** Database | Storage | Privacy
+
+**Description:**
+Member avatars are still stored as bounded base64 data URLs in Postgres. This is reliable at the current scale but consumes database space and couples image payloads to normal row reads.
+
+**Expected Behavior:**
+Move avatars to private object storage while preserving existing images, keeping authorization server-owned, and never exposing a privileged storage credential to web or native clients.
+
+**Notes / Workaround:**
+Do not switch writes until a migration/backfill and rollback path exist. Existing bounded data URLs remain the supported source of truth until then.

@@ -3,9 +3,10 @@ import { db } from '@/lib/db';
 import { notifications } from '@/lib/db/schema';
 import { err, ok, requireAuth, parseJsonBody } from '@/lib/api/helpers';
 
-type Params = { params: { id: string } };
+type Params = { params: Promise<{ id: string }> };
 
 export async function PATCH(request: Request, { params }: Params) {
+  const { id } = await params;
   const auth = await requireAuth();
   if (auth.error) return auth.error;
 
@@ -15,7 +16,7 @@ export async function PATCH(request: Request, { params }: Params) {
   const updated = await db.update(notifications)
     .set({ readAt: read ? new Date() : null })
     .where(and(
-      eq(notifications.id, params.id),
+      eq(notifications.id, id),
       eq(notifications.recipientSystemId, auth.systemId),
     ))
     .returning();

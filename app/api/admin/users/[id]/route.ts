@@ -14,13 +14,14 @@ import { recordAudit } from '@/lib/admin/audit';
 // GET /api/admin/users/[id] — full account detail with content counts.
 export async function GET(
   _request: Request,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
+  const { id } = await params;
   const gate = await requireAdminApi();
   if (gate.error) return gate.error;
 
   const account = await db.query.systems.findFirst({
-    where: eq(systems.id, params.id),
+    where: eq(systems.id, id),
     columns: {
       id: true,
       name: true,
@@ -39,10 +40,10 @@ export async function GET(
   if (!account) return err('Account not found', 404);
 
   const [memberCount, noteCount, journalCount, frontCount] = await Promise.all([
-    db.select({ value: count() }).from(members).where(eq(members.systemId, params.id)),
-    db.select({ value: count() }).from(systemNotes).where(eq(systemNotes.systemId, params.id)),
-    db.select({ value: count() }).from(systemJournal).where(eq(systemJournal.systemId, params.id)),
-    db.select({ value: count() }).from(frontEntries).where(eq(frontEntries.systemId, params.id)),
+    db.select({ value: count() }).from(members).where(eq(members.systemId, id)),
+    db.select({ value: count() }).from(systemNotes).where(eq(systemNotes.systemId, id)),
+    db.select({ value: count() }).from(systemJournal).where(eq(systemJournal.systemId, id)),
+    db.select({ value: count() }).from(frontEntries).where(eq(frontEntries.systemId, id)),
   ]);
 
   return ok({
@@ -59,8 +60,9 @@ export async function GET(
 // PATCH /api/admin/users/[id] — suspend/unsuspend or toggle admin.
 export async function PATCH(
   request: Request,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
+  const { id } = await params;
   const gate = await requireAdminApi();
   if (gate.error) return gate.error;
 
@@ -69,7 +71,7 @@ export async function PATCH(
   const body = parsed.data;
 
   const account = await db.query.systems.findFirst({
-    where: eq(systems.id, params.id),
+    where: eq(systems.id, id),
     columns: { id: true, email: true, isAdmin: true, suspendedAt: true },
   });
   if (!account) return err('Account not found', 404);
@@ -97,34 +99,35 @@ export async function PATCH(
 
   if (Object.keys(audited).length === 0) return err('No supported fields to update', 400);
 
-  await db.update(systems).set(updates).where(eq(systems.id, params.id));
+  await db.update(systems).set(updates).where(eq(systems.id, id));
 
   await recordAudit({
     actorSystemId: gate.admin.systemId,
     actorEmail: gate.admin.email,
     action: 'user.update',
     targetType: 'system',
-    targetId: params.id,
+    targetId: id,
     metadata: audited,
   });
 
-  return ok({ id: params.id, ...audited });
+  return ok({ id: id, ...audited });
 }
 
 // DELETE /api/admin/users/[id] — hard-delete an account (cascades via FKs).
 export async function DELETE(
   _request: Request,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
+  const { id } = await params;
   const gate = await requireAdminApi();
   if (gate.error) return gate.error;
 
-  if (params.id === gate.admin.systemId) {
+  if (id === gate.admin.systemId) {
     return err('You cannot delete your own account from the admin panel', 400);
   }
 
   const account = await db.query.systems.findFirst({
-    where: eq(systems.id, params.id),
+    where: eq(systems.id, id),
     columns: { id: true, email: true, name: true },
   });
   if (!account) return err('Account not found', 404);
@@ -133,16 +136,16 @@ export async function DELETE(
     return err('This account is in the ADMIN_EMAILS allowlist and cannot be deleted here', 400);
   }
 
-  await db.delete(systems).where(eq(systems.id, params.id));
+  await db.delete(systems).where(eq(systems.id, id));
 
   await recordAudit({
     actorSystemId: gate.admin.systemId,
     actorEmail: gate.admin.email,
     action: 'user.delete',
     targetType: 'system',
-    targetId: params.id,
+    targetId: id,
     metadata: { email: account.email, name: account.name },
   });
 
-  return ok({ id: params.id, deleted: true });
+  return ok({ id: id, deleted: true });
 }

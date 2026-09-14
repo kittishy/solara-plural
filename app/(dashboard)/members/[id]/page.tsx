@@ -82,17 +82,18 @@ function formatDuration(start: Date | number | null, end: Date | number | null):
 export default async function MemberDetailPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
+  const { id } = await params;
   const systemId = await requireSystemId();
 
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const langCookie = cookieStore.get(LANGUAGE_COOKIE_KEY)?.value;
   const lang = isLanguage(langCookie) ? langCookie : DEFAULT_LANGUAGE;
   const t = getServerT(lang);
 
   const member = await db.query.members.findFirst({
-    where: and(eq(members.id, params.id), eq(members.systemId, systemId)),
+    where: and(eq(members.id, id), eq(members.systemId, systemId)),
   });
 
   if (!member) notFound();

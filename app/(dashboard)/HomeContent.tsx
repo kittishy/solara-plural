@@ -1,7 +1,7 @@
 "use client";
 
 import { LocalizedLink as Link } from "@/components/navigation/LocalizedLink";
-import { Users, Layers, BookOpen, FileText, UserPlus, X } from "lucide-react";
+import { Layers, BookOpen, FileText, UserPlus, X } from "lucide-react";
 import useSWR, { mutate } from "swr";
 import { useState, useEffect, useMemo } from "react";
 import { GlassCard } from "@/components/glass/GlassCard";
@@ -74,17 +74,22 @@ function MemberAvatar({ member, size = 40 }: { member: { name: string; color: st
   );
 }
 
-function StatCard({ icon: Icon, label, value, color, href }: { icon: React.ElementType; label: string; value: number; color: string; href: string }) {
+function QuickActionCard({
+  icon: Icon,
+  label,
+  href,
+}: {
+  icon: React.ElementType;
+  label: string;
+  href: string;
+}) {
   return (
     <Link href={href} className="block">
-      <GlassCard padding="md" className="flex items-center gap-3 ios-press ios-transition h-full">
-        <div className="w-10 h-10 rounded-ios flex items-center justify-center flex-shrink-0" style={{ background: `${color}1f` }}>
-          <Icon size={20} style={{ color }} />
+      <GlassCard padding="md" className="flex min-h-20 items-center gap-3 ios-press ios-transition">
+        <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-ios bg-ios-blue/10 text-ios-blue">
+          <Icon size={20} />
         </div>
-        <div className="min-w-0">
-          <p className="text-title-2 leading-6 text-foreground">{value}</p>
-          <p className="text-caption-1 font-medium text-muted-foreground truncate">{label}</p>
-        </div>
+        <p className="text-subheadline font-bold text-foreground">{label}</p>
       </GlassCard>
     </Link>
   );
@@ -92,10 +97,10 @@ function StatCard({ icon: Icon, label, value, color, href }: { icon: React.Eleme
 
 export function HomeContent({
   systemName,
-  memberCount,
-  journalCount,
-  noteCount,
-  friendCount,
+  memberCount: _memberCount,
+  journalCount: _journalCount,
+  noteCount: _noteCount,
+  friendCount: _friendCount,
   frontingMembers: initialFrontingMembers,
   recentMembers,
   hasFrontHistory,
@@ -421,13 +426,14 @@ export function HomeContent({
         </GlassCard>
       </div>
 
-      {/* Stats grid */}
-      <div className="grid grid-cols-2 gap-3 px-4 mb-5">
-        <StatCard icon={Users} label={t("home.statMembers")} value={memberCount} color="#8B5CF6" href="/members" />
-        <StatCard icon={Layers} label={t("home.statFronting")} value={frontingMembers.length} color="#34C759" href="/front" />
-        <StatCard icon={BookOpen} label={t("home.statEntries")} value={journalCount} color="#5856D6" href="/journal" />
-        <StatCard icon={FileText} label={t("home.statNotes")} value={noteCount} color="#FF9500" href="/notes" />
-        <StatCard icon={UserPlus} label={t("home.statFriends")} value={friendCount} color="#32ADE6" href="/friends" />
+      {/* Quick actions — prioritize what someone can do now over dashboard metrics. */}
+      <div className="px-4 mb-5">
+        <div className="grid grid-cols-2 gap-3">
+          <QuickActionCard icon={Layers} label={t("nav.front")} href="/front" />
+          <QuickActionCard icon={FileText} label={t("nav.notes")} href="/notes" />
+          <QuickActionCard icon={BookOpen} label={t("nav.journal")} href="/journal" />
+          <QuickActionCard icon={UserPlus} label={t("members.addMember")} href="/members/new" />
+        </div>
       </div>
 
       {/* Recent members */}

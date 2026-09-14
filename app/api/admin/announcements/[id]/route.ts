@@ -8,8 +8,9 @@ import { recordAudit } from '@/lib/admin/audit';
 // PATCH /api/admin/announcements/[id] — toggle active state.
 export async function PATCH(
   request: Request,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
+  const { id } = await params;
   const gate = await requireAdminApi();
   if (gate.error) return gate.error;
 
@@ -20,7 +21,7 @@ export async function PATCH(
   if (typeof body.active !== 'boolean') return err('active (boolean) is required');
 
   const existing = await db.query.adminAnnouncements.findFirst({
-    where: eq(adminAnnouncements.id, params.id),
+    where: eq(adminAnnouncements.id, id),
     columns: { id: true },
   });
   if (!existing) return err('Announcement not found', 404);
@@ -28,37 +29,38 @@ export async function PATCH(
   await db
     .update(adminAnnouncements)
     .set({ active: body.active ? 1 : 0, updatedAt: new Date() })
-    .where(eq(adminAnnouncements.id, params.id));
+    .where(eq(adminAnnouncements.id, id));
 
   await recordAudit({
     actorSystemId: gate.admin.systemId,
     actorEmail: gate.admin.email,
     action: 'announcement.update',
     targetType: 'announcement',
-    targetId: params.id,
+    targetId: id,
     metadata: { active: body.active },
   });
 
-  return ok({ id: params.id, active: body.active });
+  return ok({ id: id, active: body.active });
 }
 
 // DELETE /api/admin/announcements/[id]
 export async function DELETE(
   _request: Request,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
+  const { id } = await params;
   const gate = await requireAdminApi();
   if (gate.error) return gate.error;
 
-  await db.delete(adminAnnouncements).where(eq(adminAnnouncements.id, params.id));
+  await db.delete(adminAnnouncements).where(eq(adminAnnouncements.id, id));
 
   await recordAudit({
     actorSystemId: gate.admin.systemId,
     actorEmail: gate.admin.email,
     action: 'announcement.delete',
     targetType: 'announcement',
-    targetId: params.id,
+    targetId: id,
   });
 
-  return ok({ id: params.id, deleted: true });
+  return ok({ id: id, deleted: true });
 }

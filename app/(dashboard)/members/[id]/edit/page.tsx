@@ -1,9 +1,10 @@
 import { MemberEditor } from "@/components/members/MemberEditor";
 
-export default function EditMemberPage({
+export default async function EditMemberPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
-  return <MemberEditor memberId={params.id} />;
+  const { id } = await params;
+  return <MemberEditor memberId={id} />;
 }

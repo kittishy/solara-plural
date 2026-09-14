@@ -16,13 +16,14 @@ import {
 // raw token is returned exactly once and only its hash is persisted.
 export async function POST(
   _request: Request,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
+  const { id } = await params;
   const gate = await requireAdminApi();
   if (gate.error) return gate.error;
 
   const account = await db.query.systems.findFirst({
-    where: eq(systems.id, params.id),
+    where: eq(systems.id, id),
     columns: { id: true, email: true },
   });
   if (!account) return err('Account not found', 404);
